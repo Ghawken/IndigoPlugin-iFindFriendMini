@@ -72,6 +72,21 @@
         <Description>Enable/Disable</Description>
     </Field>
 
+    <Field id="verticalMap" type="textfield" tooltip="Size of Map" defaultValue="600">
+     <Label>Vertical Size of Map e.g 600</Label><Label/>
+     <Description>Vertical Size of Map in Pixels (default 600</Description>
+    </Field>
+
+    <Field id="horizontalMap" type="textfield" tooltip="Size of Map" defaultValue="600">
+     <Label>Horizontal Size of Map e.g 600</Label><Label/>
+     <Description>Horizontal Size of Map in Pixels (default 600</Description>
+    </Field>
+
+    <Field id="ZoomMap" type="textfield" tooltip="Zoom size of Map" defaultValue="15">
+     <Label>Zoom Size of Map e.g 15</Label><Label/>
+     <Description>Zoom Size of Map default 15</Description>
+    </Field>
+
     <Field id="space9" type="label"/>
 
     <Field id="space10" type="label" alignText="right">

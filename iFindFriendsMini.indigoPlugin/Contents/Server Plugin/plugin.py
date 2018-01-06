@@ -125,10 +125,12 @@ class Plugin(indigo.PluginBase):
         self.updater = indigoPluginUpdateChecker.updateChecker(self, "http://")
         self.updaterEmailsEnabled = self.pluginPrefs.get('updaterEmailsEnabled', False)
 
+        self.configVerticalMap = self.pluginPrefs.get('verticalMap', "600")
+        self.configHorizontalMap = self.pluginPrefs.get('horizontalMap', "600")
+        self.configZoomMap = self.pluginPrefs.get('ZoomMap', "15")
+
         self.deviceNeedsUpdated = ''
-        self.finalDict = {}
-        self.jsonRawData = {}
-        self.rawData = ''
+
 
         # Convert old debugLevel scale to new scale if needed.
         # =============================================================
@@ -326,8 +328,8 @@ class Plugin(indigo.PluginBase):
             else:
                 # Get account details
                 api = iLogin[1]
-                indigo.server.log(u'Login Details**********:')
-                indigo.server.log(unicode(api.friends.locations))
+                    #indigo.server.log(u'Login Details**********:')
+                    #indigo.server.log(unicode(api.friends.locations))
                 # dev = indigo.devices[devId]
                 accountOK = True
                 # iAccountNumber = str(dev.id)
@@ -493,7 +495,9 @@ class Plugin(indigo.PluginBase):
 
         appleAPI = iLogin[1]
         follower = iLogin[1].friends.locations
-        indigo.server.log(unicode(type(follower)))
+
+        if self.debugLevel >= 2:
+            self.debugLog(unicode(type(follower)))
 
         if len(follower) == 0:
             indigo.server.log(u'No Followers Found for this Account.  Have you any friends?')
@@ -506,11 +510,12 @@ class Plugin(indigo.PluginBase):
                 if self.debugLevel >= 2:
                     self.debugLog(u'targetFriend of Device equals:' + unicode(targetFriend))
                 for follow in follower:
-                    indigo.server.log(unicode(follow['id']))
+                    if self.debugLevel >= 2:
+                        self.debugLog (unicode(follow['id']))
                     if follow['id'] == targetFriend:
                         if self.debugLevel >= 2:
-                            indigo.server.log(u'Found Target Friend in Data:  Updating Device:' + unicode(dev.name))
-                            indigo.server.log(unicode(follow))
+                            self.debugLog(u'Found Target Friend in Data:  Updating Device:' + unicode(dev.name))
+                            self.debugLog(unicode(follow))
                         self.refreshDataForDev(dev, follow)
         return
 
@@ -521,7 +526,8 @@ class Plugin(indigo.PluginBase):
             self.debugLog(u"refreshDataForDev() method called.")
 
         try:
-            indigo.server.log(
+            if self.debugLevel >= 2:
+                self.debugLog(
                 unicode('Now updating Data for : ' + unicode(dev.name) + ' with data received: ' + unicode(follow)))
             UseLabelforState = False
             # Deal with Label Dict either Dict or None
@@ -532,7 +538,7 @@ class Plugin(indigo.PluginBase):
                 label = labels
 
             if self.debugLevel >= 2:
-                indigo.server.log(unicode('Label:' + unicode(label) + ' and type is ' + unicode(type(label))))
+                self.debugLog(unicode('Label:' + unicode(label) + ' and type is ' + unicode(type(label))))
 
             if isinstance(label, dict):
                 if 'label' in label:
@@ -558,7 +564,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'latitude', 'value': follow['location']['latitude']},
             ]
             if self.debugLevel >= 2:
-                indigo.server.log(unicode(stateList))
+                self.debugLog(unicode(stateList))
             dev.updateStatesOnServer(stateList)
 
             update_time = t.strftime("%m/%d/%Y at %H:%M")
@@ -591,10 +597,10 @@ class Plugin(indigo.PluginBase):
             MAChome = os.path.expanduser("~") + "/"
             folderLocation = MAChome + "Documents/Indigo-iFindFriendMini/"
 
-            filename = dev.name.lstrip(' ')+'_Map.jpg'
+            filename = dev.name.replace(' ','_')+'_Map.jpg'
             file = folderLocation +filename
             #Generate single device URL
-            drawUrl = urlGenerate(self, latitude ,longitude , '', 600, 600, 15, dev)
+            drawUrl = urlGenerate(self, latitude ,longitude , '', self.configHorizontalMap, self.configVerticalMap, self.configZoomMap, dev)
 
             if self.debugLevel >= 2:
                 webbrowser.open_new(drawUrl)
@@ -603,23 +609,23 @@ class Plugin(indigo.PluginBase):
             os.system(fileMap)
 
             if self.debugLevel >= 2:
-                indigo.server.log('Saving Map...' + file)
+                self.debugLog('Saving Map...' + file)
 
 
             filename = 'All_device.jpg'
             file = folderLocation + filename
             # Generate URL for All Maps
-            drawUrl = urlAllGenerate(self, '',  600, 600, 15)
+            drawUrl = urlAllGenerate(self, '',  self.configHorizontalMap, self.configVerticalMap, self.configZoomMap)
 
             fileMap = "curl --output '" + file + "' --url '" + drawUrl + "'"
             os.system(fileMap)
 
             if self.debugLevel >= 2:
-                indigo.server.log('Saving Map...' + file)
+                self.debugLog('Saving Map...' + file)
 
             if self.debugLevel >= 2:
                 webbrowser.open_new(drawUrl)
-                indigo.server.log(unicode(drawUrl))
+                self.debugLog(unicode(drawUrl))
 
         except Exception as e:
             indigo.server.log(u'Exception within godoMapping: '+unicode(e))
@@ -769,14 +775,15 @@ class Plugin(indigo.PluginBase):
         ################################################
         # Logs in and authorises access to the Find my Phone API
         # Logs into the find my phone API and returns an error if it doesn't work correctly
-        indigo.server.log(u'Attempting login...')
+        if self.debugLevel >= 2:
+            self.debugLog('Attempting login...')
 
         # Logs into the API as required
         try:
             appleAPI = PyiCloudService(iUsername, iPassword)
 
             if self.debugLevel > 2:
-                indigo.server.log(u'Login successful...')
+                self.debugLog(u'Login successful...')
                 #indigo.server.log(u'appleAPI: Here we are 1.1 **************************:')
                 # indigo.server.log(unicode(type(appleAPI)))
                 # indigo.server.log(unicode(appleAPI.devices))
@@ -816,7 +823,7 @@ def urlGenerate(self, latitude, longitude, mapAPIKey='No Key', iHorizontal=600, 
 
     try:
         if self.debugLevel >= 2:
-            indigo.server.log('** Device being mapped is:' + str(latitude) + ' ' + str(longitude))
+            self.debugLog('** Device being mapped is:' + str(latitude) + ' ' + str(longitude))
         # Create Map url
         mapCentre = 'center=' + str(latitude) + "," + str(longitude)
         # Set zoom
@@ -851,7 +858,7 @@ def urlGenerate(self, latitude, longitude, mapAPIKey='No Key', iHorizontal=600, 
             customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone + '&key=' + mapAPIKey
 
         if self.debugLevel >= 2:
-            indigo.server.log(u'Map URL equals:'+unicode(customURL))
+            self.debugLog(u'Map URL equals:'+unicode(customURL))
         return customURL
 
     except Exception as e:
