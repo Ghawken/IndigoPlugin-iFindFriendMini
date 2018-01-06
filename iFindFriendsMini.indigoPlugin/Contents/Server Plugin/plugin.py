@@ -129,6 +129,7 @@ class Plugin(indigo.PluginBase):
         self.configHorizontalMap = self.pluginPrefs.get('horizontalMap', "600")
         self.configZoomMap = self.pluginPrefs.get('ZoomMap', "15")
 
+        self.googleAPI = self.pluginPrefs.get('googleAPI','')
         self.deviceNeedsUpdated = ''
 
 
@@ -591,6 +592,8 @@ class Plugin(indigo.PluginBase):
         return
 
     def godoMapping(self, latitude, longitude, dev):
+
+
         if self.debugLevel >= 2:
             self.debugLog(u"godoMapping() method called.")
         try:
@@ -600,7 +603,7 @@ class Plugin(indigo.PluginBase):
             filename = dev.name.replace(' ','_')+'_Map.jpg'
             file = folderLocation +filename
             #Generate single device URL
-            drawUrl = urlGenerate(self, latitude ,longitude , '', self.configHorizontalMap, self.configVerticalMap, self.configZoomMap, dev)
+            drawUrl = urlGenerate(self, latitude ,longitude , self.googleAPI, int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap), dev)
 
             if self.debugLevel >= 2:
                 webbrowser.open_new(drawUrl)
@@ -615,7 +618,7 @@ class Plugin(indigo.PluginBase):
             filename = 'All_device.jpg'
             file = folderLocation + filename
             # Generate URL for All Maps
-            drawUrl = urlAllGenerate(self, '',  self.configHorizontalMap, self.configVerticalMap, self.configZoomMap)
+            drawUrl = urlAllGenerate(self, self.googleAPI,  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
 
             fileMap = "curl --output '" + file + "' --url '" + drawUrl + "'"
             os.system(fileMap)
@@ -809,7 +812,7 @@ class Plugin(indigo.PluginBase):
             return 1, 'NI'
 
 
-def urlGenerate(self, latitude, longitude, mapAPIKey='No Key', iHorizontal=600, iVertical=300, iZoom=15, dev=0):
+def urlGenerate(self, latitude, longitude, mapAPIKey, iHorizontal, iVertical, iZoom, dev=0):
     ################################################
     # Routine generate a Static Google Maps HTML URL request
     # for a single device
@@ -844,7 +847,7 @@ def urlGenerate(self, latitude, longitude, mapAPIKey='No Key', iHorizontal=600, 
             iVertical = 50
 
         mapSize = 'size=' + str(iHorizontal) + 'x' + str(iVertical)
-        mapFormat = 'format=jpg'
+        mapFormat = 'format=jpg&maptype=hybrid'
 
         # Use a standard marker for a GeoFence Centre
         mapMarkerGeo = "markers=color:blue%7Csize:mid%7Clabel:G"
@@ -865,7 +868,7 @@ def urlGenerate(self, latitude, longitude, mapAPIKey='No Key', iHorizontal=600, 
         indigo.server.log(u'Mapping Exception/Error:'+unicode(e))
 
 
-def urlAllGenerate(self, mapAPIKey='No Key', iHorizontal=640, iVertical=640, iZoom=15):
+def urlAllGenerate(self, mapAPIKey, iHorizontal, iVertical, iZoom):
 
     ################################################
     # Routine generate a Static Google Maps HTML URL request
@@ -901,7 +904,7 @@ def urlAllGenerate(self, mapAPIKey='No Key', iHorizontal=640, iVertical=640, iZo
             iVertical=50
 
         mapSize='size='+str(iHorizontal)+'x'+str(iVertical)
-        mapFormat='format=jpg'
+        mapFormat='format=jpg&maptype=hybrid'
 
         # Use a standard marker for a GeoFence Centre
         mapMarkerGeo = "markers=color:blue%7Csize:mid%7Clabel:G"

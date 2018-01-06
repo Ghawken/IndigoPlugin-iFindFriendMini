@@ -87,6 +87,11 @@
      <Description>Zoom Size of Map default 15</Description>
     </Field>
 
+    <Field id="googleAPI" type="textfield" tooltip="Google Mapping API Key" defaultValue="">
+     <Label>Enter Google API Here:</Label><Label/>
+     <Description>Google API Key for Mapping</Description>
+    </Field>
+
     <Field id="space9" type="label"/>
 
     <Field id="space10" type="label" alignText="right">

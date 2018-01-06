@@ -1,12 +1,9 @@
 <?xml version="1.0"?>
 <Actions>
     <Action id="refreshData" uiPath="DeviceActions">
-        <Name>Refresh Data For All Devices</Name>
+        <Name>Refresh Data For All Friends</Name>
         <CallbackMethod>refreshDataAction</CallbackMethod>
     </Action>
 
-    <Action id="refreshDataForDev" deviceFilter="self" uiPath="DeviceActions">
-        <Name>Refresh Data For Device</Name>
-        <CallbackMethod>refreshDataForDevAction</CallbackMethod>
-    </Action>
+
 </Actions>
