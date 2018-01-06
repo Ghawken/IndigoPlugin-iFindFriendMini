@@ -479,46 +479,53 @@ class Plugin(indigo.PluginBase):
         """
         if self.debugLevel >= 2:
             self.debugLog(u"refreshData() method called.")
-        username = self.pluginPrefs.get('appleId', '')
-        password = self.pluginPrefs.get('applePwd', '')
-        appleAPIId = self.pluginPrefs.get('appleAPIid', '')
 
-        if appleAPIId == '':
-            self.indigo.log(u'Plugin Config Not setup.  Go to Plugin Config')
-            return
+        try:
+            username = self.pluginPrefs.get('appleId', '')
+            password = self.pluginPrefs.get('applePwd', '')
+            appleAPIId = self.pluginPrefs.get('appleAPIid', '')
 
-        iLogin = self.iAuthorise(username, password)
+            if appleAPIId == '':
+                self.indigo.log(u'Plugin Config Not setup.  Go to Plugin Config')
+                return
 
-        if iLogin[0] == 1:
-            if self.debugLevel >= 2:
-                self.debugLog(u"Login to icloud Failed.")
-            return
+            iLogin = self.iAuthorise(username, password)
 
-        appleAPI = iLogin[1]
-        follower = iLogin[1].friends.locations
-
-        if self.debugLevel >= 2:
-            self.debugLog(unicode(type(follower)))
-
-        if len(follower) == 0:
-            indigo.server.log(u'No Followers Found for this Account.  Have you any friends?')
-            return
-
-        for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
-            # Check AppleID of Device
-            if dev.enabled:
-                targetFriend = dev.pluginProps['targetFriend']
+            if iLogin[0] == 1:
                 if self.debugLevel >= 2:
-                    self.debugLog(u'targetFriend of Device equals:' + unicode(targetFriend))
-                for follow in follower:
+                    self.debugLog(u"Login to icloud Failed.")
+                return
+
+            appleAPI = iLogin[1]
+            follower = iLogin[1].friends.locations
+
+            if self.debugLevel >= 2:
+                self.debugLog(unicode(type(follower)))
+
+            if len(follower) == 0:
+                indigo.server.log(u'No Followers Found for this Account.  Have you any friends?')
+                return
+
+            for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
+                # Check AppleID of Device
+                if dev.enabled:
+                    targetFriend = dev.pluginProps['targetFriend']
                     if self.debugLevel >= 2:
-                        self.debugLog (unicode(follow['id']))
-                    if follow['id'] == targetFriend:
+                        self.debugLog(u'targetFriend of Device equals:' + unicode(targetFriend))
+                    for follow in follower:
                         if self.debugLevel >= 2:
-                            self.debugLog(u'Found Target Friend in Data:  Updating Device:' + unicode(dev.name))
-                            self.debugLog(unicode(follow))
-                        self.refreshDataForDev(dev, follow)
-        return
+                            self.debugLog (unicode(follow['id']))
+                        if follow['id'] == targetFriend:
+                            if self.debugLevel >= 2:
+                                self.debugLog(u'Found Target Friend in Data:  Updating Device:' + unicode(dev.name))
+                                self.debugLog(unicode(follow))
+                            self.refreshDataForDev(dev, follow)
+            return
+
+        except Exception as e:
+            indigo.server.log(u'Error within get Data.  ?Network connection or issue.'+unicode(e))
+            return
+
 
     def refreshDataForDev(self, dev, follow):
         """ Refreshes device data. """
@@ -545,10 +552,15 @@ class Plugin(indigo.PluginBase):
                 if 'label' in label:
                     labeltouse = label['label']
                     UseLabelforState = True
+                    nonletter = '$_<>!'
+                    labeltouse = labeltouse.strip(nonletter)
+                    labeltouse = labeltouse.capitalize()
             elif isinstance(label, list):
                 labeltouse = ','.join(follow['location']['labels'])
             elif label == None:
                 labeltouse = 'nil'
+
+
 
             stateList = [
                 {'key': 'id', 'value': follow['id']},
