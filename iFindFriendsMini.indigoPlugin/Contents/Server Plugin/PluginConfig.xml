@@ -32,46 +32,44 @@
 
 
     <Field id="space4" type="label" fontColor="black" alignText="right">
-        <Label>Server Timeout:</Label>
+        <Label>Checking Frequency:</Label>
     </Field>
 
     <Field id="sep2" type="separator"/>
 
     <Field id="space5" type="label" fontSize="small" fontColor="black">
-        <Label>The amount of time that the plugin will wait for icloud to respond.</Label>
+        <Label>Minutes between rechecking Friend Devices Location.</Label>
     </Field>
 
-    <Field id="configMenuServerTimeout" type="menu" defaultValue="15" tooltip="Select preference for how long the plugin waits for the server to respond.">
+    <Field id="configMenuTimeCheck" type="menu" defaultValue="15" tooltip="Select frequency for checking Devices">
         <Label>Server Timeout:</Label>
         <List>
-            <Option value="5">5 Seconds</Option>
-            <Option value="10">10 Seconds</Option>
-            <Option value="15">15 Seconds</Option>
-            <Option value="20">20 Seconds</Option>
-            <Option value="25">25 Seconds</Option>
-            <Option value="30">30 Seconds</Option>
+            <Option value="5">5 Minutes</Option>
+            <Option value="10">10 Minutes</Option>
+            <Option value="15">15 Minutes</Option>
+            <Option value="20">20 Minutes</Option>
+            <Option value="25">25 Minutes</Option>
+            <Option value="30">30 Minutes</Option>
+            <Option value="60">60 Minutes</Option>
+            <Option value="120">2 Hours</Option>
         </List>
     </Field>
 
     <Field id="space6" type="label"/>
 
-    <Field id="space7" type="label" alignText="right">
-        <Label>Update Notification:</Label>
+    <Field id="space20" type="label" alignText="right">
+        <Label>Mapping:</Label>
     </Field>
 
-    <Field id="sep3" type="separator"/>
+    <Field id="sep24" type="separator"/>
 
-    <Field id="space8" type="label" fontSize="small">
-        <Label>Receive an email alerting you to plugin updates.</Label>
+    <Field id="space211" type="label" fontSize="small">
+        <Label>Create Google Maps with Location data present.</Label>
     </Field>
 
-    <Field id="updaterEmailsEnabled" type="checkbox" defaultValue="false" tooltip="Enables (disables) email notifications.">
+    <Field id="useMaps" type="checkbox" tooltip="Enabling will result in Map generation.  In Users/">
         <Label/>
         <Description>Enable/Disable</Description>
-    </Field>
-
-    <Field id="updaterEmail" type="textfield" tooltip="Please enter the email address to receive notifications of updates to the plugin.">
-        <Label>Email address:</Label>
     </Field>
 
     <Field id="space9" type="label"/>

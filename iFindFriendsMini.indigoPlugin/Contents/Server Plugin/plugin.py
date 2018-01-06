@@ -74,6 +74,7 @@ except ImportError:
     pass
 
 import webbrowser
+import os
 
 global accountOK
 global appleAPI
@@ -120,7 +121,7 @@ class Plugin(indigo.PluginBase):
         self.debugLevel = int(self.pluginPrefs.get('showDebugLevel', 1))
         self.logFile = u"{0}/Logs/com.GlennNZ.indigoplugin.FindFriendsMini/plugin.log".format(
             indigo.server.getInstallFolderPath())
-        self.prefServerTimeout = int(self.pluginPrefs.get('configMenuServerTimeout', "15"))
+        self.configMenuTimeCheck = int(self.pluginPrefs.get('configMenuTimeCheck', "15"))
         self.updater = indigoPluginUpdateChecker.updateChecker(self, "http://")
         self.updaterEmailsEnabled = self.pluginPrefs.get('updaterEmailsEnabled', False)
 
@@ -207,10 +208,15 @@ class Plugin(indigo.PluginBase):
         if self.debugLevel >= 2:
             self.debugLog(u"indigoPluginUpdater() method called.")
 
+        secondsbetweencheck = 60*self.configMenuTimeCheck
+
+        if self.debugLevel >= 2:
+            self.debugLog(u"secondsbetween Check Equal:"+unicode(secondsbetweencheck))
+
         while self.pluginIsShuttingDown == False:
             self.sleep(5)
             self.refreshData()
-            self.sleep(180)
+            self.sleep(secondsbetweencheck)
 
     def shutdown(self):
         """ docstring placeholder """
@@ -227,6 +233,11 @@ class Plugin(indigo.PluginBase):
             self.debugLog(u"Starting FindFriendsMini. startup() method called.")
         # Set appleAPI account as not verified on start of startup
         accountOK = False
+        MAChome = os.path.expanduser("~") + "/"
+        folderLocation = MAChome + "Documents/Indigo-iFindFriendMini/"
+        if not os.path.exists(folderLocation):
+            os.makedirs(folderLocation)
+
         appleAPIId = self.pluginPrefs.get('appleAPIid', '')
 
         if appleAPIId != '':
@@ -447,82 +458,6 @@ class Plugin(indigo.PluginBase):
         except Exception as sub_error:
             self.errorLog(u'Error cleaning dictionary keys: {0}'.format(sub_error))
 
-    def parseTheJSON(self, dev, root):
-        """
-        The parseTheJSON() method contains the steps to convert the JSON file
-        into a flat dict.
-
-        http://github.com/gmr/flatdict
-        class flatdict.FlatDict(value=None, delimiter=None, former_type=<type 'dict'>)
-        """
-
-        if self.debugLevel >= 2:
-            self.debugLog(u"parseTheJSON() method called.")
-        try:
-            parsed_simplejson = simplejson.loads(root)
-
-            if self.debugLevel >= 2:
-                self.debugLog(u"Prior to FlatDict Running JSON")
-                self.debugLog(parsed_simplejson)
-
-            ###########################
-            # ADDED BY GlennNZ 28.11.16
-            # Check if list and then flatten to allow FlatDict to work in
-            # theory!
-            #
-            # if List flattens once - with addition of No_ to the beginning
-            # (Indigo appears to not allow DeviceNames to start with Numbers)
-            # then flatDict runs - and appears to run correctly (as no longer
-            # list - dict) if isinstance(list) then will flatten list down to
-            # dict.
-
-            if isinstance(parsed_simplejson, list):
-
-                if self.debugLevel >= 2:
-                    self.debugLog(u"List Detected - Flattening to Dict")
-
-                # =============================================================
-                # Added by DaveL17 17/12/13
-                # Updates to Unicode.
-                parsed_simplejson = dict((u"No_" + unicode(i), v) for (i, v) in enumerate(parsed_simplejson))
-                # =============================================================
-
-            if self.debugLevel >= 2:
-                self.debugLog(u"After List Check, Before FlatDict Running JSON")
-
-            self.jsonRawData = flatdict.FlatDict(parsed_simplejson, delimiter='_ghostxml_')
-
-            if self.debugLevel >= 2:
-                self.debugLog(self.jsonRawData)
-
-            return self.jsonRawData
-
-        except Exception as sub_error:
-            self.errorLog(dev.name + ": " + unicode(sub_error))
-
-    def parseStateValues(self, dev):
-        """
-        The parseStateValues() method walks through the dict and assigns the
-        corresponding value to each device state.
-        """
-
-        if self.debugLevel >= 2:
-            self.debugLog(u"parseStateValues() method called.")
-
-        self.debugLog(u"Writing device states:")
-
-        sorted_list = sorted(self.finalDict.iterkeys())
-        for key in sorted_list:
-            try:
-                if self.debugLevel >= 3:
-                    self.debugLog(u"   {0} = {1}".format(key, self.finalDict[key]))
-                dev.updateStateOnServer(unicode(key), value=unicode(self.finalDict[key]))
-
-            except Exception as sub_error:
-                self.errorLog(
-                    u"Error parsing key/value pair: {0} = {1}. Reason: {2}".format(key, self.finalDict[key], sub_error))
-                dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
-                dev.updateStateOnServer('deviceIsOnline', value=True, uiValue="Error")
 
     def refreshDataAction(self, valuesDict):
         """
@@ -637,11 +572,7 @@ class Plugin(indigo.PluginBase):
 
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 
-            #drawUrl = urlGenerate(self, str(follow['location']['latitude']), str(follow['location']['longitude']), '', 600, 600, 15, dev)
-            drawUrl = urlAllGenerate(self, '',  600, 600, 15)
-            indigo.server.log(unicode(drawUrl))
-
-            webbrowser.open_new(drawUrl)
+            self.godoMapping(str(follow['location']['latitude']),str(follow['location']['longitude']),dev)
 
             return
 
@@ -652,6 +583,47 @@ class Plugin(indigo.PluginBase):
             return
 
         return
+
+    def godoMapping(self, latitude, longitude, dev):
+        if self.debugLevel >= 2:
+            self.debugLog(u"godoMapping() method called.")
+        try:
+            MAChome = os.path.expanduser("~") + "/"
+            folderLocation = MAChome + "Documents/Indigo-iFindFriendMini/"
+
+            filename = dev.name.lstrip(' ')+'_Map.jpg'
+            file = folderLocation +filename
+            #Generate single device URL
+            drawUrl = urlGenerate(self, latitude ,longitude , '', 600, 600, 15, dev)
+
+            if self.debugLevel >= 2:
+                webbrowser.open_new(drawUrl)
+
+            fileMap = "curl --output '" + file + "' --url '" + drawUrl + "'"
+            os.system(fileMap)
+
+            if self.debugLevel >= 2:
+                indigo.server.log('Saving Map...' + file)
+
+
+            filename = 'All_device.jpg'
+            file = folderLocation + filename
+            # Generate URL for All Maps
+            drawUrl = urlAllGenerate(self, '',  600, 600, 15)
+
+            fileMap = "curl --output '" + file + "' --url '" + drawUrl + "'"
+            os.system(fileMap)
+
+            if self.debugLevel >= 2:
+                indigo.server.log('Saving Map...' + file)
+
+            if self.debugLevel >= 2:
+                webbrowser.open_new(drawUrl)
+                indigo.server.log(unicode(drawUrl))
+
+        except Exception as e:
+            indigo.server.log(u'Exception within godoMapping: '+unicode(e))
+
 
     def refreshDataForDevAction(self, valuesDict):
         """
@@ -751,14 +723,14 @@ class Plugin(indigo.PluginBase):
         ################################################
         # Internal - Lists the Friends linked to an account
         try:
-
-            indigo.server.log(unicode(u'myFriendDevices Called...'))
+            if self.debugLevel >= 2:
+                self.debugLog(unicode(u'myFriendDevices Called...'))
             # try:
             # Create an array where each entry is a list - the first item is
             # the value attribute and last is the display string that will be shown
             # Devices filtered on the chosen account
 
-            indigo.server.log(unicode(valuesDict))
+            #indigo.server.log(unicode(valuesDict))
             iFriendArray = []
             username = self.pluginPrefs.get('appleId', '')
             password = self.pluginPrefs.get('applePwd', '')
@@ -785,7 +757,7 @@ class Plugin(indigo.PluginBase):
                 # indigo.server.log(unicode(fol['invitationFromEmail']))
 
                 iOption2 = fol['id'], fol['invitationFromEmail']
-                indigo.server.log(unicode(iOption2))
+                #indigo.server.log(unicode(iOption2))
                 iFriendArray.append(iOption2)
             return iFriendArray
 
@@ -805,14 +777,14 @@ class Plugin(indigo.PluginBase):
 
             if self.debugLevel > 2:
                 indigo.server.log(u'Login successful...')
-                indigo.server.log(u'appleAPI: Here we are 1.1 **************************:')
+                #indigo.server.log(u'appleAPI: Here we are 1.1 **************************:')
                 # indigo.server.log(unicode(type(appleAPI)))
                 # indigo.server.log(unicode(appleAPI.devices))
                 # indigo.server.log(unicode(appleAPI.friends.details))
-                indigo.server.log(unicode(appleAPI.friends.locations))
+                #indigo.server.log(unicode(appleAPI.friends.locations))
                 # indigo.server.log(unicode(type(appleAPI.friends.locations)))
                 # indigo.server.log(unicode(type(appleAPI.friends.data)))
-                indigo.server.log(unicode(appleAPI.friends.data['followers']))
+                #indigo.server.log(unicode(appleAPI.friends.data['followers']))
                 # follower = appleAPI.friends.data['followers']
                 # for fol in follower:
                 #   indigo.server.log(unicode(fol['id']))
