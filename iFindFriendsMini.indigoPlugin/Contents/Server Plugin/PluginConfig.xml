@@ -1,0 +1,104 @@
+<?xml version="1.0"?>
+<PluginConfig>
+
+    <Field id="infoLabel0" type="label" fontColor="black">
+        <Label>FindFriendsMini Plugin</Label>
+    </Field>
+
+    <Field id="space0" type="label" fontColor="black" fontSize="small">
+        <Label>Developed by: GlennNZ</Label>
+    </Field>
+
+			<Field id="appleId"
+				   type="textfield"
+				   tooltip="Enter the Apple Account Id"
+				   default="enterAppleId">
+				<Label>Enter the device Apple Account Id:</Label>
+			</Field>
+			<Field id="applePwd"
+				   type="textfield"
+				   tooltip="Enter your Apple Account Password"
+				   default=""
+				   secure = "True">
+				<Label>Enter your Apple Account Password:</Label>
+			</Field>
+			<Field id="appleAPIid"
+				   type="textfield"
+				   tooltip="Is this account active?"
+				   default="True"
+                   hidden ='True'>
+				<Label>Apple Account ID:</Label>
+			</Field>
+
+
+    <Field id="space4" type="label" fontColor="black" alignText="right">
+        <Label>Server Timeout:</Label>
+    </Field>
+
+    <Field id="sep2" type="separator"/>
+
+    <Field id="space5" type="label" fontSize="small" fontColor="black">
+        <Label>The amount of time that the plugin will wait for icloud to respond.</Label>
+    </Field>
+
+    <Field id="configMenuServerTimeout" type="menu" defaultValue="15" tooltip="Select preference for how long the plugin waits for the server to respond.">
+        <Label>Server Timeout:</Label>
+        <List>
+            <Option value="5">5 Seconds</Option>
+            <Option value="10">10 Seconds</Option>
+            <Option value="15">15 Seconds</Option>
+            <Option value="20">20 Seconds</Option>
+            <Option value="25">25 Seconds</Option>
+            <Option value="30">30 Seconds</Option>
+        </List>
+    </Field>
+
+    <Field id="space6" type="label"/>
+
+    <Field id="space7" type="label" alignText="right">
+        <Label>Update Notification:</Label>
+    </Field>
+
+    <Field id="sep3" type="separator"/>
+
+    <Field id="space8" type="label" fontSize="small">
+        <Label>Receive an email alerting you to plugin updates.</Label>
+    </Field>
+
+    <Field id="updaterEmailsEnabled" type="checkbox" defaultValue="false" tooltip="Enables (disables) email notifications.">
+        <Label/>
+        <Description>Enable/Disable</Description>
+    </Field>
+
+    <Field id="updaterEmail" type="textfield" tooltip="Please enter the email address to receive notifications of updates to the plugin.">
+        <Label>Email address:</Label>
+    </Field>
+
+    <Field id="space9" type="label"/>
+
+    <Field id="space10" type="label" alignText="right">
+        <Label>Debugging:</Label>
+    </Field>
+
+    <Field id="sep4" type="separator"/>
+
+    <Field id="space11" type="label" fontSize="small">
+        <Label>Turn on debugging only when needed. Be careful when posting the output to the forums or other public places as it could expose sensitive information.</Label>
+    </Field>
+
+    <Field id="showDebugInfo" type="checkbox" tooltip="Enabling will result in verbose logging.">
+        <Label/>
+        <Description>Enable/Disable</Description>
+    </Field>
+
+    <Field id="showDebugLevel" type="menu" defaultValue="1" tooltip="Controls the amount of debug information written to the log.">
+        <Label>Debug level:</Label>
+        <Description>Enable/Disable</Description>
+        <List>
+            <Option value="1">Low</Option>
+            <Option value="2">Medium</Option>
+            <Option value="3">High</Option>
+        </List>
+    </Field>
+
+</PluginConfig>

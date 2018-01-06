@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<MenuItems>
+
+    <MenuItem id="killAllComms">
+        <Name>Disable All Devices</Name>
+        <CallbackMethod>killAllComms</CallbackMethod>
+    </MenuItem>
+
+    <MenuItem id="unkillAllComms">
+        <Name>Enable All Devices</Name>
+        <CallbackMethod>unkillAllComms</CallbackMethod>
+    </MenuItem>
+
+    <MenuItem id="titleSeparator" type="separator"/>
+
+    <MenuItem id="checkForUpdates">
+        <Name>Check for Plugin Updates</Name>
+        <CallbackMethod>checkVersionNow</CallbackMethod>
+    </MenuItem>
+
+    <MenuItem id="refreshData">
+        <Name>Refresh Data Now</Name>
+        <CallbackMethod>refreshData</CallbackMethod>
+    </MenuItem>
+
+    <MenuItem id="toggleDebug">
+        <Name>Toggle Debugging</Name>
+        <CallbackMethod>toggleDebugEnabled</CallbackMethod>
+    </MenuItem>
+
+</MenuItems>

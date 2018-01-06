@@ -1,0 +1,127 @@
+<?xml version="1.0"?>
+
+<Devices>
+
+
+    <Device type="custom" id="FindFriendsFriend" >
+        <Name>FindFriends Device</Name>
+
+        <ConfigUI>
+  			<Field id="autoLabela22"
+				   type="label"
+				   fontSize="small"
+				   fontColor="blue">
+				<Label>Select the FindmyFriends Friend</Label>
+			</Field>
+			<Field id="targetFriend" type="menu">
+				<Label>Friend Following?</Label>
+				<List class="self" filter='' method = "myFriendDevices" dynamicReload="true" />
+			</Field>
+
+
+			<Field id="friendName"
+				   type="textfield"
+				   tooltip="Enter a unique name for this device"
+				   default="">
+				<Label>Unique Friend Name?</Label>
+			</Field>
+            <Field id="appleFriendID"
+				   type="textfield"
+				   tooltip="Apple API ID"
+                   hidden = 'True'
+				   default="">
+			</Field>
+
+
+        </ConfigUI>
+
+        <States>
+            <State id="deviceIsOnline">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Device online?</TriggerLabel>
+                <ControlPageLabel>Device online?</ControlPageLabel>
+            </State>
+
+            <State id="deviceLastUpdated">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Device Last Updated</TriggerLabel>
+                <ControlPageLabel>Device Last Updated</ControlPageLabel>
+            </State>
+            <State id="deviceTimestamp">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Device Timestamp</TriggerLabel>
+                <ControlPageLabel>Device Timestamp</ControlPageLabel>
+            </State>
+
+
+            <State id="id">
+                <ValueType>String</ValueType>
+                <TriggerLabel>FriendID</TriggerLabel>
+                <ControlPageLabel>FriendID</ControlPageLabel>
+            </State>
+            <State id="status">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="locationStatus">
+                <ValueType>String</ValueType>
+                <TriggerLabel>locationStatus</TriggerLabel>
+                <ControlPageLabel>locationStatus</ControlPageLabel>
+            </State>
+            <State id="batteryStatus">
+                <ValueType>String</ValueType>
+                <TriggerLabel>BatteryStatus</TriggerLabel>
+                <ControlPageLabel>BatteryStatus</ControlPageLabel>
+            </State>
+            <State id="locationTimestamp">
+                <ValueType>String</ValueType>
+                <TriggerLabel>locationTimeStamp</TriggerLabel>
+                <ControlPageLabel>locationTimeStamp</ControlPageLabel>
+            </State>
+            <State id="timestamp">
+                <ValueType>String</ValueType>
+                <TriggerLabel>timestamp</TriggerLabel>
+                <ControlPageLabel>timestamp</ControlPageLabel>
+            </State>
+            <State id="altitude">
+                <ValueType>String</ValueType>
+                <TriggerLabel>altitude</TriggerLabel>
+                <ControlPageLabel>altitude</ControlPageLabel>
+            </State>
+            <State id="labels">
+                <ValueType>String</ValueType>
+                <TriggerLabel>labels</TriggerLabel>
+                <ControlPageLabel>labels</ControlPageLabel>
+            </State>
+            <State id="longitude">
+                <ValueType>String</ValueType>
+                <TriggerLabel>longitude</TriggerLabel>
+                <ControlPageLabel>longitude</ControlPageLabel>
+            </State>
+            <State id="horizontalAccuracy">
+                <ValueType>String</ValueType>
+                <TriggerLabel>horizontalAccuracy</TriggerLabel>
+                <ControlPageLabel>horizontalAccuracy</ControlPageLabel>
+            </State>
+            <State id="address">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Address</TriggerLabel>
+                <ControlPageLabel>Address</ControlPageLabel>
+            </State>
+            <State id="latitude">
+                <ValueType>String</ValueType>
+                <TriggerLabel>latitude</TriggerLabel>
+                <ControlPageLabel>latitude</ControlPageLabel>
+            </State>
+
+
+
+
+        </States>
+
+        <UiDisplayStateId>deviceIsOnline</UiDisplayStateId>
+
+    </Device>
+
+</Devices>
