@@ -44,14 +44,14 @@ except:
 
 # Now the HTTP and Compatibility libraries
 try:
-    import six
+   # import six
     import requests
 
 except:
-    indigo.server.log("Note: requests.py and six.py must be installed for this plugin to operate.  See the forum")
+    indigo.server.log("Note: requests.py must be installed for this plugin to operate.  See the forum")
     indigo.server.log(
-        "Alternatively - check the name of the plugin in the Plugins folder.  Is is iFindFirends.pluginIndigo"
-        "or iFindFriends(1).pluginIndigo?  Make sure that all iFindStuff files are deleted from Downloads"
+        "Alternatively - check the name of the plugin in the Plugins folder.  Is is FindFirends.pluginIndigo"
+        "or FindFriends(1).pluginIndigo?  Make sure that all iFindStuff files are deleted from Downloads"
         "before downloading the latest versions")
 
 # Now the html mapping libraries - note that these have also been modified to allow custom icons
@@ -456,7 +456,7 @@ class Plugin(indigo.PluginBase):
 
         if self.debugLevel >= 2:
             self.debugLog(u"refreshDataAction() method called.")
-        self.refreshData(self)
+        self.refreshData()
         return True
 
     def refreshData(self):
