@@ -4,6 +4,4 @@
         <Name>Refresh Data For All Friends</Name>
         <CallbackMethod>refreshDataAction</CallbackMethod>
     </Action>
-
-
 </Actions>

@@ -363,21 +363,7 @@ class Plugin(indigo.PluginBase):
         except Exception as sub_error:
             self.errorLog(u"Update checker error: {0}".format(sub_error))
 
-    def killAllComms(self):
-        """
-        killAllComms() sets the enabled status of all plugin devices to false.
-        """
 
-        if self.debugLevel >= 2:
-            self.debugLog(u"killAllComms() method called.")
-
-    def unkillAllComms(self):
-        """
-        unkillAllComms() sets the enabled status of all plugin devices to true.
-        """
-
-        if self.debugLevel >= 2:
-            self.debugLog(u"unkillAllComms() method called.")
 
     def fixErrorState(self, dev):
         """
@@ -537,6 +523,12 @@ class Plugin(indigo.PluginBase):
             if self.debugLevel >= 2:
                 self.debugLog(
                 unicode('Now updating Data for : ' + unicode(dev.name) + ' with data received: ' + unicode(follow)))
+
+#
+#
+# Manage Labels provided by icloud data set
+#
+#
             UseLabelforState = False
             # Deal with Label Dict either Dict or None
             labels = follow['location']['labels']
@@ -559,9 +551,9 @@ class Plugin(indigo.PluginBase):
                 labeltouse = ','.join(follow['location']['labels'])
             elif label == None:
                 labeltouse = 'nil'
-
-
-
+#
+#   Create stateList ? need better checking that exists
+#
             stateList = [
                 {'key': 'id', 'value': follow['id']},
                 {'key': 'status', 'value': follow['status']},
@@ -597,6 +589,7 @@ class Plugin(indigo.PluginBase):
 
         except Exception as e:
             indigo.server.log(unicode('Exception in refreshDataforDev: ' + unicode(e)))
+            indigo.server.log(unicode('Possibility missing some data from icloud:  Is your account setup with FindFriends enabled on iOS/Mobile device?'))
             dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             return
@@ -657,70 +650,6 @@ class Plugin(indigo.PluginBase):
 
         return True
 
-    def stopSleep(self, start_sleep):
-        """
-        The stopSleep() method accounts for changes to the user upload
-        interval preference. The plugin checks every 2 seconds to see if the
-        sleep interval should be updated.
-        """
-
-        if self.debugLevel >= 2:
-            self.debugLog(u"stopSleep() method called.")
-
-        total_sleep = float(self.pluginPrefs.get('configMenuUploadInterval', 300))
-
-        if t.time() - start_sleep > total_sleep:
-            return True
-
-        return False
-
-    def stripNamespace(self, dev, root):
-        """
-        The stripNamespace() method strips any XML namespace values, and loads
-        into self.rawData.
-        """
-
-        if self.debugLevel >= 2:
-            self.debugLog(u"stripNamespace() method called.")
-
-    def timeToUpdate(self, dev):
-        """
-        Returns True if the device is ready to be updated, else returns False.
-        """
-
-        # We don't make a log entry when this method is called because it's called every 2 seconds.
-
-        # If device has a deviceTimestamp key and is enabled.
-        if "deviceTimestamp" in dev.states.iterkeys() and dev.enabled:  # Added dev.enabled test - DaveL17 17/09/18
-
-            # If the device timestamp is an empty string, set it to a valid value.
-            if dev.states["deviceTimestamp"] == "":
-                self.fixErrorState(dev)
-
-            # If the refresh frequency is zero, the device is a manual only refresh.
-            if int(dev.pluginProps.get("refreshFreq", 300)) == 0:
-                self.debugLog(
-                    u"    Refresh frequency: {0} (Manual refresh only)".format(dev.pluginProps["refreshFreq"]))
-                return False
-
-            # If the refresh frequency is not zero, test to see if the device is ready for a refresh.
-            else:
-                t_since_upd = int(t.time() - float(dev.states["deviceTimestamp"]))
-
-                # If it's time for the device to be updated.
-                if int(t_since_upd) > int(dev.pluginProps.get("refreshFreq", 300)):
-                    self.debugLog(
-                        u"Time since update ({0}) is greater than configured frequency ({1})".format(t_since_upd,
-                                                                                                     dev.pluginProps[
-                                                                                                         "refreshFreq"]))
-                    return True
-
-                # If it's not time for the device to be updated.
-                return False
-
-        # If the device does not have a timestamp key and/or is disabled.
-        else:
-            return False
 
     def toggleDebugEnabled(self):
         """ Toggle debug on/off. """
@@ -826,6 +755,7 @@ class Plugin(indigo.PluginBase):
 
 def urlGenerate(self, latitude, longitude, mapAPIKey, iHorizontal, iVertical, iZoom, dev=0):
     ################################################
+    # Modified by FindiStuff
     # Routine generate a Static Google Maps HTML URL request
     # for a single device
     # Map size is based on the zoom parameter passed or defaults to level 15 (street names)
@@ -883,6 +813,7 @@ def urlGenerate(self, latitude, longitude, mapAPIKey, iHorizontal, iVertical, iZ
 def urlAllGenerate(self, mapAPIKey, iHorizontal, iVertical, iZoom):
 
     ################################################
+    # from FindiStuff
     # Routine generate a Static Google Maps HTML URL request
     # for all devices
     # Map size is automatically calculated based on the two furthest points (devices and/or geofences)

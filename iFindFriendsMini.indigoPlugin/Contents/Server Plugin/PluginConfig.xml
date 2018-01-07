@@ -42,7 +42,7 @@
     </Field>
 
     <Field id="configMenuTimeCheck" type="menu" defaultValue="15" tooltip="Select frequency for checking Devices">
-        <Label>Server Timeout:</Label>
+        <Label>Time for Updates:</Label>
         <List>
             <Option value="5">5 Minutes</Option>
             <Option value="10">10 Minutes</Option>
