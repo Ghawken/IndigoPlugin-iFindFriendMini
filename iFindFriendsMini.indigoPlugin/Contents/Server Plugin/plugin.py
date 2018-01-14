@@ -75,7 +75,7 @@ except ImportError:
 
 import webbrowser
 import os
-
+import locale
 global accountOK
 global appleAPI
 
@@ -87,7 +87,7 @@ __build__ = u""
 __copyright__ = u"There is no copyright for the code base."
 __license__ = u"MIT"
 __title__ = u"FindFriendsMini Plugin for Indigo Home Control"
-__version__ = u"0.0.1"
+__version__ = u"0.0.6"
 
 # Establish default plugin prefs; create them if they don't already exist.
 kDefaultPluginPrefs = {
@@ -149,6 +149,18 @@ class Plugin(indigo.PluginBase):
         #     pydevd.settrace('localhost', port=5678, stdoutToServer=True, stderrToServer=True, suspend=False)
         # except:
         #     pass
+
+        #set locale here for current date/times
+
+        try:
+            if self.debugLevel >= 2:
+                self.debugLog(u"Setting Locale called.")
+            #set locale to user default locale
+            locale.setlocale(locale.LC_ALL, 'C')
+
+        except Exception as e:
+            if self.debugLevel >= 2:
+                self.debugLog(u"Exception in Setting Locale:"+unicode(e))
 
         self.pluginIsInitializing = False
 
@@ -364,89 +376,12 @@ class Plugin(indigo.PluginBase):
             self.errorLog(u"Update checker error: {0}".format(sub_error))
 
 
-
-    def fixErrorState(self, dev):
-        """
-        If the 'deviceLastUpdated' state is an empty string, populate the state
-        with a valid timestamp.
-        """
-
-        if self.debugLevel >= 2:
-            self.debugLog(u"fixErrorState() method called.")
-        return
-
     def getTheData(self):
         """ The getTheData() method is used to retrieve target data files. """
         if self.debugLevel >= 2:
             self.debugLog(u"gettheData() method called.  Not in use.  Refresh instead")
 
         return
-
-    def cleanTheKeys(self, input_data):
-        """
-        Some dictionaries may have keys that contain problematic characters
-        which Indigo doesn't like as state names. Let's get those characters
-        out of there.
-        """
-
-        if self.debugLevel >= 2:
-            self.debugLog(u"cleanTheKeys() method called.")
-
-        try:
-            ###########################
-            # Added by DaveL17 on 16/11/25.
-            # Some characters need to be replaced with a valid replacement
-            # value because simply deleting them could cause problems. Add
-            # additional k/v pairs to chars_to_replace as needed.
-
-            ###########################
-            # ADDED BY GlennNZ 28.11.16
-            # add true for True and false for False exchanges
-
-            chars_to_replace = {'_ghostxml_': '_', '+': '_plus_', '-': '_minus_', 'true': 'True', 'false': 'False'}
-            chars_to_replace = dict((re.escape(k), v) for k, v in chars_to_replace.iteritems())
-            pattern = re.compile("|".join(chars_to_replace.keys()))
-
-            for key in input_data.iterkeys():
-                new_key = pattern.sub(lambda m: chars_to_replace[re.escape(m.group(0))], key)
-                input_data[new_key] = input_data.pop(key)
-
-            # Some characters can simply be eliminated. If something here
-            # causes problems, remove the element from the set and add it to
-            # the replacement dict above.
-            chars_to_remove = {'/', '(', ')'}
-
-            for key in input_data.iterkeys():
-                new_key = ''.join([c for c in key if c not in chars_to_remove])
-                input_data[new_key] = input_data.pop(key)
-
-            ###########################
-            # Added by DaveL17 on 16/11/28.
-            # Indigo will not accept device state names that begin with a
-            # number, so inspect them and prepend any with the string "No_" to
-            # force them to something that Indigo will accept.
-            temp_dict = {}
-
-            for key in input_data.keys():
-                if key[0].isdigit():
-                    temp_dict[u'No_{0}'.format(key)] = input_data[key]
-                else:
-                    temp_dict[key] = input_data[key]
-
-            input_data = temp_dict
-
-            self.jsonRawData = input_data
-
-            ###########################
-            # ADDED BY GlennNZ 28.11.16
-            # More debug
-            if self.debugLevel >= 2:
-                self.debugLog("cleanTheKeys result:")
-                self.debugLog(self.jsonRawData)
-
-        except Exception as sub_error:
-            self.errorLog(u'Error cleaning dictionary keys: {0}'.format(sub_error))
-
 
     def refreshDataAction(self, valuesDict):
         """
@@ -572,7 +507,11 @@ class Plugin(indigo.PluginBase):
                 self.debugLog(unicode(stateList))
             dev.updateStatesOnServer(stateList)
 
-            update_time = t.strftime("%m/%d/%Y at %H:%M")
+            #update_time = t.strftime("%m/%d/%Y at %H:%M")
+            # Change to Locale specific
+            #update_time = t.strftime('%c')
+            update_time = t.strftime('%x')+' '+t.strftime('%X')
+
             dev.updateStateOnServer('deviceLastUpdated', value=update_time)
             dev.updateStateOnServer('deviceTimestamp', value=t.time())
 
