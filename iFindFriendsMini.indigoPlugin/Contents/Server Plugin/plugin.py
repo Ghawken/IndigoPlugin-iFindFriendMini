@@ -150,17 +150,7 @@ class Plugin(indigo.PluginBase):
         # except:
         #     pass
 
-        #set locale here for current date/times
 
-        try:
-            if self.debugLevel >= 2:
-                self.debugLog(u"Setting Locale called.")
-            #set locale to user default locale
-            locale.setlocale(locale.LC_ALL, 'C')
-
-        except Exception as e:
-            if self.debugLevel >= 2:
-                self.debugLog(u"Exception in Setting Locale:"+unicode(e))
 
         self.pluginIsInitializing = False
 
@@ -244,8 +234,23 @@ class Plugin(indigo.PluginBase):
     def startup(self):
         """ docstring placeholder """
 
+
+
         if self.debugLevel >= 2:
             self.debugLog(u"Starting FindFriendsMini. startup() method called.")
+
+        #set locale here for current date/times
+
+        try:
+            if self.debugLevel >= 2:
+                self.debugLog(u"Setting Locale called.")
+            #set locale to user default locale
+            locale.setlocale(locale.LC_ALL, '')
+
+        except Exception as e:
+            if self.debugLevel >= 2:
+                self.debugLog(u"Exception in Setting Locale:"+unicode(e))
+
         # Set appleAPI account as not verified on start of startup
         accountOK = False
         MAChome = os.path.expanduser("~") + "/"
@@ -510,6 +515,7 @@ class Plugin(indigo.PluginBase):
             #update_time = t.strftime("%m/%d/%Y at %H:%M")
             # Change to Locale specific
             #update_time = t.strftime('%c')
+
             update_time = t.strftime('%x')+' '+t.strftime('%X')
 
             dev.updateStateOnServer('deviceLastUpdated', value=update_time)
