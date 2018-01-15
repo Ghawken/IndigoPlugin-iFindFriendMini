@@ -94,6 +94,11 @@
 
     <Field id="space9" type="label"/>
 
+       <Field id="datetimeFormat" type="textfield" tooltip="Date Time Format" defaultValue="">
+     <Label>Enter DateTime Format:</Label><Label/>
+     <Description>Format for datetime LastUpdate field eg. %c </Description>
+    </Field>
+
     <Field id="space10" type="label" alignText="right">
         <Label>Debugging:</Label>
     </Field>

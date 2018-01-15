@@ -12,17 +12,26 @@ Enormously based on FindiStuff by Chameleon and GhostXML by DaveL17
 """
 
 # Stock imports
+
+
+try:
+    import locale
+    locale.setlocale(locale.LC_ALL, '')
+except Exception as e:
+    pass
+    #o.server.log(u'error in import locales')
+
 import datetime
-from Queue import Queue
-import re
-import simplejson
-import subprocess
+#from Queue import Queue
+##import re
+#import simplejson
+#import subprocess
 import sys
-import threading
+#import threading
 import time as t
 
 # Third-party imports
-import flatdict  # https://github.com/gmr/flatdict
+#import flatdict  # https://github.com/gmr/flatdict
 import indigoPluginUpdateChecker
 
 try:
@@ -75,7 +84,9 @@ except ImportError:
 
 import webbrowser
 import os
-import locale
+
+
+
 global accountOK
 global appleAPI
 
@@ -128,9 +139,10 @@ class Plugin(indigo.PluginBase):
         self.configVerticalMap = self.pluginPrefs.get('verticalMap', "600")
         self.configHorizontalMap = self.pluginPrefs.get('horizontalMap', "600")
         self.configZoomMap = self.pluginPrefs.get('ZoomMap', "15")
-
+        self.datetimeFormat = self.pluginPrefs.get('datetimeFormat','%c')
         self.googleAPI = self.pluginPrefs.get('googleAPI','')
         self.deviceNeedsUpdated = ''
+
 
 
         # Convert old debugLevel scale to new scale if needed.
@@ -234,22 +246,12 @@ class Plugin(indigo.PluginBase):
     def startup(self):
         """ docstring placeholder """
 
-
-
         if self.debugLevel >= 2:
             self.debugLog(u"Starting FindFriendsMini. startup() method called.")
 
         #set locale here for current date/times
 
-        try:
-            if self.debugLevel >= 2:
-                self.debugLog(u"Setting Locale called.")
-            #set locale to user default locale
-            locale.setlocale(locale.LC_ALL, '')
 
-        except Exception as e:
-            if self.debugLevel >= 2:
-                self.debugLog(u"Exception in Setting Locale:"+unicode(e))
 
         # Set appleAPI account as not verified on start of startup
         accountOK = False
@@ -494,6 +496,17 @@ class Plugin(indigo.PluginBase):
 #
 #   Create stateList ? need better checking that exists
 #
+
+            address =""
+            if 'formattedAddressLines' in follow['location']['address']:
+                address = ','.join(follow['location']['address']['formattedAddressLines'])
+            elif 'address' in follow['location']:
+                if 'streetAddress' in follow['location']['address']:
+                    address = follow['location']['address']['streetAddress']
+                if 'locality' in follow['location']['address']:
+                    address = address + ' '+ follow['location']['address']['locality']
+
+
             stateList = [
                 {'key': 'id', 'value': follow['id']},
                 {'key': 'status', 'value': follow['status']},
@@ -505,7 +518,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'labels', 'value': labeltouse},
                 {'key': 'longitude', 'value': follow['location']['longitude']},
                 {'key': 'horizontalAccuracy', 'value': follow['location']['horizontalAccuracy']},
-                {'key': 'address', 'value': ','.join(follow['location']['address']['formattedAddressLines'])},
+                {'key': 'address', 'value': address},
                 {'key': 'latitude', 'value': follow['location']['latitude']},
             ]
             if self.debugLevel >= 2:
@@ -516,9 +529,10 @@ class Plugin(indigo.PluginBase):
             # Change to Locale specific
             #update_time = t.strftime('%c')
 
-            update_time = t.strftime('%x')+' '+t.strftime('%X')
 
-            dev.updateStateOnServer('deviceLastUpdated', value=update_time)
+            update_time = t.strftime(self.datetimeFormat)
+
+            dev.updateStateOnServer('deviceLastUpdated', value=str(update_time))
             dev.updateStateOnServer('deviceTimestamp', value=t.time())
 
             if UseLabelforState:
@@ -610,6 +624,7 @@ class Plugin(indigo.PluginBase):
 
         else:
             self.debug = False
+            self.debugLevel = 1
             self.pluginPrefs['showDebugInfo'] = False
             indigo.server.log(u"Debugging off.")
 
