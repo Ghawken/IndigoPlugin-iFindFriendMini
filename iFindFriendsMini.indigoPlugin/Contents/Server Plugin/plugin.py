@@ -32,7 +32,8 @@ import time as t
 
 # Third-party imports
 #import flatdict  # https://github.com/gmr/flatdict
-import indigoPluginUpdateChecker
+#import indigoPluginUpdateChecker
+
 
 try:
     import indigo
@@ -64,10 +65,11 @@ except:
         "before downloading the latest versions")
 
 # Now the html mapping libraries - note that these have also been modified to allow custom icons
-try:
-    from pygmaps.pygmaps import maps
-except:
-    indigo.server.log("pygmaps.py error - No Map functionality availiable - contact Developer")
+
+#try:
+#    from pygmaps.pygmaps import maps
+#except:
+#    indigo.server.log("pygmaps.py error - No Map functionality availiable - contact Developer")
 
 # Date and time libraries
 import time
@@ -85,7 +87,7 @@ except ImportError:
 import webbrowser
 import os
 
-
+from ghpu import GitHubPluginUpdater
 
 global accountOK
 global appleAPI
@@ -98,7 +100,7 @@ __build__ = u""
 __copyright__ = u"There is no copyright for the code base."
 __license__ = u"MIT"
 __title__ = u"FindFriendsMini Plugin for Indigo Home Control"
-__version__ = u"0.0.6"
+__version__ = u"0.0.8"
 
 # Establish default plugin prefs; create them if they don't already exist.
 kDefaultPluginPrefs = {
@@ -133,8 +135,12 @@ class Plugin(indigo.PluginBase):
         self.logFile = u"{0}/Logs/com.GlennNZ.indigoplugin.FindFriendsMini/plugin.log".format(
             indigo.server.getInstallFolderPath())
         self.configMenuTimeCheck = int(self.pluginPrefs.get('configMenuTimeCheck', "15"))
-        self.updater = indigoPluginUpdateChecker.updateChecker(self, "http://")
+        #self.updater = indigoPluginUpdateChecker.updateChecker(self, "http://")
         self.updaterEmailsEnabled = self.pluginPrefs.get('updaterEmailsEnabled', False)
+
+# No PluginConfig.xml Option Default to 24 hours
+        self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
+        self.next_update_check = time.time()
 
         self.configVerticalMap = self.pluginPrefs.get('verticalMap', "600")
         self.configHorizontalMap = self.pluginPrefs.get('horizontalMap', "600")
@@ -155,16 +161,20 @@ class Plugin(indigo.PluginBase):
             else:
                 self.pluginPrefs['showDebugLevel'] = 1
 
-        # Adding support for remote debugging in PyCharm. Other remote
-        # debugging facilities can be added, but only one can be run at a time.
-        # try:
-        #     pydevd.settrace('localhost', port=5678, stdoutToServer=True, stderrToServer=True, suspend=False)
-        # except:
-        #     pass
-
-
-
         self.pluginIsInitializing = False
+    ###
+    ###  Update ghpu Routines.
+
+    def checkForUpdates(self):
+        self.updater.checkForUpdate()
+
+    def updatePlugin(self):
+        self.updater.update()
+
+    def forceUpdate(self):
+        self.updater.update(currentVersion='0.0.0')
+
+    #####
 
     def __del__(self):
         """ docstring placeholder """
@@ -186,7 +196,9 @@ class Plugin(indigo.PluginBase):
         if not userCancelled:
             self.debug = valuesDict.get('showDebugInfo', False)
             self.debugLevel = int(self.pluginPrefs.get('showDebugLevel', "1"))
+            self.datetimeFormat = self.pluginPrefs.get('datetimeFormat', '%c')
             self.debugLog(u"User prefs saved.")
+
 
             if self.debug:
                 indigo.server.log(u"Debugging on (Level: {0})".format(self.debugLevel))
@@ -204,6 +216,8 @@ class Plugin(indigo.PluginBase):
         if self.debugLevel >= 2:
             self.debugLog(u"deviceStartComm() method called.")
         self.debugLog(u"Starting FindFriendsMini device: {0}".format(dev.name))
+
+        # Update statelist in case any updates/changes
         dev.stateListOrDisplayStateIdChanged()
         dev.updateStateOnServer('deviceIsOnline', value=True, uiValue="Waiting")
 
@@ -212,6 +226,7 @@ class Plugin(indigo.PluginBase):
 
         if self.debugLevel >= 2:
             self.debugLog(u"deviceStopComm() method called.")
+
         self.debugLog(u"Stopping FindFriendsMini device: {0}".format(dev.name))
 
         dev.updateStateOnServer('deviceIsOnline', value=False, uiValue="Disabled")
@@ -223,7 +238,7 @@ class Plugin(indigo.PluginBase):
         """ docstring placeholder """
 
         if self.debugLevel >= 2:
-            self.debugLog(u"indigoPluginUpdater() method called.")
+            self.debugLog(u"ronConCurrentThread() method called.")
 
         secondsbetweencheck = 60*self.configMenuTimeCheck
 
@@ -231,6 +246,15 @@ class Plugin(indigo.PluginBase):
             self.debugLog(u"secondsbetween Check Equal:"+unicode(secondsbetweencheck))
 
         while self.pluginIsShuttingDown == False:
+            if self.updateFrequency > 0:
+                if time.time() > self.next_update_check:
+                    try:
+                        self.updater.checkForUpdate()
+                        self.next_update_check = time.time() + self.updateFrequency
+                    except:
+                        self.logger.debug(u'Error checking for update - ? No Internet.  Checking again in 24 hours')
+                        self.next_update_check = self.next_update_check + 86400;
+
             self.sleep(5)
             self.refreshData()
             self.sleep(secondsbetweencheck)
@@ -249,8 +273,7 @@ class Plugin(indigo.PluginBase):
         if self.debugLevel >= 2:
             self.debugLog(u"Starting FindFriendsMini. startup() method called.")
 
-        #set locale here for current date/times
-
+        self.updater = GitHubPluginUpdater(self)
 
 
         # Set appleAPI account as not verified on start of startup
@@ -272,11 +295,6 @@ class Plugin(indigo.PluginBase):
         if appleAPI[0] == 1:
             if self.debugLevel >= 2:
                 self.debugLog(u"Login to icloud Failed.")
-
-        try:
-            self.updater.checkVersionPoll()
-        except Exception as sub_error:
-            self.errorLog(u"Update checker error: {0}".format(sub_error))
 
     def validateDeviceConfigUi(self, valuesDict, typeID, devId):
         """ Validate select device config menu settings. """
@@ -367,20 +385,6 @@ class Plugin(indigo.PluginBase):
                 return (False, valuesDict, errorDict)
 
         return True, valuesDict
-
-    def checkVersionNow(self):
-        """
-        The checkVersionNow() method is called if user selects "Check For
-        Plugin Updates..." Indigo menu item.
-        """
-
-        if self.debugLevel >= 2:
-            self.debugLog(u"checkVersionNow() method called.")
-
-        try:
-            self.updater.checkVersionNow()
-        except Exception as sub_error:
-            self.errorLog(u"Update checker error: {0}".format(sub_error))
 
 
     def getTheData(self):
@@ -525,10 +529,9 @@ class Plugin(indigo.PluginBase):
                 self.debugLog(unicode(stateList))
             dev.updateStatesOnServer(stateList)
 
-            #update_time = t.strftime("%m/%d/%Y at %H:%M")
-            # Change to Locale specific
-            #update_time = t.strftime('%c')
 
+# Change to strftime user selectable date for DeviceLastUpdate field
+# Is Plugin config selectable
 
             update_time = t.strftime(self.datetimeFormat)
 

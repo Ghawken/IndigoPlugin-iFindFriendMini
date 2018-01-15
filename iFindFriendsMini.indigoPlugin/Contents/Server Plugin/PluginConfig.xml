@@ -91,8 +91,18 @@
      <Label>Enter Google API Here:</Label><Label/>
      <Description>Google API Key for Mapping</Description>
     </Field>
+    <Field id="space210" type="label" alignText="right">
+        <Label>Date/Time format:</Label>
+    </Field>
+    <Field id="sep44" type="separator"/>
 
-    <Field id="space9" type="label"/>
+        <Field id="space2221" type="label" fontSize="small">
+        <Label>Date/Time format of lastUpdate field.  In format strftime.  See. strftime.org for more options
+            eg  %c  == Mon Jan 15 16:50:59 2018
+            eg.  %b %d %Y %H:%M:%S == Feb 18 2009 00:03:38
+            eg. %a %d %b %-I:%M %p == Mon 15 Jan 4:57 PM
+        </Label>
+    </Field>
 
        <Field id="datetimeFormat" type="textfield" tooltip="Date Time Format" defaultValue="">
      <Label>Enter DateTime Format:</Label><Label/>
