@@ -27,6 +27,7 @@ import datetime
 #import simplejson
 #import subprocess
 import sys
+import math
 #import threading
 import time as t
 
@@ -215,11 +216,40 @@ class Plugin(indigo.PluginBase):
 
         if self.debugLevel >= 2:
             self.debugLog(u"deviceStartComm() method called.")
-        self.debugLog(u"Starting FindFriendsMini device: {0}".format(dev.name))
+        self.debugLog(u'Starting FindFriendsMini device: '+unicode(dev.name)+' and dev.id:'+unicode(dev.id)+ ' and dev.type:'+unicode(dev.deviceTypeId))
+
+        if dev.deviceTypeId=='FindFriendsGeofence':
+            stateList = [
+                {'key': 'friendsInRange', 'value': 0},
+                {'key': 'lastArrivaltime', 'value': ''},
+                {'key': 'lastLeavetime', 'value': ''},
+                {'key': 'deviceIsOnline', 'value': 'Waiting'}]
+            if self.debugLevel >= 2:
+                self.debugLog(unicode(stateList))
+            dev.updateStatesOnServer(stateList)
+
+        if dev.deviceTypeId == 'FindFriendsFriend':
+            stateList = [
+                {'key': 'id', 'value':''},
+                {'key': 'status', 'value': ''},
+                {'key': 'locationStatus', 'value': ''},
+                {'key': 'batteryStatus', 'value': ''},
+                {'key': 'locationTimestamp', 'value': ''},
+                {'key': 'timestamp', 'value': ''},
+                {'key': 'altitude', 'value': ''},
+                {'key': 'labels', 'value': ''},
+                {'key': 'longitude', 'value': ''},
+                {'key': 'horizontalAccuracy', 'value': ''},
+                {'key': 'address', 'value': ''},
+                {'key': 'latitude', 'value': ''}]
+            if self.debugLevel >= 2:
+                self.debugLog(unicode(stateList))
+            dev.updateStatesOnServer(stateList)
 
         # Update statelist in case any updates/changes
         dev.stateListOrDisplayStateIdChanged()
         dev.updateStateOnServer('deviceIsOnline', value=True, uiValue="Waiting")
+
 
     def deviceStopComm(self, dev):
         """ docstring placeholder """
@@ -227,9 +257,10 @@ class Plugin(indigo.PluginBase):
         if self.debugLevel >= 2:
             self.debugLog(u"deviceStopComm() method called.")
 
-        self.debugLog(u"Stopping FindFriendsMini device: {0}".format(dev.name))
+        self.debugLog(u"Stopping FindFriendsMini device: {0}".unicode(dev.name))
 
         dev.updateStateOnServer('deviceIsOnline', value=False, uiValue="Disabled")
+
         dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
         # =============================================================
@@ -257,6 +288,8 @@ class Plugin(indigo.PluginBase):
 
             self.sleep(5)
             self.refreshData()
+            self.sleep(5)
+            self.checkGeofence()
             self.sleep(secondsbetweencheck)
 
     def shutdown(self):
@@ -444,6 +477,7 @@ class Plugin(indigo.PluginBase):
                     targetFriend = dev.pluginProps['targetFriend']
                     if self.debugLevel >= 2:
                         self.debugLog(u'targetFriend of Device equals:' + unicode(targetFriend))
+
                     for follow in follower:
                         if self.debugLevel >= 2:
                             self.debugLog (unicode(follow['id']))
@@ -451,13 +485,104 @@ class Plugin(indigo.PluginBase):
                             if self.debugLevel >= 2:
                                 self.debugLog(u'Found Target Friend in Data:  Updating Device:' + unicode(dev.name))
                                 self.debugLog(unicode(follow))
+                            # Update device with data from iFindFriends service
                             self.refreshDataForDev(dev, follow)
+
             return
 
         except Exception as e:
             indigo.server.log(u'Error within get Data.  ?Network connection or issue.'+unicode(e))
             return
 
+    def checkGeofence(self):
+        try:
+            if self.debugLevel >= 2:
+                self.debugLog('Check GeoFences Called..')
+
+            # need to start with GeofFence and then go through all devices
+            # iDevName = dev.states['friendName']
+            # Check GeoFences after devices
+            for geoDevices in indigo.devices.itervalues('self.FindFriendsGeofence'):
+                if geoDevices.enabled:
+                    igeoFriendsRange = 0
+                    localProps = geoDevices.pluginProps
+                    if not 'geoName' in localProps:
+                        continue
+                    igeoName = localProps['geoName']
+                    igeoLong = float(localProps['geoLongitude'])
+                    igeoLat = float(localProps['geoLatitude'])
+                    igeoRangeDistance = int(localProps['geoRange'])
+
+                    # old Friends in Range - act on changes.
+                    igeoFriendsRangeOld = int(geoDevices.states['friendsInRange'])
+
+                    for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
+                        if dev.enabled:
+                            if self.debugLevel >= 2:
+                                self.debugLog('Geo Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
+                            iDevLatitude = float(dev.states['latitude'])
+                            iDevLongitude = float(dev.states['longitude'])
+                    # Now check the distance for each device
+                    # Calculate the distance
+                            if self.debugLevel >= 2:
+                                self.debugLog('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(iDevLatitude) + ',' + str(iDevLongitude))
+                            iSeparation = iDistance(igeoLat, igeoLong, iDevLatitude, iDevLongitude)
+                            if self.debugLevel > 2:
+                                self.debugLog(unicode(iSeparation))
+                            if not iSeparation[0]:
+                                if self.debugLevel >= 2:
+                                    self.debugLog(u'Problem with iSeparation')
+                        # Problem with the distance so ignore and move on
+                                continue
+                            iSeparationABS = abs(iSeparation[1])
+                    # if distance between to points smaller than range of GeoFence then is 'InRange' or within Geofence
+                    # now need to count numbers.
+                            if iSeparationABS <= igeoRangeDistance:
+                                iDevGeoInRange = 'true'
+                                igeoFriendsRange = igeoFriendsRange + 1
+                            else:
+                                iDevGeoInRange = 'false'
+                            #End of Device Ieration
+
+                    #Now back to GeoFence iteration
+                    update_time = t.strftime(self.datetimeFormat)
+                    if igeoFriendsRange != igeoFriendsRangeOld:
+                                # Has been change to the igeoFriends Number
+                                # Should Update now
+                        geoDevices.updateStateOnServer('friendsInRange', value=int(igeoFriendsRange))
+                    if igeoFriendsRangeOld > igeoFriendsRange:
+                                    #More friends in range before, someone must have left
+                                    # Update leave time
+                        geoDevices.updateStateOnServer('lastLeavetime', value=update_time)
+                    elif igeoFriendsRangeOld < igeoFriendsRange:
+                                    #Less People previously, someone must have arrived
+                                    # update arrival time
+                        geoDevices.updateStateOnServer('lastArrivaltime', value=update_time)
+                            # Change Sensor Icon
+                    if igeoFriendsRange==0:
+                        geoDevices.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+                    if igeoFriendsRange >0:
+                        geoDevices.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+
+        except Exception as e:
+            indigo.server.log(u'Error within Check GeoFences: '+unicode(e))
+            return
+
+
+
+    def getLatLong(self, valuesDict=None, typeId="", dev=0):
+
+        ################################################
+        # Opens a web Browser so user can find a latitude and longitude for an address
+        # Uses www.latlong.com
+
+        try:
+            iurl="http://www.latlong.net"
+            self.browserOpen(iurl)
+        except:
+            indigo.server.log(u'Default web browser did not open - check Mac set up', isError = True)
+            indigo.server.log(u'or issues contacting the www.latlong.net site.  Is internet working?', isError=True)
+        return
 
     def refreshDataForDev(self, dev, follow):
         """ Refreshes device data. """
@@ -596,6 +721,8 @@ class Plugin(indigo.PluginBase):
             if self.debugLevel >= 2:
                 webbrowser.open_new(drawUrl)
                 self.debugLog(unicode(drawUrl))
+
+            return
 
         except Exception as e:
             indigo.server.log(u'Exception within godoMapping: '+unicode(e))
@@ -840,3 +967,57 @@ def urlAllGenerate(self, mapAPIKey, iHorizontal, iVertical, iZoom):
     except Exception as e:
         indigo.server.log(u'urlAllGenerate'+unicode(e))
         return ''
+
+def iDistance(lat1, long1, lat2, long2):
+
+    ################################################
+    # Once again thanks Mike and iFindStuff!
+    # Calculates the 'As the crow flies' distance between
+    # two points and returns value in metres
+
+    global iDebug1, iDebug2, iDebug3, iDebug4, iDebug5, gUnits
+
+    # First check if numbers are valid
+    if lat1+long1 == 0.0 or lat2+long2 == 0.0:
+
+        #  Zero default sent through
+        indigo.server.log(u'No distance calculation possible as values are 0,0,0,0')
+        return False, 0.0
+
+    # Convert latitude and longitude to
+    # spherical coordinates in radians.
+    degrees_to_radians = math.pi/180.0
+
+    # phi = 90 - latitude
+    phi1 = (90.0 - lat1)*degrees_to_radians
+    phi2 = (90.0 - lat2)*degrees_to_radians
+
+    # theta = longitude
+    theta1 = long1*degrees_to_radians
+    theta2 = long2*degrees_to_radians
+
+    # Compute spherical distance from spherical coordinates.
+
+    # For two locations in spherical coordinates
+    # (1, theta, phi) and (1, theta', phi')
+    # cosine( arc length ) =
+    #    sin phi sin phi' cos(theta-theta') + cos phi cos phi'
+    # distance = rho * arc length
+
+    cos = (math.sin(phi1)*math.sin(phi2)*math.cos(theta1 - theta2) +
+           math.cos(phi1)*math.cos(phi2))
+    try:
+        arc = math.acos( cos )
+    except Exception as e:
+        indigo.server.log('Error within iDistance Calculation'+unicode(e))
+        arc = 1
+        pass
+
+    # Remember to multiply arc by the radius of the earth
+    # e.g. m to get actual distance in m
+
+    mt_radius_of_earth = 6373000.0
+
+    distance = arc * mt_radius_of_earth
+
+    return True, distance

@@ -1,7 +1,71 @@
 <?xml version="1.0"?>
 
 <Devices>
+    <Device type="custom" id="FindFriendsGeofence" >
+        <Name>FindFriends GeoFence</Name>
+         <ConfigUI>
+			<Field id="geoName"
+				   type="textfield"
+				   tooltip="Name of the GeoFence"
+				   default="Home">
+				<Label>Enter a unique name for the Geolocation:</Label>
+			</Field>
+			<Field id="geoDescription"
+				   type="textfield"
+				   tooltip="Enter a description"
+				   default="">
+				<Label>Enter a description for your Geolocation:</Label>
+			</Field>
+			<Field id="simpleSeparator2" type="separator"/>
+			<Field id="getLocation" type="button" tooltip="Click this button to find Longitude and Latitude">
+				<Label>Click this button to find Longitude and Latitude</Label>
+				<Title>Find Location Details</Title>
+				<CallbackMethod>getLatLong</CallbackMethod>
+			</Field>
+			<Field type="textfield"
+				   id="geoLatitude"
+				   hidden='False'
+				   defaultValue="0.00000000">
+				<Label>Latitude of the Geolocation?</Label>
+			</Field>
+			<Field type="textfield"
+				   hidden='False'
+				   id="geoLongitude"
+				   defaultValue="0.000000000">
+				<Label>Longitude of the Geolocation?</Label>
+			</Field>
+			<Field type="textfield"
+				   id="geoRange"
+				   hidden='False'
+				   defaultValue="0">
+				<Label>Range of the Geolocation?</Label>
+			</Field>
+         </ConfigUI>
+        <States>
+			<State id="friendsInRange" readonly="YES">
+				<ValueType>Number</ValueType>
+				<TriggerLabel>Devices near?</TriggerLabel>
+				<ControlPageLabel>Number of devices Within</ControlPageLabel>
+			</State>
+			<State id="lastArrivaltime" readonly="YES">
+				<ValueType>String</ValueType>
+				<TriggerLabel>last date/time of arrival</TriggerLabel>
+				<ControlPageLabel>last date/time of arrival</ControlPageLabel>
+			</State>
+			<State id="lastLeavetime" readonly="YES">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Last date/time of arrival</TriggerLabel>
+				<ControlPageLabel>Last date/time of arrival</ControlPageLabel>
+			</State>
+            <State id="deviceIsOnline">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Device online?</TriggerLabel>
+                <ControlPageLabel>Device online?</ControlPageLabel>
+            </State>
+		</States>
+        <UiDisplayStateId>friendsInRange</UiDisplayStateId>
 
+    </Device>
 
     <Device type="custom" id="FindFriendsFriend" >
         <Name>FindFriends Device</Name>
