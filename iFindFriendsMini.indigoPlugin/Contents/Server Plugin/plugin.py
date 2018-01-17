@@ -222,7 +222,7 @@ class Plugin(indigo.PluginBase):
             stateList = [
                 {'key': 'friendsInRange', 'value': 0},
                 {'key': 'lastArrivaltime', 'value': ''},
-                {'key': 'lastLeavetime', 'value': ''},
+                {'key': 'lastDeptime', 'value': ''},
                 {'key': 'deviceIsOnline', 'value': 'Waiting'}]
             if self.debugLevel >= 2:
                 self.debugLog(unicode(stateList))
@@ -553,7 +553,7 @@ class Plugin(indigo.PluginBase):
                     if igeoFriendsRangeOld > igeoFriendsRange:
                                     #More friends in range before, someone must have left
                                     # Update leave time
-                        geoDevices.updateStateOnServer('lastLeavetime', value=update_time)
+                        geoDevices.updateStateOnServer('lastDeptime', value=update_time)
                     elif igeoFriendsRangeOld < igeoFriendsRange:
                                     #Less People previously, someone must have arrived
                                     # update arrival time

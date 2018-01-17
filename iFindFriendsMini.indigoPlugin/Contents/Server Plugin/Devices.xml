@@ -45,17 +45,17 @@
 			<State id="friendsInRange" readonly="YES">
 				<ValueType>Number</ValueType>
 				<TriggerLabel>Devices near?</TriggerLabel>
-				<ControlPageLabel>Number of devices Within</ControlPageLabel>
+				<ControlPageLabel>Number of devices Within GeoFence</ControlPageLabel>
 			</State>
 			<State id="lastArrivaltime" readonly="YES">
 				<ValueType>String</ValueType>
-				<TriggerLabel>last date/time of arrival</TriggerLabel>
-				<ControlPageLabel>last date/time of arrival</ControlPageLabel>
-			</State>
-			<State id="lastLeavetime" readonly="YES">
-				<ValueType>String</ValueType>
 				<TriggerLabel>Last date/time of arrival</TriggerLabel>
 				<ControlPageLabel>Last date/time of arrival</ControlPageLabel>
+			</State>
+			<State id="lastDeptime" readonly="YES">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Last date/time of Departure</TriggerLabel>
+				<ControlPageLabel>Last date/time of Departure</ControlPageLabel>
 			</State>
             <State id="deviceIsOnline">
                 <ValueType>Boolean</ValueType>
