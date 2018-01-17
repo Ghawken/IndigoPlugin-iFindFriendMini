@@ -249,7 +249,7 @@ class Plugin(indigo.PluginBase):
         # Update statelist in case any updates/changes
         dev.stateListOrDisplayStateIdChanged()
         dev.updateStateOnServer('deviceIsOnline', value=True, uiValue="Waiting")
-
+        dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
     def deviceStopComm(self, dev):
         """ docstring placeholder """
@@ -257,7 +257,7 @@ class Plugin(indigo.PluginBase):
         if self.debugLevel >= 2:
             self.debugLog(u"deviceStopComm() method called.")
 
-        self.debugLog(u"Stopping FindFriendsMini device: {0}".unicode(dev.name))
+        self.debugLog(u"Stopping FindFriendsMini device: {0}".format(dev.name))
 
         dev.updateStateOnServer('deviceIsOnline', value=False, uiValue="Disabled")
 
