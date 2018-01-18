@@ -19,7 +19,7 @@
 	<MenuItem id="titleSeparator1" type="separator" />
     <MenuItem id="refreshData">
         <Name>Refresh Data Now</Name>
-        <CallbackMethod>refreshData</CallbackMethod>
+        <CallbackMethod>actionrefreshdata</CallbackMethod>
     </MenuItem>
 	<MenuItem id="titleSeparator2" type="separator" />
     <MenuItem id="toggleDebug">

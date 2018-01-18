@@ -100,7 +100,7 @@
         <Label>Date/Time format of lastUpdate field.  In format strftime.  See. strftime.org for more options
             eg  %c  == Mon Jan 15 16:50:59 2018
             eg.  %b %d %Y %H:%M:%S == Feb 18 2009 00:03:38
-            eg. %a %d %b %-I:%M %p == Mon 15 Jan 4:57 PM
+            eg. %a %d %b %I:%M %p == Mon 15 Jan 4:57 PM
         </Label>
     </Field>
 

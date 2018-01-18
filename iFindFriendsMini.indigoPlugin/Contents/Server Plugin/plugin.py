@@ -223,6 +223,10 @@ class Plugin(indigo.PluginBase):
                 {'key': 'friendsInRange', 'value': 0},
                 {'key': 'lastArrivaltime', 'value': ''},
                 {'key': 'lastDeptime', 'value': ''},
+                {'key': 'lastArrivaltimestamp', 'value': ''},
+                {'key': 'lastDeptimestamp', 'value': ''},
+                {'key': 'minutessincelastArrival', 'value': 0},
+                {'key': 'minutessincelastDep', 'value': 0},
                 {'key': 'deviceIsOnline', 'value': 'Waiting'}]
             if self.debugLevel >= 2:
                 self.debugLog(unicode(stateList))
@@ -264,6 +268,12 @@ class Plugin(indigo.PluginBase):
         dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
         # =============================================================
+
+    def actionrefreshdata(self):
+        self.refreshData()
+        self.sleep(5)
+        self.checkGeofence()
+        return
 
     def runConcurrentThread(self):
         """ docstring placeholder """
@@ -554,15 +564,32 @@ class Plugin(indigo.PluginBase):
                                     #More friends in range before, someone must have left
                                     # Update leave time
                         geoDevices.updateStateOnServer('lastDeptime', value=update_time)
+                        geoDevices.updateStateOnServer('lastDeptimestamp', value=t.time())
                     elif igeoFriendsRangeOld < igeoFriendsRange:
                                     #Less People previously, someone must have arrived
                                     # update arrival time
                         geoDevices.updateStateOnServer('lastArrivaltime', value=update_time)
+                        geoDevices.updateStateOnServer('lastArrivaltimestamp', value=t.time())
                             # Change Sensor Icon
                     if igeoFriendsRange==0:
                         geoDevices.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                     if igeoFriendsRange >0:
                         geoDevices.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+                    lastArrivaltimestamp =    float(geoDevices.states['lastArrivaltimestamp'])
+
+                    try:
+                        lastDeptimestamp = float(geoDevices.states['lastDeptimestamp'])
+                        if lastArrivaltimestamp > 0:
+                            #indigo.server.log(unicode(lastArrivaltimestamp))
+                            timesincearrival = int(t.time()-float(lastArrivaltimestamp))/60  #time in seconds /60
+                            #indigo.server.log(unicode(timesincearrival))
+                            geoDevices.updateStateOnServer('minutessincelastArrival', value=timesincearrival)
+                        if lastDeptimestamp >0:
+                            timesincedep = int(t.time()-float(lastDeptimestamp))/60
+                            geoDevices.updateStateOnServer('minutessincelastDep', value=timesincedep)
+                    except Exception as e:
+                        indigo.server.log(u'Error with Departure/Arrival Time Calculation:'+unicode(e))
+                        pass
 
         except Exception as e:
             indigo.server.log(u'Error within Check GeoFences: '+unicode(e))
@@ -756,7 +783,7 @@ class Plugin(indigo.PluginBase):
             self.debug = False
             self.debugLevel = 1
             self.pluginPrefs['showDebugInfo'] = False
-            indigo.server.log(u"Debugging off.")
+            indigo.server.log(u"Debugging off.  Debug level: {0}".format(self.debugLevel))
 
     def myFriendDevices(self, filter=0, valuesDict=None, typeId="", targetId=0):
 

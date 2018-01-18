@@ -47,16 +47,39 @@
 				<TriggerLabel>Devices near?</TriggerLabel>
 				<ControlPageLabel>Number of devices Within GeoFence</ControlPageLabel>
 			</State>
-			<State id="lastArrivaltime" readonly="YES">
+            <State id="lastArrivaltimestamp" readonly="YES">
+				<ValueType>Number</ValueType>
+				<TriggerLabel>Timestamp of last arrival</TriggerLabel>
+				<ControlPageLabel>Timestamp of last arrival</ControlPageLabel>
+			</State>
+
+			<State id="lastDeptimestamp" readonly="YES">
+				<ValueType>Number</ValueType>
+				<TriggerLabel>Timestamp of last Departure</TriggerLabel>
+				<ControlPageLabel>Timestamp of last Departure</ControlPageLabel>
+			</State>
+            <State id="lastArrivaltime" readonly="YES">
 				<ValueType>String</ValueType>
 				<TriggerLabel>Last date/time of arrival</TriggerLabel>
 				<ControlPageLabel>Last date/time of arrival</ControlPageLabel>
 			</State>
+
 			<State id="lastDeptime" readonly="YES">
 				<ValueType>String</ValueType>
 				<TriggerLabel>Last date/time of Departure</TriggerLabel>
 				<ControlPageLabel>Last date/time of Departure</ControlPageLabel>
 			</State>
+            <State id="minutessincelastArrival" readonly="YES">
+				<ValueType>Number</ValueType>
+				<TriggerLabel>Minutes since last arrival</TriggerLabel>
+				<ControlPageLabel>Minutes since last arrival</ControlPageLabel>
+			</State>
+			<State id="minutessincelastDep" readonly="YES">
+				<ValueType>Number</ValueType>
+				<TriggerLabel>Minutes since last Departure</TriggerLabel>
+				<ControlPageLabel>Minutes since last Departure</ControlPageLabel>
+			</State>
+
             <State id="deviceIsOnline">
                 <ValueType>Boolean</ValueType>
                 <TriggerLabel>Device online?</TriggerLabel>
