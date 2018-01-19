@@ -77,6 +77,5 @@ To use these you ideally need a Google Maps API setup, as Mike describes well he
 http://forums.indigodomo.com/viewtopic.php?f=181&t=14734
 
 
-Consider it currently Beta (and off myself for a few days now...)  but please give it a whirl and report back.
 
 Glenn

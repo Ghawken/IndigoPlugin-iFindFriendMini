@@ -13,8 +13,8 @@
         <CallbackMethod>updatePlugin</CallbackMethod>
     </MenuItem>
     <MenuItem id="forceUpdate">
-        <Name>Force Update</Name>
-        <CallbackMethod>forceUpdate</CallbackMethod>
+        <Name>Check PluginStore for Update</Name>
+        <CallbackMethod>pluginstoreUpdate</CallbackMethod>
     </MenuItem>
 	<MenuItem id="titleSeparator1" type="separator" />
     <MenuItem id="refreshData">

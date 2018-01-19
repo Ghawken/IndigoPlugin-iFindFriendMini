@@ -172,8 +172,9 @@ class Plugin(indigo.PluginBase):
     def updatePlugin(self):
         self.updater.update()
 
-    def forceUpdate(self):
-        self.updater.update(currentVersion='0.0.0')
+    def pluginstoreUpdate(self):
+        iurl = 'http://www.indigodomo.com/pluginstore/139/'
+        self.browserOpen(iurl)
 
     #####
 
@@ -227,7 +228,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'lastDeptimestamp', 'value': ''},
                 {'key': 'minutessincelastArrival', 'value': 0},
                 {'key': 'minutessincelastDep', 'value': 0},
-                {'key': 'deviceIsOnline', 'value': 'Waiting'}]
+                {'key': 'deviceIsOnline', 'value': False, 'uiValue':'Waiting'}]
             if self.debugLevel >= 2:
                 self.debugLog(unicode(stateList))
             dev.updateStatesOnServer(stateList)
@@ -575,7 +576,8 @@ class Plugin(indigo.PluginBase):
                         geoDevices.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                     if igeoFriendsRange >0:
                         geoDevices.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
-                    lastArrivaltimestamp =    float(geoDevices.states['lastArrivaltimestamp'])
+                    lastArrivaltimestamp = float(geoDevices.states['lastArrivaltimestamp'])
+
 
                     try:
                         lastDeptimestamp = float(geoDevices.states['lastDeptimestamp'])
@@ -591,8 +593,13 @@ class Plugin(indigo.PluginBase):
                         indigo.server.log(u'Error with Departure/Arrival Time Calculation:'+unicode(e))
                         pass
 
+                    geoDevices.updateStateOnServer('deviceIsOnline', value=True, uiValue='Online')
+
+
         except Exception as e:
             indigo.server.log(u'Error within Check GeoFences: '+unicode(e))
+            geoDevices.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
+
             return
 
 
@@ -680,13 +687,10 @@ class Plugin(indigo.PluginBase):
             if self.debugLevel >= 2:
                 self.debugLog(unicode(stateList))
             dev.updateStatesOnServer(stateList)
-
-
 # Change to strftime user selectable date for DeviceLastUpdate field
 # Is Plugin config selectable
 
             update_time = t.strftime(self.datetimeFormat)
-
             dev.updateStateOnServer('deviceLastUpdated', value=str(update_time))
             dev.updateStateOnServer('deviceTimestamp', value=t.time())
 
@@ -724,7 +728,7 @@ class Plugin(indigo.PluginBase):
             #Generate single device URL
             drawUrl = urlGenerate(self, latitude ,longitude , self.googleAPI, int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap), dev)
 
-            if self.debugLevel >= 2:
+            if self.debugLevel >= 4:
                 webbrowser.open_new(drawUrl)
 
             fileMap = "curl --output '" + file + "' --url '" + drawUrl + "'"
@@ -732,7 +736,6 @@ class Plugin(indigo.PluginBase):
 
             if self.debugLevel >= 2:
                 self.debugLog('Saving Map...' + file)
-
 
             filename = 'All_device.jpg'
             file = folderLocation + filename
@@ -745,7 +748,7 @@ class Plugin(indigo.PluginBase):
             if self.debugLevel >= 2:
                 self.debugLog('Saving Map...' + file)
 
-            if self.debugLevel >= 2:
+            if self.debugLevel >= 4:
                 webbrowser.open_new(drawUrl)
                 self.debugLog(unicode(drawUrl))
 
@@ -783,6 +786,7 @@ class Plugin(indigo.PluginBase):
             self.debug = False
             self.debugLevel = 1
             self.pluginPrefs['showDebugInfo'] = False
+            self.pluginPrefs['showDebugLevel'] = 1
             indigo.server.log(u"Debugging off.  Debug level: {0}".format(self.debugLevel))
 
     def myFriendDevices(self, filter=0, valuesDict=None, typeId="", targetId=0):

@@ -79,7 +79,6 @@
 				<TriggerLabel>Minutes since last Departure</TriggerLabel>
 				<ControlPageLabel>Minutes since last Departure</ControlPageLabel>
 			</State>
-
             <State id="deviceIsOnline">
                 <ValueType>Boolean</ValueType>
                 <TriggerLabel>Device online?</TriggerLabel>
