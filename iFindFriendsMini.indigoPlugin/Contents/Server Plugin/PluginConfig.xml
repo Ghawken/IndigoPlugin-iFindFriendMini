@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <PluginConfig>
 
-    <Field id="infoLabel0" type="label" fontColor="black">
+    <Field id="infoLabel0" type="label" fontColor="black" alignText="right" >
         <Label>FindFriendsMini Plugin</Label>
     </Field>
 
-    <Field id="space0" type="label" fontColor="black" fontSize="small">
+    <Field id="space0" type="label" fontColor="black" fontSize="small" alignText="right">
         <Label>Developed by: GlennNZ</Label>
     </Field>
 
@@ -30,6 +30,7 @@
 				<Label>Apple Account ID:</Label>
 			</Field>
 
+    <Field id="sep44aa" type="separator"/>
 
     <Field id="space4" type="label" fontColor="black" alignText="right">
         <Label>Checking Frequency:</Label>
@@ -55,7 +56,7 @@
         </List>
     </Field>
 
-    <Field id="space6" type="label"/>
+    <Field id="asep44" type="separator"/>
 
     <Field id="space20" type="label" alignText="right">
         <Label>Mapping:</Label>
@@ -91,6 +92,9 @@
      <Label>Enter Google API Here:</Label><Label/>
      <Description>Google API Key for Mapping</Description>
     </Field>
+
+    <Field id="space226" type="separator"/>
+
     <Field id="space210" type="label" alignText="right">
         <Label>Date/Time format:</Label>
     </Field>
@@ -108,6 +112,28 @@
      <Label>Enter DateTime Format:</Label><Label/>
      <Description>Format for datetime LastUpdate field eg. %c </Description>
     </Field>
+
+    <Field id="space2226" type="separator"/>
+
+    <Field id="space120" type="label" alignText="right">
+        <Label>Update Frequency:</Label>
+    </Field>
+
+    <Field id="sep400" type="separator"/>
+
+    <Field id="space121" type="label" fontSize="small">
+        <Label>Frequency of Update checking.  If update needed after check can Open Plugin Store to Download.</Label>
+    </Field>
+    <Field id="updateFrequency" type="textfield" tooltip="Size of Map" defaultValue="24">
+     <Label>Frequency of Update Checks [in Hours] </Label>
+     <Description>Hours between checking for Plugin Update.  Default 24 hours.</Description>
+    </Field>
+
+    <Field id="openStore" type="checkbox" tooltip='Enabling with open Plugin Store for download'>
+        <Label>Automatically Open Plugin Store if an update is available.</Label>
+        <Description>Enable/Disable</Description>
+    </Field>
+    <Field id="space21126" type="separator"/>
 
     <Field id="space10" type="label" alignText="right">
         <Label>Debugging:</Label>

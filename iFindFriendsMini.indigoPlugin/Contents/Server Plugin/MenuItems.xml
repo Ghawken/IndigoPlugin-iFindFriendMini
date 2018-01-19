@@ -8,12 +8,8 @@
         <Name>Check for Updates</Name>
         <CallbackMethod>checkForUpdates</CallbackMethod>
     </MenuItem>
-    <MenuItem id="updatePlugin">
-        <Name>Update Plugin</Name>
-        <CallbackMethod>updatePlugin</CallbackMethod>
-    </MenuItem>
     <MenuItem id="forceUpdate">
-        <Name>Check PluginStore for Update</Name>
+        <Name>Open PluginStore for Download</Name>
         <CallbackMethod>pluginstoreUpdate</CallbackMethod>
     </MenuItem>
 	<MenuItem id="titleSeparator1" type="separator" />

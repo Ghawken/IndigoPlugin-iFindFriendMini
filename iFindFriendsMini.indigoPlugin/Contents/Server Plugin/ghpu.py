@@ -103,11 +103,49 @@ class GitHubPluginUpdater(object):
 		# assume the tag is the release version
 		latestVersion = update['tag_name'].lstrip('v')
 		self.logger.debug('Latest release is: %s' % latestVersion)
-
 		if (ver(currentVersion) >= ver(latestVersion)):
 			return None
+		return update
+
+	def getUpdateAlways(self, currentVersion):
+		self.logger.debug('Current version is: %s' % currentVersion)
+
+		update = self.getLatestRelease()
+
+		if (update == None):
+			self.logger.debug('No release available')
+			return None
+
+		# assume the tag is the release version
+		latestVersion = update['tag_name'].lstrip('v')
+		self.logger.debug('Latest release is: %s' % latestVersion)
 
 		return update
+# Modification to get versions and then take to plugin Store via True/False
+
+	def getLatestVersion(self):
+
+		currentVersion = str(self.plugin.pluginVersion)
+
+		self.logger.info('FindFriendsMini: Update Checking. Your Current version is: %s' % currentVersion)
+
+		update = self.getUpdateAlways(currentVersion)
+
+		if (update == None):
+			self.logger.info('FindFriendsMini: Update Checking. No release available')
+			return False
+		# assume the tag is the release version
+		latestVersion = update['tag_name'].lstrip('v')
+
+		self.logger.info('FindFriendsMini: Update Checking. The Github Latest release is: %s' % latestVersion)
+		if (ver(currentVersion) >= ver(latestVersion)):
+			self.logger.info(u'FindFriendsMini: Update Checking. You already have the lastest release.  No update needed.')
+			return False
+		if (ver(currentVersion) < ver(latestVersion)):
+			self.logger.info(u'FindFriendsMini: Update Checking. Please visit the Plugin Store to Download')
+			return True
+
+		return False
 
 	#---------------------------------------------------------------------------
 	# returns the latest release information from a given user / repo
@@ -122,7 +160,6 @@ class GitHubPluginUpdater(object):
 	# NOTE this does not count against the current limit
 	def getRateLimit(self):
 		limiter = self._GET('/rate_limit')
-
 		remain = int(limiter['rate']['remaining'])
 		limit = int(limiter['rate']['limit'])
 		resetAt = int(limiter['rate']['reset'])
