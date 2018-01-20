@@ -33,7 +33,15 @@ except ImportError:
 
 try:
     from pyicloud import PyiCloudService
-    from pyicloud.exceptions import PyiCloudFailedLoginException
+    #from pyicloud.exceptions import PyiCloudFailedLoginException
+
+    from pyicloud.exceptions import (
+        PyiCloudFailedLoginException,
+        PyiCloudAPIResponseError,
+        PyiCloud2SARequiredError,
+        PyiCloudServiceNotActivatedErrror
+    )
+
 
 except:
     indigo.server.log("FATAL ERROR - Cannot find pyicloud - check with developer")
@@ -283,12 +291,12 @@ class Plugin(indigo.PluginBase):
 
             self.prefsUpdated = False
             self.sleep(0.5)
-            loopcounter = 0
+            updateGeofencedue = time.time() + 60 # Geofence update due in 65 seconds # should be reset below
 
 
             while self.prefsUpdated == False:
-                if self.debugLevel >=3 and loopcounter == 60:
-                    self.debugLog(u'ronConcurrrent internal loop: self.prefsUpdated False: Next Update:'+unicode(int(time.time()-nextloopdue))+' and loopcounter at:'+unicode(loopcounter))
+                if self.debugLevel >=3 and int(updateGeofencedue-time.time()) == 0:
+                    self.debugLog(u'ronConcurrrent internal loop: self.prefsUpdated False: Next Update:'+unicode(int(time.time()-nextloopdue))+' and updateGeofenceDue:'+unicode(int(updateGeofencedue-time.time())))
                 # Update Plugin Frequency Loop
                 if self.updateFrequency > 0:
                     if time.time() > self.next_update_check:
@@ -309,19 +317,19 @@ class Plugin(indigo.PluginBase):
                         self.checkGeofence()   #Check distances etc of GeoFences
                         nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
                         #reset Geofence time update as done above
-                        loopcounter = 0
+                        updateGeofencedue = time.time() + 60
                         if self.debugLevel >= 2:
                             self.debugLog(u'ronConcurrrent loop: Next Update due (seconds):'+unicode(int(time.time()-nextloopdue)))
                     except:
                         self.debugLog(u'Error within RunConcurrentLoop Update cycle')
                         nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
-                if loopcounter >=60:
+                # Move to time for Geofences - so always in sync
+                if time.time() > updateGeofencedue:
                     self.updateGeofencetime()
-                    loopcounter = 1
+                    # add 60 seconds
+                    updateGeofencedue = time.time() + 60
 
                 self.sleep(1)
-                loopcounter = loopcounter + 1
-                #Increment the loopcounter which is used for 60 second GeoFence Time Update
 
         if self.debugLevel >2:
             self.debugLog(u'Exiting self.pluginIsShuttingDown Loop.')
@@ -923,12 +931,8 @@ class Plugin(indigo.PluginBase):
 
             return 0, appleAPI
 
-        except PyiCloudFailedLoginException as e:
-            indigo.server.log(u'Login failed -:' + unicode(e.message), type="iFindFriends Critical ", isError=True)
-            return 1, 'NL'
-
         except Exception as e:
-            indigo.server.log(u'Error ...' + unicode(e.message) + unicode(e.__dict__), type="iFindFriend Urgent ",
+            indigo.server.log(u'Login FailedError ...' + unicode(e.message) + unicode(e.__dict__), type="iFindFriend Urgent ",
                               isError=True)
             return 1, 'NI'
 

@@ -10,7 +10,13 @@ import os
 from re import match
 import copy
 
-from pyicloud.exceptions import PyiCloudFailedLoginException
+from pyicloud.exceptions import (
+    PyiCloudFailedLoginException,
+    PyiCloudAPIResponseError,
+    PyiCloud2SARequiredError,
+    PyiCloudServiceNotActivatedErrror
+)
+
 from pyicloud.services import (
     FindMyiPhoneServiceManager,
     FindFriendsService,
