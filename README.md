@@ -168,7 +168,7 @@ Latitude/Longitude
 Range:  Circle of Geofence currently in Metres (sorry!)  [1m = 3.28 feet]
 
 GeoFence Device States:
-![](https://kek.gg/i/6kjnLQ.png)
+![](https://kek.gg/i/4vtkPh.png)
 
 These stats are updated with Devices at same frequency (defaults to 5 minutes)
 Stats of use:

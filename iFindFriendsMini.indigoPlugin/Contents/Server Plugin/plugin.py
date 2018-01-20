@@ -480,7 +480,9 @@ class Plugin(indigo.PluginBase):
             follower = iLogin[1].friends.locations
 
             if self.debugLevel >= 2:
-                self.debugLog(unicode(type(follower)))
+                self.debugLog(unicode('Follower is Type: '+ unicode(type(follower))))
+            if self.debugLevel >=4:
+                self.debugLog(unicode('More debugging: Follower: '+unicode(appleAPI.friends)))
 
             if len(follower) == 0:
                 indigo.server.log(u'No Followers Found for this Account.  Have you any friends?')
@@ -836,19 +838,20 @@ class Plugin(indigo.PluginBase):
 
             if self.debugLevel > 2:
                 self.debugLog(u'Login successful...')
-                #indigo.server.log(u'appleAPI: Here we are 1.1 **************************:')
-                # indigo.server.log(unicode(type(appleAPI)))
-                # indigo.server.log(unicode(appleAPI.devices))
-                # indigo.server.log(unicode(appleAPI.friends.details))
-                #indigo.server.log(unicode(appleAPI.friends.locations))
-                # indigo.server.log(unicode(type(appleAPI.friends.locations)))
-                # indigo.server.log(unicode(type(appleAPI.friends.data)))
-                #indigo.server.log(unicode(appleAPI.friends.data['followers']))
-                # follower = appleAPI.friends.data['followers']
-                # for fol in follower:
-                #   indigo.server.log(unicode(fol['id']))
-                #   indigo.server.log(unicode(fol['invitationFromEmail']))
-                # indigo.server.log(unicode(appleAPI.friends.details))
+                if self.debugLevel >=4:
+                    self.debugLog(u'appleAPI: Here we are 0.1.5 **************************:')
+                    self.debugLog(unicode(type(appleAPI)))
+                    self.debugLog(unicode(appleAPI.devices))
+                    self.debugLog(unicode(appleAPI.friends.details))
+                    self.debugLog(unicode(appleAPI.friends.locations))
+                    self.debugLog(unicode(type(appleAPI.friends.locations)))
+                    self.debugLog(unicode(type(appleAPI.friends.data)))
+                    self.debugLog(unicode(appleAPI.friends.data['followers']))
+                    follower = appleAPI.friends.data['followers']
+                    for fol in follower:
+                        self.debugLog(unicode(fol['id']))
+                        self.debugLog(unicode(fol['invitationFromEmail']))
+                    self.debugLog(unicode(appleAPI.friends.details))
             return 0, appleAPI
 
         except PyiCloudFailedLoginException as e:
