@@ -21,20 +21,10 @@ except Exception as e:
     pass
     #o.server.log(u'error in import locales')
 
-import datetime
-#from Queue import Queue
-##import re
-#import simplejson
-#import subprocess
 import sys
 import math
-#import threading
+
 import time as t
-
-# Third-party imports
-#import flatdict  # https://github.com/gmr/flatdict
-#import indigoPluginUpdateChecker
-
 
 try:
     import indigo
@@ -54,9 +44,7 @@ except:
 
 # Now the HTTP and Compatibility libraries
 try:
-   # import six
     import requests
-
 except:
     indigo.server.log("Note: requests.py must be installed for this plugin to operate.  Indigo 7 ONLY.  See the forum")
     indigo.server.log(
@@ -64,20 +52,8 @@ except:
         "or FindFriendsMini(1).pluginIndigo?  Make sure that all iFindStuff files are deleted from Downloads"
         "before downloading the latest versions")
 
-# Now the html mapping libraries - note that these have also been modified to allow custom icons
-
-#try:
-#    from pygmaps.pygmaps import maps
-#except:
-#    indigo.server.log("pygmaps.py error - No Map functionality availiable - contact Developer")
-
 # Date and time libraries
 import time
-
-# Now install GeoCoder for reverse address lookup
-# from pygeocoder import Geocoder, GeocoderError, GeocoderResult
-
-
 
 try:
     import pydevd
@@ -115,7 +91,6 @@ kDefaultPluginPrefs = {
 class Plugin(indigo.PluginBase):
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
         """ docstring placeholder """
-
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
         self.pluginIsInitializing = True
         self.pluginIsShuttingDown = False
@@ -136,7 +111,6 @@ class Plugin(indigo.PluginBase):
         #self.updater = indigoPluginUpdateChecker.updateChecker(self, "http://")
         self.updaterEmailsEnabled = self.pluginPrefs.get('updaterEmailsEnabled', False)
 
-# No PluginConfig.xml Option Default to 24 hours
         self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
         self.next_update_check = time.time()
         self.configVerticalMap = self.pluginPrefs.get('verticalMap', "600")
@@ -161,7 +135,7 @@ class Plugin(indigo.PluginBase):
     ###  Update ghpu Routines.
 
     def checkForUpdates(self):
-        #update = self.updater.checkForUpdate()
+
         updateavailable = self.updater.getLatestVersion()
         if updateavailable and self.openStore:
             indigo.server.log(u'FindFriendsMini: Update Checking.  Update is Available.  Taking you to plugin Store. ')
@@ -260,7 +234,7 @@ class Plugin(indigo.PluginBase):
 
         # Update statelist in case any updates/changes
         dev.stateListOrDisplayStateIdChanged()
-        dev.updateStateOnServer('deviceIsOnline', value=True, uiValue="Waiting")
+        dev.updateStateOnServer('deviceIsOnline', value=False, uiValue="Waiting")
         dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
     def deviceStopComm(self, dev):
@@ -268,16 +242,15 @@ class Plugin(indigo.PluginBase):
 
         if self.debugLevel >= 2:
             self.debugLog(u"deviceStopComm() method called.")
-
         self.debugLog(u"Stopping FindFriendsMini device: {0}".format(dev.name))
-
         dev.updateStateOnServer('deviceIsOnline', value=False, uiValue="Disabled")
-
         dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
         # =============================================================
 
     def actionrefreshdata(self):
+        if self.debugLevel >= 2:
+            self.debugLog(u"actionrefreshdata() method called.")
         self.refreshData()
         self.sleep(5)
         self.checkGeofence()
@@ -299,17 +272,18 @@ class Plugin(indigo.PluginBase):
             if self.updateFrequency > 0:
                 if time.time() > self.next_update_check:
                     try:
-                        #self.updater.checkForUpdate()
                         self.checkForUpdates()
                         self.next_update_check = time.time() + self.updateFrequency
                     except:
-                        self.logger.debug(u'Error checking for update - ? No Internet.  Checking again in 24 hours')
+                        self.logger.debug(u'Error checking for update - ? No Internet connection.  Checking again in 24 hours')
                         self.next_update_check = self.next_update_check + 86400;
 
             self.sleep(5)
             self.refreshData()
             self.sleep(5)
             self.checkGeofence()
+            # todo
+            # If time is changed won't be updated here - need to either restart plugin or change code
             self.sleep(secondsbetweencheck)
 
     def shutdown(self):
@@ -317,7 +291,6 @@ class Plugin(indigo.PluginBase):
 
         if self.debugLevel >= 2:
             self.debugLog(u"Shutting down FindFriendsMini. shutdown() method called")
-
         self.pluginIsShuttingDown = True
 
     def startup(self):
@@ -325,10 +298,7 @@ class Plugin(indigo.PluginBase):
 
         if self.debugLevel >= 2:
             self.debugLog(u"Starting FindFriendsMini. startup() method called.")
-
         self.updater = GitHubPluginUpdater(self)
-
-
         # Set appleAPI account as not verified on start of startup
         accountOK = False
         MAChome = os.path.expanduser("~") + "/"
@@ -340,7 +310,7 @@ class Plugin(indigo.PluginBase):
 
         if appleAPIId != '':
             if self.debugLevel >= 2:
-                self.debugLog(u"AppleAPIID is not empty - loging in to appleAPI now.")
+                self.debugLog(u"AppleAPIID is not empty - logging in to appleAPI now.")
             username = self.pluginPrefs.get('appleId')
             password = self.pluginPrefs.get('applePwd')
             appleAPI = self.iAuthorise(username, password)
@@ -354,7 +324,6 @@ class Plugin(indigo.PluginBase):
 
         # =============================================================
         # Device configuration validation Added DaveL17 17/12/19
-
         errorDict = indigo.Dict()
         self.debugLog(u"validateDeviceConfigUi() method called.")
         return True, valuesDict, errorDict
@@ -404,15 +373,12 @@ class Plugin(indigo.PluginBase):
 
             # Validate login
             iLogin = self.iAuthorise(valuesDict['appleId'], valuesDict['applePwd'])
-
             if not iLogin[0] == 0:
-
                 # Failed login
                 iFail = True
                 errorDict["appleId"] = "Could not log in with that username/password combination"
                 errorDict[
                     "showAlertText"] = "Login validation failed - check username & password or internet connection"
-
             else:
                 # Get account details
                 api = iLogin[1]
@@ -420,13 +386,6 @@ class Plugin(indigo.PluginBase):
                     #indigo.server.log(unicode(api.friends.locations))
                 # dev = indigo.devices[devId]
                 accountOK = True
-                # iAccountNumber = str(dev.id)
-                # dev.updateStateOnServer('accountActive', value="Active")
-                # dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
-
-                # Devices in or added to Dictionary so return OK
-                accountOK = True
-                # indigo.server.log(u'appleAPIid:'+unicode(api['id']))
                 valuesDict['appleAPIid'] = valuesDict['appleId']
                 return True, valuesDict
 
@@ -459,7 +418,6 @@ class Plugin(indigo.PluginBase):
         """
         if self.debugLevel >= 2:
             self.debugLog(u"refreshData() method called.")
-
         try:
             username = self.pluginPrefs.get('appleId', '')
             password = self.pluginPrefs.get('applePwd', '')
@@ -475,15 +433,12 @@ class Plugin(indigo.PluginBase):
                 if self.debugLevel >= 2:
                     self.debugLog(u"Login to icloud Failed.")
                 return
-
             appleAPI = iLogin[1]
             follower = iLogin[1].friends.locations
-
             if self.debugLevel >= 2:
                 self.debugLog(unicode('Follower is Type: '+ unicode(type(follower))))
             if self.debugLevel >=4:
-                self.debugLog(unicode('More debugging: Follower: '+unicode(appleAPI.friends)))
-
+                self.debugLog(unicode('More debugging: Follower: '+unicode(iLogin[1].friends.locations)))
             if len(follower) == 0:
                 indigo.server.log(u'No Followers Found for this Account.  Have you any friends?')
                 if self.debugLevel >=4:
@@ -511,14 +466,12 @@ class Plugin(indigo.PluginBase):
                     self.debugLog(u"{0:=^130}".format(""))
                     return
 
-
             for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
                 # Check AppleID of Device
                 if dev.enabled:
                     targetFriend = dev.pluginProps['targetFriend']
                     if self.debugLevel >= 2:
                         self.debugLog(u'targetFriend of Device equals:' + unicode(targetFriend))
-
                     for follow in follower:
                         if self.debugLevel >= 2:
                             self.debugLog (unicode(follow['id']))
@@ -528,15 +481,15 @@ class Plugin(indigo.PluginBase):
                                 self.debugLog(unicode(follow))
                             # Update device with data from iFindFriends service
                             self.refreshDataForDev(dev, follow)
-
             return
 
         except Exception as e:
-            indigo.server.log(u'Error within get Data.  ?Network connection or issue:  Error:'+unicode(e))
-            indigo.server.log(u'-----------------------------------------------------------------------------')
+            indigo.server.log(u'Error within get Data.  ?Network connection or issue:  Error Given:'+unicode(e))
+            indigo.server.log(u"{0:=^130}".format(""))
             indigo.server.log(u'Have you also logged on and setup new account on an Ios/iphone/ipad device?')
-            indigo.server.log(u'This needs to be done, for FindmyFriends to work.  Cannot just create account.')
-            indigo.server.log(u'-----------------------------------------------------------------------------')
+            indigo.server.log(u'You need to run and enable iOS FindmyFriends Application, you should see visible friends')
+            indigo.server.log(u'This needs to be done, for FindmyFriends to work.  You cannot just create account.')
+            indigo.server.log(u"{0:=^130}".format(""))
             return
 
     def checkGeofence(self):
@@ -556,7 +509,6 @@ class Plugin(indigo.PluginBase):
                     igeoLong = float(localProps['geoLongitude'])
                     igeoLat = float(localProps['geoLatitude'])
                     igeoRangeDistance = int(localProps['geoRange'])
-
                     # old Friends in Range - act on changes.
                     igeoFriendsRangeOld = int(geoDevices.states['friendsInRange'])
 
@@ -575,7 +527,7 @@ class Plugin(indigo.PluginBase):
                                 self.debugLog(unicode(iSeparation))
                             if not iSeparation[0]:
                                 if self.debugLevel >= 2:
-                                    self.debugLog(u'Problem with iSeparation')
+                                    self.debugLog(u'Problem with iSeparation.  Continue.')
                         # Problem with the distance so ignore and move on
                                 continue
                             iSeparationABS = abs(iSeparation[1])
@@ -587,7 +539,6 @@ class Plugin(indigo.PluginBase):
                             else:
                                 iDevGeoInRange = 'false'
                             #End of Device Ieration
-
                     #Now back to GeoFence iteration
                     update_time = t.strftime(self.datetimeFormat)
                     if igeoFriendsRange != igeoFriendsRangeOld:
@@ -643,7 +594,6 @@ class Plugin(indigo.PluginBase):
 
     def refreshDataForDev(self, dev, follow):
         """ Refreshes device data. """
-
         if self.debugLevel >= 2:
             self.debugLog(u"refreshDataForDev() method called.")
         try:
@@ -712,12 +662,10 @@ class Plugin(indigo.PluginBase):
             update_time = t.strftime(self.datetimeFormat)
             dev.updateStateOnServer('deviceLastUpdated', value=str(update_time))
             dev.updateStateOnServer('deviceTimestamp', value=t.time())
-
             if UseLabelforState:
                 dev.updateStateOnServer('deviceIsOnline', value=True, uiValue=labeltouse)
             else:
                 dev.updateStateOnServer('deviceIsOnline', value=True, uiValue=dev.states['address'])
-
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
             self.godoMapping(str(follow['location']['latitude']),str(follow['location']['longitude']),dev)
             return
@@ -728,8 +676,6 @@ class Plugin(indigo.PluginBase):
             dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             return
-
-        return
 
     def godoMapping(self, latitude, longitude, dev):
 
@@ -743,7 +689,6 @@ class Plugin(indigo.PluginBase):
             file = folderLocation +filename
             #Generate single device URL
             drawUrl = urlGenerate(self, latitude ,longitude , self.googleAPI, int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap), dev)
-
             if self.debugLevel >= 4:
                 webbrowser.open_new(drawUrl)
 
@@ -757,17 +702,14 @@ class Plugin(indigo.PluginBase):
             file = folderLocation + filename
             # Generate URL for All Maps
             drawUrl = urlAllGenerate(self, self.googleAPI,  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
-
             fileMap = "curl --output '" + file + "' --url '" + drawUrl + "'"
             os.system(fileMap)
-
             if self.debugLevel >= 2:
                 self.debugLog('Saving Map...' + file)
 
             if self.debugLevel >= 4:
                 webbrowser.open_new(drawUrl)
                 self.debugLog(unicode(drawUrl))
-
             return
 
         except Exception as e:
@@ -855,7 +797,6 @@ class Plugin(indigo.PluginBase):
         # Logs into the find my phone API and returns an error if it doesn't work correctly
         if self.debugLevel >= 2:
             self.debugLog('Attempting login...')
-
         # Logs into the API as required
         try:
             appleAPI = PyiCloudService(iUsername, iPassword)
@@ -922,7 +863,6 @@ class Plugin(indigo.PluginBase):
             indigo.server.log(u'Error ...' + unicode(e.message) + unicode(e.__dict__), type="iFindFriend Urgent ",
                               isError=True)
             return 1, 'NI'
-
 
 def urlGenerate(self, latitude, longitude, mapAPIKey, iHorizontal, iVertical, iZoom, dev=0):
     ################################################

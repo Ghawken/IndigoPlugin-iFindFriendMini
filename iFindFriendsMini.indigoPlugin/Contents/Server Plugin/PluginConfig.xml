@@ -9,6 +9,8 @@
         <Label>Developed by: GlennNZ</Label>
     </Field>
 
+    <Field id="sepnew44" type="separator"/>
+
 			<Field id="appleId"
 				   type="textfield"
 				   tooltip="Enter the Apple Account Id"
@@ -45,7 +47,8 @@
     <Field id="configMenuTimeCheck" type="menu" defaultValue="15" tooltip="Select frequency for checking Devices">
         <Label>Time for Updates:</Label>
         <List>
-            <Option value="5">5 Minutes</Option>
+            <Option value="2">2 Minutes</Option>
+            <Option value="5">5 Minutes (Default)</Option>
             <Option value="10">10 Minutes</Option>
             <Option value="15">15 Minutes</Option>
             <Option value="20">20 Minutes</Option>
