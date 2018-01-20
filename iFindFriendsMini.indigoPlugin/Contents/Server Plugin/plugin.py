@@ -107,7 +107,7 @@ class Plugin(indigo.PluginBase):
         self.debugLevel = int(self.pluginPrefs.get('showDebugLevel', 1))
         self.logFile = u"{0}/Logs/com.GlennNZ.indigoplugin.FindFriendsMini/plugin.log".format(
             indigo.server.getInstallFolderPath())
-        self.configMenuTimeCheck = int(self.pluginPrefs.get('configMenuTimeCheck', "15"))
+        self.configMenuTimeCheck = int(self.pluginPrefs.get('configMenuTimeCheck', "5"))
         #self.updater = indigoPluginUpdateChecker.updateChecker(self, "http://")
         self.updaterEmailsEnabled = self.pluginPrefs.get('updaterEmailsEnabled', False)
 
@@ -181,6 +181,8 @@ class Plugin(indigo.PluginBase):
             self.googleAPI = self.pluginPrefs.get('googleAPI', '')
             self.openStore = self.pluginPrefs.get('openStore', False)
             self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
+            # If plugin config menu closed update the time for check.  Will apply after first change.
+            self.configMenuTimeCheck = int(self.pluginPrefs.get('configMenuTimeCheck', "5"))
             self.debugLog(u"User prefs saved.")
 
             if self.debug:
@@ -262,7 +264,7 @@ class Plugin(indigo.PluginBase):
         if self.debugLevel >= 2:
             self.debugLog(u"ronConCurrentThread() method called.")
 
-        secondsbetweencheck = 60*self.configMenuTimeCheck
+        #secondsbetweencheck = 60*self.configMenuTimeCheck
 
         if self.debugLevel >= 2:
             self.debugLog(u"secondsbetween Check Equal:"+unicode(secondsbetweencheck))
@@ -284,7 +286,7 @@ class Plugin(indigo.PluginBase):
             self.checkGeofence()
             # todo
             # If time is changed won't be updated here - need to either restart plugin or change code
-            self.sleep(secondsbetweencheck)
+            self.sleep(self.configMenuTimeCheck*60)
 
     def shutdown(self):
         """ docstring placeholder """
