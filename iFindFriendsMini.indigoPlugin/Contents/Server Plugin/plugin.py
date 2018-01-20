@@ -840,17 +840,31 @@ class Plugin(indigo.PluginBase):
                 self.debugLog(u'Login successful...')
                 if self.debugLevel >=4:
                     self.debugLog(u'appleAPI: Here we are 0.1.5 **************************:')
+                    self.debugLog(u'type AppleAPI result equals:')
                     self.debugLog(unicode(type(appleAPI)))
+                    self.debugLog(u'AppleAPI.devices equals:')
                     self.debugLog(unicode(appleAPI.devices))
+                    self.debugLog(u'AppleAPI.friends.details equals:')
                     self.debugLog(unicode(appleAPI.friends.details))
+                    self.debugLog(u'AppleAPI.friends.locations equals:')
                     self.debugLog(unicode(appleAPI.friends.locations))
+                    self.debugLog(u'Type of appleAPI.friends.locations equals:')
                     self.debugLog(unicode(type(appleAPI.friends.locations)))
+                    self.debugLog(u'Type of appleAPI.friends.data')
                     self.debugLog(unicode(type(appleAPI.friends.data)))
+                    self.debugLog(u'AppleAPI.friends.data equals')
+                    self.debugLog(unicode(appleAPI.friends.data))
+                    self.debugLog(u'appleAPI.friends.data[followers] equals:')
                     self.debugLog(unicode(appleAPI.friends.data['followers']))
+
                     follower = appleAPI.friends.data['followers']
+                    self.debugLog(u'follower or appleAPI.friends.data[followers] equals:')
                     for fol in follower:
+                        self.debugLog(u'Follower in follower: ID equals')
                         self.debugLog(unicode(fol['id']))
+                        self.debugLog(u'email address from Id equals:')
                         self.debugLog(unicode(fol['invitationFromEmail']))
+                    self.debugLog(u'AppleAPI.friends.details equals:')
                     self.debugLog(unicode(appleAPI.friends.details))
             return 0, appleAPI
 
