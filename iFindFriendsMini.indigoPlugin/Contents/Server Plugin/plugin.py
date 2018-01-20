@@ -929,7 +929,13 @@ class Plugin(indigo.PluginBase):
                     self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u"{0:=^130}".format(""))
 
+
             return 0, appleAPI
+
+        except PyiCloudFailedLoginException:
+            indigo.server.log(u'Login failed - Check username/password - has it changed recently?...',
+                              type="iFindStuff Critical ", isError=True)
+            return 1, 'NL'
 
         except Exception as e:
             indigo.server.log(u'Login FailedError ...' + unicode(e.message) + unicode(e.__dict__), type="iFindFriend Urgent ",
