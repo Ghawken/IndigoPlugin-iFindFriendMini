@@ -486,7 +486,31 @@ class Plugin(indigo.PluginBase):
 
             if len(follower) == 0:
                 indigo.server.log(u'No Followers Found for this Account.  Have you any friends?')
+                if self.debugLevel >=4:
+                    self.debugLog(u'Full Dump of AppleAPI data follows:')
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(unicode(iLogin[1].friends.data))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u'Please PM developer this log.')
+                    self.debugLog(u"{0:=^130}".format(""))
+                    return
                 return
+
+            if follower is None:
+                indigo.server.log(u'No Followers Found for this Account.  Have you any (enabled) friends?')
+                if self.debugLevel >=4:
+                    self.debugLog(u'Full Dump of AppleAPI data follows:')
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(unicode(iLogin[1].friends.data))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u'Please PM developer this log.')
+                    self.debugLog(u"{0:=^130}".format(""))
+                    return
+
 
             for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
                 # Check AppleID of Device
@@ -839,33 +863,55 @@ class Plugin(indigo.PluginBase):
             if self.debugLevel > 2:
                 self.debugLog(u'Login successful...')
                 if self.debugLevel >=4:
-                    self.debugLog(u'appleAPI: Here we are 0.1.5 **************************:')
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u'type AppleAPI result equals:')
                     self.debugLog(unicode(type(appleAPI)))
                     self.debugLog(u'AppleAPI.devices equals:')
                     self.debugLog(unicode(appleAPI.devices))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u'AppleAPI.friends.details equals:')
                     self.debugLog(unicode(appleAPI.friends.details))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u'AppleAPI.friends.locations equals:')
                     self.debugLog(unicode(appleAPI.friends.locations))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u'Type of appleAPI.friends.locations equals:')
                     self.debugLog(unicode(type(appleAPI.friends.locations)))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u'Type of appleAPI.friends.data')
                     self.debugLog(unicode(type(appleAPI.friends.data)))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u'AppleAPI.friends.data equals')
                     self.debugLog(unicode(appleAPI.friends.data))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u'appleAPI.friends.data[followers] equals:')
                     self.debugLog(unicode(appleAPI.friends.data['followers']))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
 
                     follower = appleAPI.friends.data['followers']
                     self.debugLog(u'follower or appleAPI.friends.data[followers] equals:')
                     for fol in follower:
+                        self.debugLog(u"{0:=^130}".format(""))
+                        self.debugLog(u"{0:=^130}".format(""))
                         self.debugLog(u'Follower in follower: ID equals')
                         self.debugLog(unicode(fol['id']))
                         self.debugLog(u'email address from Id equals:')
                         self.debugLog(unicode(fol['invitationFromEmail']))
+
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u'AppleAPI.friends.details equals:')
                     self.debugLog(unicode(appleAPI.friends.details))
+                    self.debugLog(u"{0:=^130}".format(""))
+                    self.debugLog(u"{0:=^130}".format(""))
             return 0, appleAPI
 
         except PyiCloudFailedLoginException as e:

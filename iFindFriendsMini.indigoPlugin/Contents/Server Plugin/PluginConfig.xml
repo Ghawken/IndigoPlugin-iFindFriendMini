@@ -157,7 +157,7 @@
             <Option value="1">Low</Option>
             <Option value="2">Medium</Option>
             <Option value="3">High</Option>
-            <Option value="4">High/Plus Maps</Option>
+            <Option value="4">High/Plus Maps/iCloud Logging</Option>
         </List>
     </Field>
 
