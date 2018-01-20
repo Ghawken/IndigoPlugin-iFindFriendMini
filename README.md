@@ -105,21 +105,21 @@ For these friends the following custom states are Displayed:
 (Interestingly some of these unreported fields do get reported in you have the FindmyFriends app open at the time of the check - altitude for example and potentially others I haven't noticed)
 
 
-Address: Formatted with commas 
-Altitude: 
-batteryStatus: appears to be not reported
- deviceIsOnline 
-deviceLastUpdated 
-deviceTimeStamp 
-horizontalAccuracy 
-id 
-labels 
-latitude 
-locationStatus: appears to be not reported 
-locationTimeStamp: appears to be always 0 
-longitude: 
-status: 
-timestamp: appears to be also 0
+- Address: Formatted with commas
+- Altitude:
+- batteryStatus: appears to be not reported
+- deviceIsOnline
+- deviceLastUpdated
+- deviceTimeStamp
+- horizontalAccuracy
+- id
+- labels
+- latitude
+- locationStatus: appears to be not reported
+- locationTimeStamp: appears to be always 0
+- longitude:
+- status:
+- timestamp: appears to be also 0
 
 
 ![](https://s17.postimg.org/qd5lrmrhr/device_States.png)
@@ -172,11 +172,11 @@ GeoFence Device States:
 
 These stats are updated with Devices at same frequency (defaults to 5 minutes)
 Stats of use:
-friendsinRange = number of friends within the Geofence.  Device is Green if more than 1 within, grey if noone
-lastArrivalTime = date/time in configured format of Last arrival
-lastDeptime = date/time in configured format of last Departure
-minutessincelastArrival  - minutes since this event.  Updated at same frequency of devices
-minutessincelastDep - 
+- friendsinRange = number of friends within the Geofence.  Device is Green if more than 1 within, grey if noone
+- lastArrivalTime = date/time in configured format of Last arrival
+- lastDeptime = date/time in configured format of last Departure
+- minutessincelastArrival  - minutes since this event.  Updated at same frequency of devices
+- minutessincelastDep -
 
 Allows triggering on state:
 eg.  **if >20 minutes since someone left and 0 friend within Geofence - do something.**
@@ -195,14 +195,14 @@ Changelog:
 
 Latest Version:
 **0.1.4**
-Delete unused code/node - much smaller now!
-Tidy up uiValue/Values for Geofences
-Add Menu to check PluginStore
-Change Update code to use PluginStore (seems some changes coming to PluginStore - so best to use I suspect
-Change Plugin Config Menus.
-Add option to change update checking time/and enable automatic opening of PluginStore
-Some more logging advice for not setup correctly issues.
-Add icon.png for PluginStore
+- Delete unused code/node - much smaller now!
+- Tidy up uiValue/Values for Geofences
+- Add Menu to check PluginStore
+- Change Update code to use PluginStore (seems some changes coming to PluginStore - so best to use I suspect
+- Change Plugin Config Menus.
+- Add option to change update checking time/and enable automatic opening of PluginStore
+- Some more logging advice for not setup correctly issues.
+- Add icon.png for PluginStore
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
