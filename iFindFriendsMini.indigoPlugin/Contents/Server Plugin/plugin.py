@@ -94,6 +94,7 @@ class Plugin(indigo.PluginBase):
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
         self.pluginIsInitializing = True
         self.pluginIsShuttingDown = False
+        self.prefsUpdated = False
         indigo.server.log(u"")
         indigo.server.log(u"{0:=^130}".format(" Initializing New Plugin Session "))
         indigo.server.log(u"{0:<30} {1}".format("Plugin name:", pluginDisplayName))
@@ -184,6 +185,7 @@ class Plugin(indigo.PluginBase):
             # If plugin config menu closed update the time for check.  Will apply after first change.
             self.configMenuTimeCheck = int(self.pluginPrefs.get('configMenuTimeCheck', "5"))
             self.debugLog(u"User prefs saved.")
+            self.prefsUpdated = True
 
             if self.debug:
                 indigo.server.log(u"Debugging on (Level: {0})".format(self.debugLevel))
@@ -234,6 +236,7 @@ class Plugin(indigo.PluginBase):
                 self.debugLog(unicode(stateList))
             dev.updateStatesOnServer(stateList)
 
+        self.prefsUpdated = True
         # Update statelist in case any updates/changes
         dev.stateListOrDisplayStateIdChanged()
         dev.updateStateOnServer('deviceIsOnline', value=False, uiValue="Waiting")
@@ -267,26 +270,62 @@ class Plugin(indigo.PluginBase):
         #secondsbetweencheck = 60*self.configMenuTimeCheck
 
         if self.debugLevel >= 2:
-            self.debugLog(u"secondsbetween Check Equal:"+unicode(secondsbetweencheck))
+            self.debugLog(u"secondsbetween Check Equal:"+unicode(60*self.configMenuTimeCheck))
 
+        # Change to time based looping with second checking.  Allowing to update Geofences minutely and any config changes to be immediately registered
         while self.pluginIsShuttingDown == False:
+        # Shutdown nicely
 
-            if self.updateFrequency > 0:
-                if time.time() > self.next_update_check:
+            if self.debugLevel >= 3:
+                self.debugLog(u'ronConcurrrent loop: pluginshuttingdown=False Loop Running.')
+            currenttimenow = time.time()
+            nextloopdue = time.time() + 5  # currenttime plus 5 seconds when next loop is due.  Will need to reset with config changes.
+
+            self.prefsUpdated = False
+            self.sleep(0.5)
+            loopcounter = 0
+
+
+            while self.prefsUpdated == False:
+                if self.debugLevel >=3 and loopcounter == 60:
+                    self.debugLog(u'ronConcurrrent internal loop: self.prefsUpdated False: Next Update:'+unicode(int(time.time()-nextloopdue))+' and loopcounter at:'+unicode(loopcounter))
+                # Update Plugin Frequency Loop
+                if self.updateFrequency > 0:
+                    if time.time() > self.next_update_check:
+                        try:
+                            self.checkForUpdates()
+                            self.next_update_check = time.time() + self.updateFrequency
+                        except:
+                            self.logger.debug(u'Error checking for update - ? No Internet connection.  Checking again in 24 hours')
+                            self.next_update_check = self.next_update_check + 86400;
+                # Update Loop Check.  Checks Devices and GeoFences.
+                if time.time() > nextloopdue:
                     try:
-                        self.checkForUpdates()
-                        self.next_update_check = time.time() + self.updateFrequency
+                    #self.sleep()
+                        if self.debugLevel >= 2:
+                            self.debugLog(u'ronConcurrrent loop: Running Update:')
+                        self.refreshData()
+                        self.sleep(2)
+                        self.checkGeofence()   #Check distances etc of GeoFences
+                        nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
+                        #reset Geofence time update as done above
+                        loopcounter = 0
+                        if self.debugLevel >= 2:
+                            self.debugLog(u'ronConcurrrent loop: Next Update due (seconds):'+unicode(int(time.time()-nextloopdue)))
                     except:
-                        self.logger.debug(u'Error checking for update - ? No Internet connection.  Checking again in 24 hours')
-                        self.next_update_check = self.next_update_check + 86400;
+                        self.debugLog(u'Error within RunConcurrentLoop Update cycle')
+                        nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
+                if loopcounter >=60:
+                    self.updateGeofencetime()
+                    loopcounter = 1
 
-            self.sleep(5)
-            self.refreshData()
-            self.sleep(5)
-            self.checkGeofence()
-            # todo
-            # If time is changed won't be updated here - need to either restart plugin or change code
-            self.sleep(self.configMenuTimeCheck*60)
+                self.sleep(1)
+                loopcounter = loopcounter + 1
+                #Increment the loopcounter which is used for 60 second GeoFence Time Update
+
+        if self.debugLevel >2:
+            self.debugLog(u'Exiting self.pluginIsShuttingDown Loop.')
+
 
     def shutdown(self):
         """ docstring placeholder """
@@ -435,9 +474,10 @@ class Plugin(indigo.PluginBase):
                 if self.debugLevel >= 2:
                     self.debugLog(u"Login to icloud Failed.")
                 return
+
             appleAPI = iLogin[1]
             follower = iLogin[1].friends.locations
-            if self.debugLevel >= 2:
+            if self.debugLevel >= 4:
                 self.debugLog(unicode('Follower is Type: '+ unicode(type(follower))))
             if self.debugLevel >=4:
                 self.debugLog(unicode('More debugging: Follower: '+unicode(iLogin[1].friends.locations)))
@@ -452,7 +492,6 @@ class Plugin(indigo.PluginBase):
                     self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u'Please PM developer this log.')
                     self.debugLog(u"{0:=^130}".format(""))
-                    return
                 return
 
             if follower is None:
@@ -466,19 +505,19 @@ class Plugin(indigo.PluginBase):
                     self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u'Please PM developer this log.')
                     self.debugLog(u"{0:=^130}".format(""))
-                    return
+                return
 
             for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
                 # Check AppleID of Device
                 if dev.enabled:
                     targetFriend = dev.pluginProps['targetFriend']
-                    if self.debugLevel >= 2:
+                    if self.debugLevel >= 4:
                         self.debugLog(u'targetFriend of Device equals:' + unicode(targetFriend))
                     for follow in follower:
-                        if self.debugLevel >= 2:
+                        if self.debugLevel >= 4:
                             self.debugLog (unicode(follow['id']))
                         if follow['id'] == targetFriend:
-                            if self.debugLevel >= 2:
+                            if self.debugLevel >=4:
                                 self.debugLog(u'Found Target Friend in Data:  Updating Device:' + unicode(dev.name))
                                 self.debugLog(unicode(follow))
                             # Update device with data from iFindFriends service
@@ -493,6 +532,29 @@ class Plugin(indigo.PluginBase):
             indigo.server.log(u'This needs to be done, for FindmyFriends to work.  You cannot just create account.')
             indigo.server.log(u"{0:=^130}".format(""))
             return
+
+    def updateGeofencetime(self):
+        try:
+            if self.debugLevel >2:
+                self.debugLog('update GeoFences time called')
+
+            for geoDevices in indigo.devices.itervalues('self.FindFriendsGeofence'):
+                if geoDevices.enabled:
+                    #localProps = geoDevices.pluginProps
+                    lastArrivaltimestamp = float(geoDevices.states['lastArrivaltimestamp'])
+                    lastDeptimestamp = float(geoDevices.states['lastDeptimestamp'])
+                    if lastArrivaltimestamp > 0:
+                        #indigo.server.log(unicode(lastArrivaltimestamp))
+                        timesincearrival = int(t.time() - float(lastArrivaltimestamp)) / 60  # time in seconds /60
+                        #indigo.server.log(unicode(timesincearrival))
+                        geoDevices.updateStateOnServer('minutessincelastArrival', value=timesincearrival)
+                    if lastDeptimestamp > 0:
+                        timesincedep = int(t.time() - float(lastDeptimestamp)) / 60
+                        geoDevices.updateStateOnServer('minutessincelastDep', value=timesincedep)
+
+        except Exception as e:
+            indigo.server.log(u'Error with updateGeoFence Time:' + unicode(e))
+            pass
 
     def checkGeofence(self):
         try:
@@ -562,8 +624,9 @@ class Plugin(indigo.PluginBase):
                         geoDevices.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                     if igeoFriendsRange >0:
                         geoDevices.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
-                    lastArrivaltimestamp = float(geoDevices.states['lastArrivaltimestamp'])
+
                     try:
+                        lastArrivaltimestamp = float(geoDevices.states['lastArrivaltimestamp'])
                         lastDeptimestamp = float(geoDevices.states['lastDeptimestamp'])
                         if lastArrivaltimestamp > 0:
                             #indigo.server.log(unicode(lastArrivaltimestamp))
@@ -596,10 +659,11 @@ class Plugin(indigo.PluginBase):
 
     def refreshDataForDev(self, dev, follow):
         """ Refreshes device data. """
+
         if self.debugLevel >= 2:
             self.debugLog(u"refreshDataForDev() method called.")
         try:
-            if self.debugLevel >= 2:
+            if self.debugLevel >= 4:
                 self.debugLog(
                 unicode('Now updating Data for : ' + unicode(dev.name) + ' with data received: ' + unicode(follow)))
 #
@@ -615,7 +679,7 @@ class Plugin(indigo.PluginBase):
             else:
                 label = labels
 
-            if self.debugLevel >= 2:
+            if self.debugLevel >=4:
                 self.debugLog(unicode('Label:' + unicode(label) + ' and type is ' + unicode(type(label))))
 
             if isinstance(label, dict):
@@ -805,6 +869,7 @@ class Plugin(indigo.PluginBase):
 
             if self.debugLevel > 2:
                 self.debugLog(u'Login successful...')
+
                 if self.debugLevel >=4:
                     self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u"{0:=^130}".format(""))
@@ -855,6 +920,7 @@ class Plugin(indigo.PluginBase):
                     self.debugLog(unicode(appleAPI.friends.details))
                     self.debugLog(u"{0:=^130}".format(""))
                     self.debugLog(u"{0:=^130}".format(""))
+
             return 0, appleAPI
 
         except PyiCloudFailedLoginException as e:
