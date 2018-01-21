@@ -942,9 +942,14 @@ class Plugin(indigo.PluginBase):
                               type="FindFriendsMini Critical ", isError=True)
             return 1, 'NL'
 
+        except ValueError as e:
+            indigo.server.log(u'Login failed - 2SA and 2FA Authenication are NOT supported.  Create new account without. Error:'+unicode(e.message)+unicode(e.__dict__),
+                              type="FindFriendsMini Critical ", isError=True)
+            return 1, 'NL'
+
 
         except Exception as e:
-            indigo.server.log(u'Login Failed Error.  Is 2FA setup on this account? ' + unicode(e.message) + unicode(e.__dict__), type="iFindFriend Urgent ",
+            indigo.server.log(u'Login Failed General Error.   ' + unicode(e.message) + unicode(e.__dict__), type="iFindFriend Urgent ",
                               isError=True)
             return 1, 'NI'
 
