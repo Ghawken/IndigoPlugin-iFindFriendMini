@@ -43,14 +43,21 @@ try:
     )
 
 
-except:
-    indigo.server.log("FATAL ERROR - Cannot find pyicloud - check with developer")
+except Exception as e:
+    indigo.server.log(u"{0:=^130}".format(""), isError=True)
+    indigo.server.log(u'Returned Error:'+unicode(e), isError=True)
+    indigo.server.log(u"{0:=^130}".format(""), isError=True)
+    indigo.server.log("FATAL ERROR - Cannot find pyicloud - check with developer", isError=True)
     indigo.server.log("Can't find pyicloud for more details and how to resolve."
                       "Alternatively - check the name of the plugin in the Plugins folder.  Is is FindFriendsMini.pluginIndigo"
                       "or FindFriendsMini(1).pluginIndigo?  Make sure that all FindFriendsMini files are deleted from Downloads"
                       "before downloading the latest versions")
+    indigo.server.log(u"{0:=^130}".format(""), isError=True)
+    indigo.server.log(u"{0:=^130}".format(""), isError=True)
 
 # Now the HTTP and Compatibility libraries
+#indigo.server.log(u"{0:=^130}".format(""), isError=True)
+
 try:
     import requests
 except:
@@ -533,7 +540,7 @@ class Plugin(indigo.PluginBase):
             return
 
         except Exception as e:
-            indigo.server.log(u'Error within get Data.  ?Network connection or issue:  Error Given:'+unicode(e))
+            indigo.server.log(u'Error within get Data.  ?Network connection or issue:  Error Given: '+unicode(e))
             indigo.server.log(u"{0:=^130}".format(""))
             indigo.server.log(u'Have you also logged on and setup new account on an Ios/iphone/ipad device?')
             indigo.server.log(u'You need to run and enable iOS FindmyFriends Application, you should see visible friends')
