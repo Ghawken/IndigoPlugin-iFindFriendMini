@@ -55,6 +55,8 @@ class PyiCloudService(object):
 
         self._cookie_directory = 'cookies'
 
+        self.data ={}
+
         self.session = requests.Session()
         self.session.verify = False
         self.session.headers.update({
@@ -133,15 +135,28 @@ class PyiCloudService(object):
         data = dict(self.user)
         data.update({'id': self.params['id'], 'extended_login': False})
 
-        req = self.session.post(
-            self._base_login_url,
-            params=self.params,
-            data=json.dumps(data)
-        )
+        try:
+            req = self.session.post(
+                self._base_login_url,
+                params=self.params,
+                data=json.dumps(data)
+            )
+
+
+
+        except PyiCloudAPIResponseError as error:
+            msg ='API Response Error.  Invalid email/passwoprd'
+            msg = req.json()
+            raise PyiCloudFailedLoginException(msg, error)
+
+        #content_type = req.headers.get('Content-Type', '').split(';')[0]
+        #json_mimetypes = ['application/json', 'text/json']
 
         if not req.ok:
             msg = 'Invalid email/password combination.'
+#            msg = req.json()
             raise PyiCloudFailedLoginException(msg)
+
 
         # Glenn added dump and save the Whole Cookie File
         # with open(cookiefile, 'wb') as f:
@@ -164,6 +179,7 @@ class PyiCloudService(object):
         self.refresh_validate()
 
         self.discovery = req.json()
+        self.data = req.json()
         self.webservices = self.discovery['webservices']
 
     '''
@@ -204,6 +220,14 @@ class PyiCloudService(object):
 
         self._cookies = request.cookies
     '''
+    @property
+    def requires_2sa(self):
+        """ Returns True if two-step authentication is required."""
+        return self.data.get('hsaChallengeRequired', False) \
+            and self.data['dsInfo'].get('hsaVersion', 0) >= 1
+        # FIXME: Implement 2FA for hsaVersion == 2
+
+
     @property
     def devices(self):
         """ Return all Friends."""

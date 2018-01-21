@@ -47,7 +47,7 @@ except:
     indigo.server.log("FATAL ERROR - Cannot find pyicloud - check with developer")
     indigo.server.log("Can't find pyicloud for more details and how to resolve."
                       "Alternatively - check the name of the plugin in the Plugins folder.  Is is FindFriendsMini.pluginIndigo"
-                      "or FindFriendsMini(1).pluginIndigo?  Make sure that all iFindStuff files are deleted from Downloads"
+                      "or FindFriendsMini(1).pluginIndigo?  Make sure that all FindFriendsMini files are deleted from Downloads"
                       "before downloading the latest versions")
 
 # Now the HTTP and Compatibility libraries
@@ -57,7 +57,7 @@ except:
     indigo.server.log("Note: requests.py must be installed for this plugin to operate.  Indigo 7 ONLY.  See the forum")
     indigo.server.log(
         "Alternatively - check the name of the plugin in the Plugins folder.  Is is FindFriendsMini.pluginIndigo"
-        "or FindFriendsMini(1).pluginIndigo?  Make sure that all iFindStuff files are deleted from Downloads"
+        "or FindFriendsMini(1).pluginIndigo?  Make sure that all FindFriendsMini files are deleted from Downloads"
         "before downloading the latest versions")
 
 # Date and time libraries
@@ -933,12 +933,18 @@ class Plugin(indigo.PluginBase):
             return 0, appleAPI
 
         except PyiCloudFailedLoginException:
-            indigo.server.log(u'Login failed - Check username/password - has it changed recently?...',
-                              type="iFindStuff Critical ", isError=True)
+            indigo.server.log(u'Login failed - Check username/password - has it changed recently.  2FA is not allowed/supported on this account',
+                              type="FindFriendsMini Critical ", isError=True)
             return 1, 'NL'
 
+        except PyiCloud2SARequiredError:
+            indigo.server.log(u'Login failed - 2SA and 2FA Authenication are NOT supported.  Create new account without.',
+                              type="FindFriendsMini Critical ", isError=True)
+            return 1, 'NL'
+
+
         except Exception as e:
-            indigo.server.log(u'Login FailedError ...' + unicode(e.message) + unicode(e.__dict__), type="iFindFriend Urgent ",
+            indigo.server.log(u'Login Failed Error.  Is 2FA setup on this account? ' + unicode(e.message) + unicode(e.__dict__), type="iFindFriend Urgent ",
                               isError=True)
             return 1, 'NI'
 
