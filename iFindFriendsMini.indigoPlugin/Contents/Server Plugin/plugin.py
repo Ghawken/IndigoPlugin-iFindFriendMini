@@ -66,13 +66,12 @@ except Exception as e:
         indigo.server.log('Restarting Plugin...', isError=True)
         indigo.server.log(u"{0:=^130}".format(""), isError=True)
         MajorProblem =1
-    except:
-        indigo.server.log(u'Easy_Install Failed. Please contact developer.', isError=True)
+    except Exception as b:
+        indigo.server.log(u'Easy_Install/Pytz Failed. Please contact developer.  Error:'+unicode(b), isError=True)
 
 
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
     indigo.server.log("Please Disable Plugin and connect Developer.", isError=True)
-    indigo.server.log(u"{0:=^130}".format(""), isError=True)
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
 # Now the HTTP and Compatibility libraries
 #indigo.server.log(u"{0:=^130}".format(""), isError=True)
