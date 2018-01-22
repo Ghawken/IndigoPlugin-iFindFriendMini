@@ -47,14 +47,16 @@ except Exception as e:
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
     indigo.server.log(u'Returned Error:'+unicode(e), isError=True)
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
-    indigo.server.log("FATAL ERROR - Cannot find pyicloud - check with developer", isError=True)
+    indigo.server.log("FATAL ERROR - Cannot find pyicloud or cannot load pyicloud or dependency.", isError=True)
     indigo.server.log("Can't find pyicloud for more details and how to resolve."
                       "Alternatively - check the name of the plugin in the Plugins folder.  Is is FindFriendsMini.pluginIndigo"
                       "or FindFriendsMini(1).pluginIndigo?  Make sure that all FindFriendsMini files are deleted from Downloads"
                       "before downloading the latest versions")
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
-
+    indigo.server.log("Please Disable Plugin and connect Developer.", isError=True)
+    indigo.server.log(u"{0:=^130}".format(""), isError=True)
+    indigo.server.log(u"{0:=^130}".format(""), isError=True)
 # Now the HTTP and Compatibility libraries
 #indigo.server.log(u"{0:=^130}".format(""), isError=True)
 
@@ -825,6 +827,21 @@ class Plugin(indigo.PluginBase):
             self.pluginPrefs['showDebugInfo'] = False
             self.pluginPrefs['showDebugLevel'] = 1
             indigo.server.log(u"Debugging off.  Debug level: {0}".format(self.debugLevel))
+
+    def toggleDebugMax(self):
+        """ Toggle debug on/off. """
+
+        if self.debugLevel >= 2:
+            self.debugLog(u"toggleDebugMax() method called.")
+
+        self.debug = True
+        self.pluginPrefs['showDebugInfo'] = True
+        indigo.server.log(u"Debugging on. Maximum Level.")
+        #self.debugLog(u"Debug level: {0}".format(self.debugLevel))
+        self.debugLevel = 5
+        self.pluginPrefs['showDebugLevel'] = 5
+        self.debugLog(u"Debug level: {0}".format(self.debugLevel))
+
 
     def myFriendDevices(self, filter=0, valuesDict=None, typeId="", targetId=0):
 

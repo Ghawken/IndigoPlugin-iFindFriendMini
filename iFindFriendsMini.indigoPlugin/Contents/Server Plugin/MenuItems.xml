@@ -22,5 +22,8 @@
         <Name>Toggle Debugging</Name>
         <CallbackMethod>toggleDebugEnabled</CallbackMethod>
     </MenuItem>
-
+    <MenuItem id="toggleDebugMax">
+        <Name>Set Debug to Max</Name>
+        <CallbackMethod>toggleDebugMax</CallbackMethod>
+    </MenuItem>
 </MenuItems>
