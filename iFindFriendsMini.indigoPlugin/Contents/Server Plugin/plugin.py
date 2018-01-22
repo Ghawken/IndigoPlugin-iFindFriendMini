@@ -13,6 +13,8 @@ Enormously based on FindiStuff by Chameleon and GhostXML by DaveL17
 
 # Stock imports
 
+global MajorProblem
+MajorProblem = 0
 
 try:
     import locale
@@ -29,6 +31,7 @@ import time as t
 try:
     import indigo
 except ImportError:
+    MajorProblem = 2  #1 to restart, 2 to disable
     pass
 
 try:
@@ -44,15 +47,28 @@ try:
 
 
 except Exception as e:
+    MajorProblem =2
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
     indigo.server.log(u'Returned Error:'+unicode(e), isError=True)
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
     indigo.server.log("FATAL ERROR - Cannot find pyicloud or cannot load pyicloud or dependency.", isError=True)
-    indigo.server.log("Can't find pyicloud for more details and how to resolve."
-                      "Alternatively - check the name of the plugin in the Plugins folder.  Is is FindFriendsMini.pluginIndigo"
-                      "or FindFriendsMini(1).pluginIndigo?  Make sure that all FindFriendsMini files are deleted from Downloads"
-                      "before downloading the latest versions")
-    indigo.server.log(u"{0:=^130}".format(""), isError=True)
+    indigo.server.log('Maybe missing pytz package.  Attempting fix....', isError=True)
+
+    try:
+        indigo.server.log('Attempting install of Easy_Install...', isError=True)
+        from setuptools.command import easy_install
+        import pkg_resources
+        indigo.server.log(u"{0:=^130}".format(""), isError=True)
+        indigo.server.log('Attempting install of ptyz...', isError=True)
+        easy_install.main(['ptyz'])
+        pkg_resources.require('ptyz')
+        indigo.server.log('Restarting Plugin...', isError=True)
+        indigo.server.log(u"{0:=^130}".format(""), isError=True)
+        MajorProblem =1
+    except:
+        indigo.server.log(u'Easy_Install Failed. Please contact developer.', isError=True)
+
+
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
     indigo.server.log("Please Disable Plugin and connect Developer.", isError=True)
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
@@ -108,6 +124,8 @@ kDefaultPluginPrefs = {
 class Plugin(indigo.PluginBase):
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
         """ docstring placeholder """
+        indigo.server.log(u'MajorProblem equals:'+unicode(MajorProblem))
+
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
         self.pluginIsInitializing = True
         self.pluginIsShuttingDown = False
@@ -119,6 +137,7 @@ class Plugin(indigo.PluginBase):
         indigo.server.log(u"{0:<30} {1}".format("Plugin ID:", pluginId))
         indigo.server.log(u"{0:<30} {1}".format("Indigo version:", indigo.server.version))
         indigo.server.log(u"{0:<30} {1}".format("Python version:", sys.version.replace('\n', '')))
+        indigo.server.log(u"{0:<30} {1}".format("Major Problem equals: ", MajorProblem))
         indigo.server.log(u"{0:=^130}".format(""))
 
         self.debug = self.pluginPrefs.get('showDebugInfo', False)
@@ -149,6 +168,26 @@ class Plugin(indigo.PluginBase):
                 self.pluginPrefs['showDebugLevel'] = 1
 
         self.pluginIsInitializing = False
+
+        if MajorProblem > 0:
+            plugin = indigo.server.getPlugin('com.GlennNZ.indigoplugin.FindFriendsMini')
+
+            if MajorProblem == 1:
+                indigo.server.log(u'Major Problem:  Restarting Plugin...',isError=True)
+                if plugin.isEnabled():
+                    plugin.restart(waitUntilDone=False)
+                self.sleep(1)
+            if MajorProblem == 2:
+                indigo.server.log(u"{0:=^130}".format(""), isError=True)
+                indigo.server.log(u"{0:=^130}".format(""), isError=True)
+                indigo.server.log(u'Major Problem:   Please Disable Plugin.  Now Sleeping.  Please contact Developer.',isError=True)
+                indigo.server.log(u"{0:=^130}".format(""), isError=True)
+                indigo.server.log(u"{0:=^130}".format(""), isError=True)
+                if plugin.isEnabled():
+                    # Can't disabled
+                    # Can Sleep Forever Though
+                    #plugin.disable()
+                    self.sleep(86400)
     ###
     ###  Update ghpu Routines.
 
