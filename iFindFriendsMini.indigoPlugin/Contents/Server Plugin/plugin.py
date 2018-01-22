@@ -53,15 +53,16 @@ except Exception as e:
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
     indigo.server.log("FATAL ERROR - Cannot find pyicloud or cannot load pyicloud or dependency.", isError=True)
     indigo.server.log('Maybe missing pytz package.  Attempting fix....', isError=True)
+    indigo.server.log(u"{0:=^130}".format(""), isError=True)
 
     try:
         indigo.server.log('Attempting install of Easy_Install...', isError=True)
         from setuptools.command import easy_install
         import pkg_resources
         indigo.server.log(u"{0:=^130}".format(""), isError=True)
-        indigo.server.log('Attempting install of ptyz...', isError=True)
-        easy_install.main(['ptyz'])
-        pkg_resources.require('ptyz')
+        indigo.server.log('Attempting install of pytz...', isError=True)
+        easy_install.main(['pytz'])
+        pkg_resources.require('pytz')
         indigo.server.log('Restarting Plugin...', isError=True)
         indigo.server.log(u"{0:=^130}".format(""), isError=True)
         MajorProblem =1
@@ -124,7 +125,7 @@ kDefaultPluginPrefs = {
 class Plugin(indigo.PluginBase):
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
         """ docstring placeholder """
-        indigo.server.log(u'MajorProblem equals:'+unicode(MajorProblem))
+
 
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
         self.pluginIsInitializing = True
