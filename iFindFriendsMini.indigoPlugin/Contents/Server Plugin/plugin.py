@@ -52,26 +52,31 @@ except Exception as e:
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
     indigo.server.log(u'Returned Error:'+unicode(e), isError=True)
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
-    indigo.server.log("FATAL ERROR - Cannot find pyicloud or cannot load pyicloud or dependency.", isError=True)
+    indigo.server.log("-- FATAL ERROR - Cannot find pyicloud or cannot load pyicloud or dependency.", isError=True)
 
     if 'pytz' in errortext:
-        indigo.server.log('Maybe missing pytz package.  Attempting fix....', isError=True)
+        indigo.server.log('Missing pytz package.  Please Follow Below instructions. (Once only needed)', isError=True)
         indigo.server.log(u"{0:=^130}".format(""), isError=True)
         try:
-            indigo.server.log('Attempting install of Pip...', isError=True)
-            #from setuptools.command import easy_install
-            #import pkg_resources
-            import pip
+            #import pip
+            t.sleep(5)
             indigo.server.log(u"{0:=^130}".format(""), isError=True)
-            indigo.server.log('Attempting install of pytz...', isError=True)
-            #easy_install.main(['pytz'])
-            #pkg_resources.require('pytz')
-            pip.main(['install', 'pytz'])
+            indigo.server.log('Open Terminal Window and type.', isError=True)
+            indigo.server.log('sudo easy_install pip', isError=True)
+            indigo.server.log('& then.  Both followed by enter.', isError=True)
+            indigo.server.log('sudo pip install pytz', isError=True)
+            indigo.server.log(u"{0:=^130}".format(""), isError=True)
+            indigo.server.log('Plugin will restart in 3 minutes', isError=True)
+            #pip.main(['install', 'microcache'])
+            t.sleep(180)
             indigo.server.log('Restarting Plugin...', isError=True)
             indigo.server.log(u"{0:=^130}".format(""), isError=True)
-            MajorProblem =1
+            t.sleep(2)
+            MajorProblem = 1
+
         except Exception as b:
-            indigo.server.log(u'Pip/Pytz Failed. Please contact developer.  Error:'+unicode(b), isError=True)
+            indigo.server.log(u'Major Problem. Please contact developer.  Error:'+unicode(b), isError=True)
+            MajorProblem = 2
             pass
 # Now the HTTP and Compatibility libraries
 #indigo.server.log(u"{0:=^130}".format(""), isError=True)
