@@ -139,7 +139,7 @@
     <Field id="space21126" type="separator"/>
 
     <Field id="space10" type="label" alignText="right">
-        <Label>Debugging:</Label>
+        <Label>Debugging Options:</Label>
     </Field>
 
     <Field id="sep4" type="separator"/>
@@ -148,19 +148,26 @@
         <Label>Turn on debugging only when needed. Be careful when posting the output to the forums or other public places as it could expose sensitive information.</Label>
     </Field>
 
-    <Field id="showDebugInfo" type="checkbox" tooltip="Enabling will result in verbose logging.">
+    <Field id="debugicloud" type="checkbox" tooltip="Enabling will result in verbose logging of icloud connection.">
         <Label/>
-        <Description>Enable/Disable</Description>
+        <Description>Debug Apple iCloud</Description>
     </Field>
 
-    <Field id="showDebugLevel" type="menu" defaultValue="1" tooltip="Controls the amount of debug information written to the log.">
+    <Field id="debugmaps" type="checkbox" tooltip="Enabling will result in Browser showing maps.">
+        <Label/>
+        <Description>Debug and Show Maps</Description>
+    </Field>
+
+    <Field id="showDebugLevel" type="menu" defaultValue="20" tooltip="Controls the amount of debug information written to the log.">
         <Label>Debug level:</Label>
-        <Description>Enable/Disable</Description>
+        <Description>Level of Debug information to show in Indigo</Description>
         <List>
-            <Option value="1">Low</Option>
-            <Option value="2">Medium</Option>
-            <Option value="3">High</Option>
-            <Option value="4">High/Plus Maps/iCloud Logging</Option>
+            <Option value="5">Detailed Debugging Messages</Option>
+            <Option value="10">Debugging Messages</Option>
+            <Option value="20">Informational Messages</Option>
+            <Option value="30">Warning Messages</Option>
+            <Option value="40">Error Messages</Option>
+            <Option value="50">Critical Errors Only</Option>
         </List>
     </Field>
 
