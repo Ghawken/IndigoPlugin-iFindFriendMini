@@ -78,6 +78,11 @@ except Exception as e:
             indigo.server.log(u'Major Problem. Please contact developer.  Error:'+unicode(b), isError=True)
             MajorProblem = 2
             pass
+
+    else:
+        indigo.server.log(u'Major Problem. Please contact developer.  Error:' + unicode(e), isError=True)
+        MajorProblem = 2
+        pass
 # Now the HTTP and Compatibility libraries
 #indigo.server.log(u"{0:=^130}".format(""), isError=True)
 
