@@ -149,6 +149,7 @@ class Plugin(indigo.PluginBase):
         self.logger.info(u"{0:<30} {1}".format("Plugin ID:", pluginId))
         self.logger.info(u"{0:<30} {1}".format("Indigo version:", indigo.server.version))
         self.logger.info(u"{0:<30} {1}".format("Python version:", sys.version.replace('\n', '')))
+        self.logger.info(u"{0:<30} {1}".format("Python Directory:", sys.prefix.replace('\n', '')))
         self.logger.info(u"{0:<30} {1}".format("Major Problem equals: ", MajorProblem))
         self.logger.info(u"{0:=^130}".format(""))
 
