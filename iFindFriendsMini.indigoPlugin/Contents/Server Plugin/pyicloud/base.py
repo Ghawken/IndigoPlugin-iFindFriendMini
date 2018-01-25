@@ -18,11 +18,11 @@ from pyicloud.exceptions import (
 )
 
 from pyicloud.services import (
-    FindMyiPhoneServiceManager,
-    FindFriendsService,
-    CalendarService,
-    UbiquityService,
-    ContactsService
+    #FindMyiPhoneServiceManager,
+    FindFriendsService
+    #CalendarService,
+    #UbiquityService,
+   # ContactsService
 )
 
 
@@ -41,8 +41,11 @@ class PyiCloudService(object):
     """
     def __init__(self, apple_id, password, cookie_directory=None):
         self.discovery = None
+        self.logger = logging.getLogger('Plugin.PyiCloud')
         self.client_id = str(uuid.uuid1()).upper()
         self.user = {'apple_id': apple_id, 'password': password}
+
+        #self.logger.debug(u'------------------------  self.user equals'+unicode(self.user))
 
         self._home_endpoint = 'https://www.icloud.com'
         self._setup_endpoint = 'https://setup.icloud.com/setup/ws/1'
@@ -146,7 +149,8 @@ class PyiCloudService(object):
 
         except PyiCloudAPIResponseError as error:
             msg ='API Response Error.  Invalid email/passwoprd'
-            msg = req.json()
+            #msg = req.json()
+            self.logger.exception(u'PyiCloud Login error:')
             raise PyiCloudFailedLoginException(msg, error)
 
         #content_type = req.headers.get('Content-Type', '').split(';')[0]
@@ -154,7 +158,8 @@ class PyiCloudService(object):
 
         if not req.ok:
             msg = 'Invalid email/password combination.'
-#            msg = req.json()
+#           msg = req.json()
+            self.logger.debug(u'PyiCloud Req Not OK:  msg:'+unicode(req))
             raise PyiCloudFailedLoginException(msg)
 
 

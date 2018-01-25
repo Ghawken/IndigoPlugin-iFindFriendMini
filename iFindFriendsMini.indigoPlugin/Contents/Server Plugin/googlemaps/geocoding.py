@@ -30,24 +30,22 @@ def geocode(client, address=None, components=None, bounds=None, region=None,
     :param address: The address to geocode.
     :type address: string
 
-    :param components: A component filter for which you wish to obtain a geocode,
-                       for example:
-                       ``{'administrative_area': 'TX','country': 'US'}``
+    :param components: A component filter for which you wish to obtain a
+        geocode, for example: ``{'administrative_area': 'TX','country': 'US'}``
     :type components: dict
 
     :param bounds: The bounding box of the viewport within which to bias geocode
-                   results more prominently.
+        results more prominently.
     :type bounds: string or dict with northeast and southwest keys.
 
     :param region: The region code, specified as a ccTLD ("top-level domain")
-                   two-character value.
+        two-character value.
     :type region: string
 
     :param language: The language in which to return results.
     :type langauge: string
 
     :rtype: list of geocoding results.
-
     """
 
     params = {}
@@ -67,7 +65,7 @@ def geocode(client, address=None, components=None, bounds=None, region=None,
     if language:
         params["language"] = language
 
-    return client._get("/maps/api/geocode/json", params)["results"]
+    return client._request("/maps/api/geocode/json", params).get("results", [])
 
 
 def reverse_geocode(client, latlng, result_type=None, location_type=None,
@@ -76,26 +74,28 @@ def reverse_geocode(client, latlng, result_type=None, location_type=None,
     Reverse geocoding is the process of converting geographic coordinates into a
     human-readable address.
 
-    :param latlng: The latitude/longitude value for which you wish to obtain the
-                   closest, human-readable address
-    :type latlng: dict or list or tuple
+    :param latlng: The latitude/longitude value or place_id for which you wish
+        to obtain the closest, human-readable address.
+    :type latlng: string, dict, list, or tuple
 
     :param result_type: One or more address types to restrict results to.
-    :type result_type: string or list of string
+    :type result_type: string or list of strings
 
     :param location_type: One or more location types to restrict results to.
-    :type location_type: list of string
+    :type location_type: list of strings
 
     :param language: The language in which to return results.
     :type langauge: string
 
     :rtype: list of reverse geocoding results.
-
     """
 
-    params = {
-        "latlng": convert.latlng(latlng)
-    }
+    # Check if latlng param is a place_id string.
+    #  place_id strings do not contain commas; latlng strings do.
+    if convert.is_string(latlng) and ',' not in latlng:
+        params = {"place_id": latlng}
+    else:
+        params = {"latlng": convert.latlng(latlng)}
 
     if result_type:
         params["result_type"] = convert.join_list("|", result_type)
@@ -106,4 +106,4 @@ def reverse_geocode(client, latlng, result_type=None, location_type=None,
     if language:
         params["language"] = language
 
-    return client._get("/maps/api/geocode/json", params)["results"]
+    return client._request("/maps/api/geocode/json", params).get("results", [])

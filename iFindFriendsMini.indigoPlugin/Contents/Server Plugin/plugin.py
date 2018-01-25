@@ -79,6 +79,30 @@ except Exception as e:
             MajorProblem = 2
             pass
 
+    if 'six' in errortext:
+        indigo.server.log('Missing six package.  Please Follow Below instructions. (Once only needed)', isError=True)
+        indigo.server.log(u"{0:=^130}".format(""), isError=True)
+        try:
+            #import pip
+            t.sleep(5)
+            indigo.server.log(u"{0:=^130}".format(""), isError=True)
+            indigo.server.log('Open Terminal Window and type.', isError=True)
+            indigo.server.log('sudo easy_install pip', isError=True)
+            indigo.server.log('& then.  [Both followed by enter]', isError=True)
+            indigo.server.log('sudo pip install six', isError=True)
+            indigo.server.log(u"{0:=^130}".format(""), isError=True)
+            indigo.server.log('Plugin will restart in 3 minutes', isError=True)
+            #pip.main(['install', 'microcache'])
+            t.sleep(180)
+            indigo.server.log('Restarting Plugin...', isError=True)
+            indigo.server.log(u"{0:=^130}".format(""), isError=True)
+            t.sleep(2)
+            MajorProblem = 1
+
+        except Exception as b:
+            indigo.server.log(u'Major Problem. Please contact developer.  Error:'+unicode(b), isError=True)
+            MajorProblem = 2
+            pass
     else:
         indigo.server.log(u"{0:=^130}".format(""), isError=True)
         indigo.server.log(u'Major Problem. Please contact developer.  Error:' + unicode(e), isError=True)
@@ -104,9 +128,24 @@ try:
 except ImportError:
     pass
 
+try:
+    from googlemaps import googlemaps
+    from googlemaps.exceptions import (
+        ApiError,
+        TransportError,
+        HTTPError,
+        Timeout
+
+    )
+except Exception as e:
+    indigo.server.log(u"{0:=^130}".format(""), isError=True)
+    indigo.server.log(u'Error Importing Googlemaps.  Error:'+unicode(e), isError=True)
+    indigo.server.log(u"{0:=^130}".format(""), isError=True)
+
 import webbrowser
 import os
 import logging
+import datetime
 
 from ghpu import GitHubPluginUpdater
 
@@ -160,9 +199,9 @@ class Plugin(indigo.PluginBase):
 
         try:
             self.logLevel = int(self.pluginPrefs[u"showDebugLevel"])
-
         except:
             self.logLevel = logging.INFO
+
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.debug(u"logLevel = " + str(self.logLevel))
 
@@ -170,6 +209,7 @@ class Plugin(indigo.PluginBase):
         self.debugicloud = self.pluginPrefs.get('debugicloud', False)
         self.debugLevel = int(self.pluginPrefs.get('showDebugLevel', 20))
         self.debugmaps = self.pluginPrefs.get('debugmaps', False)
+        self.debugdistance = self.pluginPrefs.get('debugdistance', False)
         self.logFile = u"{0}/Logs/com.GlennNZ.indigoplugin.FindFriendsMini/plugin.log".format(
             indigo.server.getInstallFolderPath())
         self.configMenuTimeCheck = int(self.pluginPrefs.get('configMenuTimeCheck', "5"))
@@ -252,6 +292,7 @@ class Plugin(indigo.PluginBase):
             self.debugLevel = int(valuesDict.get('showDebugLevel', "20"))
             self.debugicloud = valuesDict.get('debugicloud', False)
             self.debugmaps = valuesDict.get('debugmaps', False)
+            self.debugdistance = valuesDict.get('debugdistance', False)
             self.datetimeFormat = valuesDict.get('datetimeFormat', '%c')
             self.configVerticalMap = valuesDict.get('verticalMap', "600")
             self.configHorizontalMap = valuesDict.get('horizontalMap', "600")
@@ -308,6 +349,14 @@ class Plugin(indigo.PluginBase):
                 {'key': 'locationTimestamp', 'value': ''},
                 {'key': 'timestamp', 'value': ''},
                 {'key': 'altitude', 'value': ''},
+                {'key': 'homeDistance', 'value': 0},
+                {'key': 'homeTime', 'value': 0},
+                {'key': 'otherDistance', 'value': 0},
+                {'key': 'otherTime', 'value': 0},
+                {'key': 'homeDistanceText', 'value': 'unknown'},
+                {'key': 'homeTimeText', 'value': 'unknown'},
+                {'key': 'otherDistanceText', 'value': 'unknown'},
+                {'key': 'otherTimeText', 'value': 'unknown'},
                 {'key': 'labels', 'value': ''},
                 {'key': 'longitude', 'value': ''},
                 {'key': 'horizontalAccuracy', 'value': ''},
@@ -339,6 +388,8 @@ class Plugin(indigo.PluginBase):
         self.refreshData()
         self.sleep(5)
         self.checkGeofence()
+        self.sleep(2)
+        self.checkHomeOther()
         return
 
     def runConcurrentThread(self):
@@ -387,6 +438,8 @@ class Plugin(indigo.PluginBase):
                         self.refreshData()
                         self.sleep(2)
                         self.checkGeofence()   #Check distances etc of GeoFences
+                        self.sleep(2)
+                        self.checkHomeOther()
                         nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
                         #reset Geofence time update as done above
                         updateGeofencedue = time.time() + 60
@@ -664,7 +717,7 @@ class Plugin(indigo.PluginBase):
                     # Calculate the distance
 
                             self.logger.debug('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(iDevLatitude) + ',' + str(iDevLongitude))
-                            iSeparation = iDistance(igeoLat, igeoLong, iDevLatitude, iDevLongitude)
+                            iSeparation = self.iDistance(igeoLat, igeoLong, iDevLatitude, iDevLongitude)
 
                             self.logger.debug(unicode(iSeparation))
                             if not iSeparation[0]:
@@ -717,6 +770,8 @@ class Plugin(indigo.PluginBase):
                         self.logger.info(u'Error with Departure/Arrival Time Calculation:'+unicode(e))
                         pass
                     geoDevices.updateStateOnServer('deviceIsOnline', value=True, uiValue='Online')
+
+
         except Exception as e:
             self.logger.info(u'Error within Check GeoFences: '+unicode(e))
             geoDevices.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
@@ -830,7 +885,7 @@ class Plugin(indigo.PluginBase):
             filename = dev.name.replace(' ','_')+'_Map.jpg'
             file = folderLocation +filename
             #Generate single device URL
-            drawUrl = urlGenerate(self, latitude ,longitude , self.googleAPI, int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap), dev)
+            drawUrl = self.urlGenerate(latitude ,longitude , self.googleAPI, int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap), dev)
             if self.debugmaps:
                 webbrowser.open_new(drawUrl)
 
@@ -841,7 +896,7 @@ class Plugin(indigo.PluginBase):
             filename = 'All_device.jpg'
             file = folderLocation + filename
             # Generate URL for All Maps
-            drawUrl = urlAllGenerate(self, self.googleAPI,  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
+            drawUrl = self.urlAllGenerate(self.googleAPI,  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
             fileMap = "curl --output '" + file + "' --url '" + drawUrl + "'"
             os.system(fileMap)
 
@@ -1040,181 +1095,332 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u'Login Failed General Error.   ' + unicode(e.message) + unicode(e.__dict__))
             return 1, 'NI'
 
-def urlGenerate(self, latitude, longitude, mapAPIKey, iHorizontal, iVertical, iZoom, dev=0):
-    ################################################
-    # Modified by FindiStuff
-    # Routine generate a Static Google Maps HTML URL request
-    # for a single device
-    # Map size is based on the zoom parameter passed or defaults to level 15 (street names)
-    # All commands are of the format...
-    # https://maps.googleapis.com/maps/api/staticmap?parameters where the parameters
-    # Determine the map content and format
-    # Parameters are separated with the & symbol
-    # Need to take care of the piping symbol
-    # url pipe = %7C
+    def urlGenerate(self, latitude, longitude, mapAPIKey, iHorizontal, iVertical, iZoom, dev=0):
+        ################################################
+        # Modified by FindiStuff
+        # Routine generate a Static Google Maps HTML URL request
+        # for a single device
+        # Map size is based on the zoom parameter passed or defaults to level 15 (street names)
+        # All commands are of the format...
+        # https://maps.googleapis.com/maps/api/staticmap?parameters where the parameters
+        # Determine the map content and format
+        # Parameters are separated with the & symbol
+        # Need to take care of the piping symbol
+        # url pipe = %7C
 
-    try:
+        try:
 
-        self.logger.debug('** Device being mapped is:' + str(latitude) + ' ' + str(longitude))
-        # Create Map url
-        mapCentre = 'center=' + str(latitude) + "," + str(longitude)
-        # Set zoom
-        if iZoom < 0:
-            iZoom = 0
-        elif iZoom > 21:
-            iZoom = 21
-        mapZoom = 'zoom=' + str(iZoom)
-        # Set size
-        if iHorizontal > 640:
-            iHorizontal = 640
-        elif iHorizontal < 50:
-            iHorizontal = 50
+            self.logger.debug('** Device being mapped is:' + str(latitude) + ' ' + str(longitude))
+            # Create Map url
+            mapCentre = 'center=' + str(latitude) + "," + str(longitude)
+            # Set zoom
+            if iZoom < 0:
+                iZoom = 0
+            elif iZoom > 21:
+                iZoom = 21
+            mapZoom = 'zoom=' + str(iZoom)
+            # Set size
+            if iHorizontal > 640:
+                iHorizontal = 640
+            elif iHorizontal < 50:
+                iHorizontal = 50
 
-        if iVertical > 640:
-            iVertical = 640
-        elif iVertical < 50:
-            iVertical = 50
+            if iVertical > 640:
+                iVertical = 640
+            elif iVertical < 50:
+                iVertical = 50
 
-        mapSize = 'size=' + str(iHorizontal) + 'x' + str(iVertical)
-        mapFormat = 'format=jpg&maptype=hybrid'
+            mapSize = 'size=' + str(iHorizontal) + 'x' + str(iVertical)
+            mapFormat = 'format=jpg&maptype=hybrid'
 
-        # Use a standard marker for a GeoFence Centre
-        mapMarkerGeo = "markers=color:blue%7Csize:mid%7Clabel:G"
-        mapMarkerPhone = "markers=icon:http://chart.apis.google.com/chart?chst=d_map_pin_icon%26chld=mobile%257CFF0000%7C" + str(
-            latitude) + "," + str(longitude)
-        mapGoogle = 'https://maps.googleapis.com/maps/api/staticmap?'
+            # Use a standard marker for a GeoFence Centre
+            mapMarkerGeo = "markers=color:blue%7Csize:mid%7Clabel:G"
+            mapMarkerPhone = "markers=icon:http://chart.apis.google.com/chart?chst=d_map_pin_icon%26chld=mobile%257CFF0000%7C" + str(
+                latitude) + "," + str(longitude)
+            mapGoogle = 'https://maps.googleapis.com/maps/api/staticmap?'
 
-        if mapAPIKey == 'No Key':
-            customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone
-        else:
-            customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone + '&key=' + mapAPIKey
-
-
-        self.logger.debug(u'Map URL equals:'+unicode(customURL))
-        return customURL
-
-    except Exception as e:
-        self.logger.info(u'Mapping Exception/Error:'+unicode(e))
+            if mapAPIKey == 'No Key':
+                customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone
+            else:
+                customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone + '&key=' + mapAPIKey
 
 
-def urlAllGenerate(self, mapAPIKey, iHorizontal, iVertical, iZoom):
+            self.logger.debug(u'Map URL equals:'+unicode(customURL))
+            return customURL
 
-    ################################################
-    # from FindiStuff
-    # Routine generate a Static Google Maps HTML URL request
-    # for all devices
-    # Map size is automatically calculated based on the two furthest points (devices and/or geofences)
-    # All commands are of the format...
-    # https://maps.googleapis.com/maps/api/staticmap?parameters where the parameters
-    # Determine the map content and format
-    # Parameters are separated with the & symbol
-    # Need to take care of the piping symbol
-    # url pipe = %7C
+        except Exception as e:
+            self.logger.info(u'Mapping Exception/Error:'+unicode(e))
 
-    global iDebug1, iDebug2, iDebug3, iDebug4, iDebug5, gIcon
 
-    # Create geoFence list
-    try:
-        # Create Map url
-        # URL Centre and Zoom is calculated by Google Maps
-        mapCentre = ''
+    def urlAllGenerate(self, mapAPIKey, iHorizontal, iVertical, iZoom):
 
-        # Set zoom
-        mapZoom = ''
+        ################################################
+        # from FindiStuff
+        # Routine generate a Static Google Maps HTML URL request
+        # for all devices
+        # Map size is automatically calculated based on the two furthest points (devices and/or geofences)
+        # All commands are of the format...
+        # https://maps.googleapis.com/maps/api/staticmap?parameters where the parameters
+        # Determine the map content and format
+        # Parameters are separated with the & symbol
+        # Need to take care of the piping symbol
+        # url pipe = %7C
 
-        # Set size
-        if iHorizontal>640:
-            iHorizontal=640
-        elif iHorizontal<50:
-            iHorizontal=50
+        global iDebug1, iDebug2, iDebug3, iDebug4, iDebug5, gIcon
 
-        if iVertical>640:
-            iVertical=640
-        elif iVertical<50:
-            iVertical=50
+        # Create geoFence list
+        try:
+            # Create Map url
+            # URL Centre and Zoom is calculated by Google Maps
+            mapCentre = ''
 
-        mapSize='size='+str(iHorizontal)+'x'+str(iVertical)
-        mapFormat='format=jpg&maptype=hybrid'
+            # Set zoom
+            mapZoom = ''
 
-        # Use a standard marker for a GeoFence Centre
-        mapMarkerGeo = "markers=color:blue%7Csize:mid%7Clabel:G"
+            # Set size
+            if iHorizontal>640:
+                iHorizontal=640
+            elif iHorizontal<50:
+                iHorizontal=50
 
-        # Now create the device markers (must be a maximum of 5 different types and less than 64x64 and on a http: server)
-        mapMarkerP = ''
-        mapMarkerPhone = ''
-        for dev in indigo.devices.iter('self.FindFriendsFriend'):
-            mapMarkerP = "markers=icon:http://chart.apis.google.com/chart?chst=d_map_pin_icon%26chld=mobile%257CFF0000%7C"+\
-                             str(dev.states['latitude'])+","+str(dev.states['longitude'])
-            # Store the custom marker
-            mapMarkerPhone = mapMarkerPhone+'&'+mapMarkerP
+            if iVertical>640:
+                iVertical=640
+            elif iVertical<50:
+                iVertical=50
 
-        if len(mapMarkerPhone)<2:
-            #Trap no devices
+            mapSize='size='+str(iHorizontal)+'x'+str(iVertical)
+            mapFormat='format=jpg&maptype=hybrid'
+
+            # Use a standard marker for a GeoFence Centre
+            mapMarkerGeo = "markers=color:blue%7Csize:mid%7Clabel:G"
+
+            # Now create the device markers (must be a maximum of 5 different types and less than 64x64 and on a http: server)
+            mapMarkerP = ''
             mapMarkerPhone = ''
+            for dev in indigo.devices.iter('self.FindFriendsFriend'):
+                mapMarkerP = "markers=icon:http://chart.apis.google.com/chart?chst=d_map_pin_icon%26chld=mobile%257CFF0000%7C"+\
+                                 str(dev.states['latitude'])+","+str(dev.states['longitude'])
+                # Store the custom marker
+                mapMarkerPhone = mapMarkerPhone+'&'+mapMarkerP
 
-        mapGoogle = 'https://maps.googleapis.com/maps/api/staticmap?'
+            if len(mapMarkerPhone)<2:
+                #Trap no devices
+                mapMarkerPhone = ''
 
-        if mapAPIKey == 'No Key':
-            customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone
-        else:
-            customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone+'&key='+mapAPIKey
+            mapGoogle = 'https://maps.googleapis.com/maps/api/staticmap?'
 
-        return customURL
+            if mapAPIKey == 'No Key':
+                customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone
+            else:
+                customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone+'&key='+mapAPIKey
 
-    except Exception as e:
-        self.logger.info(u'urlAllGenerate'+unicode(e))
-        return ''
+            return customURL
 
-def iDistance(lat1, long1, lat2, long2):
+        except Exception as e:
+            self.logger.info(u'urlAllGenerate'+unicode(e))
+            return ''
 
-    ################################################
-    # Once again thanks Mike and iFindStuff!
-    # Calculates the 'As the crow flies' distance between
-    # two points and returns value in metres
 
-    global iDebug1, iDebug2, iDebug3, iDebug4, iDebug5, gUnits
 
-    # First check if numbers are valid
-    if lat1+long1 == 0.0 or lat2+long2 == 0.0:
+    def checkHomeOther(self):
 
-        #  Zero default sent through
-        self.logger.info(u'No distance calculation possible as values are 0,0,0,0')
-        return False, 0.0
+        try:
+            self.logger.debug('Check HomeOther Called..')
+            # need to start with GeofFence and then go through all devices
+            # iDevName = dev.states['friendName']
+            # Check GeoFences after devices
 
-    # Convert latitude and longitude to
-    # spherical coordinates in radians.
-    degrees_to_radians = math.pi/180.0
+            for geoDevices in indigo.devices.itervalues('self.FindFriendsGeofence'):
+                if geoDevices.enabled:
+                    igeoFriendsRange = 0
+                    localProps = geoDevices.pluginProps
+                    if not 'geoName' in localProps:
+                        continue
+                    igeoName = localProps['geoName']
+                    # If home Geo updates all devices time/distance
+                    if igeoName == 'Home':
+                        igeoLong = float(localProps['geoLongitude'])
+                        igeoLat = float(localProps['geoLatitude'])
+                        igeoRangeDistance = int(localProps['geoRange'])
+                        igeoFriendsRangeOld = int(geoDevices.states['friendsInRange'])
 
-    # phi = 90 - latitude
-    phi1 = (90.0 - lat1)*degrees_to_radians
-    phi2 = (90.0 - lat2)*degrees_to_radians
+                        #This is home Geo - now update all devices
+                        for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
+                            if dev.enabled:
+                                self.logger.debug('Home Check Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
+                                iDevLatitude = float(dev.states['latitude'])
+                                iDevLongitude = float(dev.states['longitude'])
+                                # Now check the distance for each device
+                                # Calculate the distance
+                                self.logger.debug('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(
+                                    iDevLatitude) + ',' + str(iDevLongitude))
 
-    # theta = longitude
-    theta1 = long1*degrees_to_radians
-    theta2 = long2*degrees_to_radians
+                                origin = igeoLat, igeoLong
+                                destination = iDevLatitude, iDevLongitude
+                                iRealDistanceHome = self.distanceCalculation(origin, destination, self.googleAPI, 'driving',
+                                                                        "metric")
+                                self.logger.debug(u'Home Calculation: Equals Time/Distance:'+unicode(iRealDistanceHome))
 
-    # Compute spherical distance from spherical coordinates.
+                                if len(iRealDistanceHome[2]) != 0 and iRealDistanceHome[0] != 'FailAPI':
+                                    try:
+                                        iRealDistanceVal = int(float(iRealDistanceHome[3]))
+                                        iTimeMinutes = int(0)
+                                        if int(iRealDistanceHome[1]) ==1:
+                                            iTimeMinutes = 1
+                                        elif int(iRealDistanceHome[1]) >60:
+                                            iTimeMinutes = int(float(iRealDistanceHome[1]/60))
 
-    # For two locations in spherical coordinates
-    # (1, theta, phi) and (1, theta', phi')
-    # cosine( arc length ) =
-    #    sin phi sin phi' cos(theta-theta') + cos phi cos phi'
-    # distance = rho * arc length
+                                    except ValueError:
+                                        self.logger.exception('iGeoLocation')
+                                        iRealDistanceVal = 0.0
+                                        iTimeMinutes =0
 
-    cos = (math.sin(phi1)*math.sin(phi2)*math.cos(theta1 - theta2) +
-           math.cos(phi1)*math.cos(phi2))
-    try:
-        arc = math.acos( cos )
-    except Exception as e:
-        self.logger.info('Error within iDistance Calculation'+unicode(e))
-        arc = 1
-        pass
+                                    dev.updateStateOnServer('homeDistanceText', value=str(iRealDistanceHome[2]))
+                                    dev.updateStateOnServer('homeTimeText', value=str(iRealDistanceHome[0]))
+                                    dev.updateStateOnServer('homeDistance', value=int(iRealDistanceVal) )
+                                    dev.updateStateOnServer('homeTime', value=int(iTimeMinutes))
 
-    # Remember to multiply arc by the radius of the earth
-    # e.g. m to get actual distance in m
+                    if igeoName == 'Other':
+                        igeoLong = float(localProps['geoLongitude'])
+                        igeoLat = float(localProps['geoLatitude'])
+                        igeoRangeDistance = int(localProps['geoRange'])
+                        igeoFriendsRangeOld = int(geoDevices.states['friendsInRange'])
 
-    mt_radius_of_earth = 6373000.0
+                        # This is home Geo - now update all devices
+                        for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
+                            if dev.enabled:
+                                self.logger.debug(
+                                    'Other Geo Check Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
+                                iDevLatitude = float(dev.states['latitude'])
+                                iDevLongitude = float(dev.states['longitude'])
+                                # Now check the distance for each device
+                                # Calculate the distance
+                                self.logger.debug('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(
+                                    iDevLatitude) + ',' + str(iDevLongitude))
 
-    distance = arc * mt_radius_of_earth
+                                origin = igeoLat, igeoLong
+                                destination = iDevLatitude, iDevLongitude
+                                iRealDistanceHome = self.distanceCalculation(origin, destination, self.googleAPI, 'driving',
+                                                                        "metric")
+                                self.logger.debug(u'Home Calculation: Equals Time/Distance:' + unicode(iRealDistanceHome))
 
-    return True, distance
+                                if len(iRealDistanceHome[2]) != 0 and iRealDistanceHome[0] != 'FailAPI':
+                                    try:
+                                        iRealDistanceVal = int(float(iRealDistanceHome[3]))
+                                        iTimeMinutes = int(0)
+                                        if int(iRealDistanceHome[1]) ==1:
+                                            iTimeMinutes = 1
+                                        elif int(iRealDistanceHome[1]) >60:
+                                            iTimeMinutes = int(float(iRealDistanceHome[1]/60))
+
+                                    except ValueError:
+                                        self.logger.exception('iGeoLocation')
+                                        iRealDistanceVal = 0.0
+                                        iTimeMinutes =0
+
+                                    dev.updateStateOnServer('otherDistanceText', value=str(iRealDistanceHome[2]))
+                                    dev.updateStateOnServer('otherTimeText', value=str(iRealDistanceHome[0]))
+                                    dev.updateStateOnServer('otherDistance', value=int(iRealDistanceVal))
+                                    dev.updateStateOnServer('otherTime', value=int(iTimeMinutes))
+        except Exception as e:
+            self.logger.exception(u'Error Within checkHomeOther:')
+            return
+
+
+
+    def iDistance(self, lat1, long1, lat2, long2):
+
+        ################################################
+        # Once again thanks Mike and iFindStuff!
+        # Calculates the 'As the crow flies' distance between
+        # two points and returns value in metres
+
+        global iDebug1, iDebug2, iDebug3, iDebug4, iDebug5, gUnits
+
+        # First check if numbers are valid
+        if lat1+long1 == 0.0 or lat2+long2 == 0.0:
+
+            #  Zero default sent through
+            self.logger.info(u'No distance calculation possible as values are 0,0,0,0')
+            return False, 0.0
+
+        # Convert latitude and longitude to
+        # spherical coordinates in radians.
+        degrees_to_radians = math.pi/180.0
+
+        # phi = 90 - latitude
+        phi1 = (90.0 - lat1)*degrees_to_radians
+        phi2 = (90.0 - lat2)*degrees_to_radians
+
+        # theta = longitude
+        theta1 = long1*degrees_to_radians
+        theta2 = long2*degrees_to_radians
+
+        # Compute spherical distance from spherical coordinates.
+
+        # For two locations in spherical coordinates
+        # (1, theta, phi) and (1, theta', phi')
+        # cosine( arc length ) =
+        #    sin phi sin phi' cos(theta-theta') + cos phi cos phi'
+        # distance = rho * arc length
+
+        cos = (math.sin(phi1)*math.sin(phi2)*math.cos(theta1 - theta2) +
+               math.cos(phi1)*math.cos(phi2))
+        try:
+            arc = math.acos( cos )
+        except Exception as e:
+            self.logger.exception('Error within iDistance Calculation'+unicode(e))
+            arc = 1
+            pass
+
+        # Remember to multiply arc by the radius of the earth
+        # e.g. m to get actual distance in m
+
+        mt_radius_of_earth = 6373000.0
+
+        distance = arc * mt_radius_of_earth
+
+        return True, distance
+
+    def distanceCalculation(self, origin, final, APIKey, mode='driving',units="metric"):
+
+        ################################################
+        # Uses Google Maps Distance Matrix API to calculate travel distance and time.
+        # Note that output is in km or m that must be converted to current units.
+        # Limited to 2.500 uses/day and plugin restricts to 10 min frequency/device
+
+        try:
+            gmaps = googlemaps.Client(APIKey)
+        except:
+
+            self.logger.exception('Problem with Google Maps key - is it registered for Distance Matrix API?')
+            self.logger.exception('Check forum for details on how to authorise your key')
+            return 'FailAPI',"",'',''
+
+        try:
+            now = datetime.datetime.now()
+            distance_result = gmaps.distance_matrix(origin,final,
+                                                    mode='driving', language=None, avoid=None, units='metric', departure_time=now,
+                                                    arrival_time=None, transit_mode=None, transit_routing_preference=None)
+            if self.debugdistance:
+                self.logger.debug(u'Distance Result from Google:')
+                self.logger.debug(unicode(distance_result))
+
+            iTimeTaken = distance_result['rows'][0]['elements'][0]['duration']['text']
+            iTimeTakenseconds = distance_result['rows'][0]['elements'][0]['duration']['value']
+
+            iDistCalc = distance_result['rows'][0]['elements'][0]['distance']['text']
+            iDistCalcmeters = distance_result['rows'][0]['elements'][0]['distance']['value']
+
+            return iTimeTaken, iTimeTakenseconds, iDistCalc, iDistCalcmeters
+
+        except ApiError:
+            self.logger.info(u'Google API Denied Distance Matrix acess.  Is it registered for Distance Matrix API?'
+                             )
+
+            self.logger.info(u'Check forum for details on how to authorise key')
+            return 'FailAPI','','',''
+
+        except Exception as e:
+            self.logger.exception(u'Problem with distance Calculation')
+            return 'FailAPI','','',''
