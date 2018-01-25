@@ -2,6 +2,28 @@
 <Actions>
     <Action id="refreshData" uiPath="DeviceActions">
         <Name>Refresh Data For All Friends</Name>
-        <CallbackMethod>refreshDataAction</CallbackMethod>
+        <CallbackMethod>actionrefreshdata</CallbackMethod>
+    </Action>
+
+    <Action id="changeRefresh" uiPath="DeviceActions">
+        <Name>Change Refresh Data interval</Name>
+        <CallbackMethod>changeInterval</CallbackMethod>
+        <ConfigUI>
+        <Field id="configMenuTimeCheck" type="menu">
+            <Label>Time Interval</Label>
+        <List>
+            <Option value="1">1 Minute</Option>
+            <Option value="2">2 Minutes</Option>
+            <Option value="5">5 Minutes (Default)</Option>
+            <Option value="10">10 Minutes</Option>
+            <Option value="15">15 Minutes</Option>
+            <Option value="20">20 Minutes</Option>
+            <Option value="25">25 Minutes</Option>
+            <Option value="30">30 Minutes</Option>
+            <Option value="60">60 Minutes</Option>
+            <Option value="120">2 Hours</Option>
+        </List>
+        </Field>
+        </ConfigUI>
     </Action>
 </Actions>

@@ -382,7 +382,7 @@ class Plugin(indigo.PluginBase):
 
         # =============================================================
 
-    def actionrefreshdata(self):
+    def actionrefreshdata(self, action):
 
         self.logger.debug(u"actionrefreshdata() method called.")
         self.refreshData()
@@ -390,6 +390,13 @@ class Plugin(indigo.PluginBase):
         self.checkGeofence()
         self.sleep(2)
         self.checkHomeOther()
+        return
+
+    def changeInterval(self, action):
+        self.logger.debug(u"change interval() method called.")
+        # If plugin config menu closed update the time for check.  Will apply after first change.
+        self.configMenuTimeCheck = int(action.props.get('configMenuTimeCheck', "5"))
+        self.prefsUpdated = True
         return
 
     def runConcurrentThread(self):
@@ -581,7 +588,6 @@ class Plugin(indigo.PluginBase):
         The refreshDataAction() method refreshes data for all devices based on
         a plugin menu call.
         """
-
         self.logger.debug(u"refreshDataAction() method called.")
         self.refreshData()
         return True
