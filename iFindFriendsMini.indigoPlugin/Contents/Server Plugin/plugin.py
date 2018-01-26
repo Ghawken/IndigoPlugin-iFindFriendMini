@@ -1502,44 +1502,37 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug("Checking Trigger %s (%s), Type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
                 #self.logger.error(unicode(trigger))
 
-                if trigger.pluginProps["geofenceId"] != str(device.id):
+                if trigger.pluginProps["geofenceId"] != str(device.id) or (trigger.pluginTypeId == "geoFenceExit" and triggertype !='EXIT') or (trigger.pluginTypeId == "geoFenceEnter" and triggertype !='ENTER'):
                     self.logger.debug("\t\tSkipping Trigger %s (%s), wrong device: %s" % (trigger.name, trigger.id, device.id))
-                    return
+                    self.logger.debug(u'or Checked Trigger Wrong event.  '+unicode(triggertype))
+                else:
+                    idfriend = ''
+                    # get id from name
+                    # could save id to save this iteration but ugly looking and less useful display
+                    for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
+                        if dev.enabled:
+                            iDevUniqueName = dev.pluginProps['friendName']
+                            if iDevUniqueName == friend:
+                                self.logger.debug(u'Matching friend found:'+unicode(friend)+' id is :'+unicode(dev.id))
+                                idfriend = dev.id
 
-                if trigger.pluginTypeId == "geoFenceExit" and triggertype !='EXIT':
-                    self.logger.debug(u'Checked Trigger Wrong event.  ')
-                    return
-                if trigger.pluginTypeId == "geoFenceEnter" and triggertype !='ENTER':
-                    self.logger.debug(u'Checked Trigger Wrong event.  Exit.')
-                    return
+                    if idfriend=='':
+                        self.logger.info(u'No matching friend :'+unicode(friend)+' found.  Has it been deleted? or renamed?')
+                        return
 
-                idfriend = ''
-                # get id from name
-                # could save id to save this iteration but ugly looking and less useful display
-                for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
-                    if dev.enabled:
-                        iDevUniqueName = dev.pluginProps['friendName']
-                        if iDevUniqueName == friend:
-                            self.logger.debug(u'Matching friend found:'+unicode(friend)+' id is :'+unicode(dev.id))
-                            idfriend = dev.id
+                    if trigger.pluginProps["friendId"] != str(idfriend):
+                        self.logger.debug(u'Trigger Friend does not equal target friend.  Return.')
+                        return
 
-                if idfriend=='':
-                    self.logger.info(u'No matching friend :'+unicode(friend)+' found.  Has it been deleted? or renamed?')
-                    return
+                    if trigger.pluginTypeId == "geoFenceExit" and triggertype=='EXIT':
+                        self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+                        indigo.trigger.execute(trigger)
+                    elif trigger.pluginTypeId == "geoFenceEnter" and triggertype=='ENTER':
+                        self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+                        indigo.trigger.execute(trigger)
 
-                if trigger.pluginProps["friendId"] != str(idfriend):
-                    self.logger.debug(u'Trigger Friend does not equal target friend.  Return.')
-                    return
+                    self.logger.debug("\tNot Run Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
 
-                if trigger.pluginTypeId == "geoFenceExit" and triggertype=='EXIT':
-                    self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
-                    indigo.trigger.execute(trigger)
-                elif trigger.pluginTypeId == "geoFenceEnter" and triggertype=='ENTER':
-                    self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
-                    indigo.trigger.execute(trigger)
-
-                self.logger.debug("\tUnknown Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
-                return
         except:
             self.logger.exception(u'Exception within Trigger Check')
             return
