@@ -1282,6 +1282,14 @@ class Plugin(indigo.PluginBase):
             # iDevName = dev.states['friendName']
             # Check GeoFences after devices
 
+
+
+            if len(self.googleAPI) <5:
+                self.logger.info(u"{0:=^130}".format(""))
+                self.logger.info(u'Need to enter and approve GoogleAPI key for distance calculation')
+                self.logger.info(u"{0:=^130}".format(""))
+                return
+
             for geoDevices in indigo.devices.itervalues('self.FindFriendsGeofence'):
                 if geoDevices.enabled:
                     igeoFriendsRange = 0
@@ -1441,13 +1449,20 @@ class Plugin(indigo.PluginBase):
         # Note that output is in km or m that must be converted to current units.
         # Limited to 2.500 uses/day and plugin restricts to 10 min frequency/device
 
+        self.logger.debug(u'distanceCalculation run')
+
+
         try:
             gmaps = googlemaps.Client(APIKey)
         except:
 
-            self.logger.exception('Problem with Google Maps key - is it registered for Distance Matrix API?')
-            self.logger.exception('Check forum for details on how to authorise your key')
-            return 'FailAPI',"",'',''
+            self.logger.info(u"{0:=^130}".format(""))
+            self.logger.info(u'Google API Connection Error.')
+            self.logger.info(u'Incorrect API.  Have you obtained you free Google API Key?')
+            self.logger.info(u'Or Key not approved for both Static Maps API and Distance Matrix API access')
+            self.logger.info(u'Check forum for details on how to authorise key for both APIs')
+            self.logger.info(u"{0:=^130}".format(""))
+            return 'FailAPI','',''
 
         try:
             now = datetime.datetime.now()
@@ -1467,10 +1482,12 @@ class Plugin(indigo.PluginBase):
             return iTimeTaken, iTimeTakenseconds, iDistCalc, iDistCalcmeters
 
         except ApiError:
-            self.logger.info(u'Google API Denied Distance Matrix acess.  Is it registered for Distance Matrix API?'
-                             )
-
-            self.logger.info(u'Check forum for details on how to authorise key')
+            self.logger.info(u"{0:=^130}".format(""))
+            self.logger.info(u'Google API Connection Error.')
+            self.logger.info(u'Incorrect API.  Have you obtained your free Google API key?')
+            self.logger.info(u'or Key not approved for both Static Maps API and Distance Matrix API access')
+            self.logger.info(u'Check forum for details on how to authorise key for both APIs')
+            self.logger.info(u"{0:=^130}".format(""))
             return 'FailAPI','','',''
 
         except Exception as e:
@@ -1503,7 +1520,7 @@ class Plugin(indigo.PluginBase):
                 #self.logger.error(unicode(trigger))
 
                 if trigger.pluginProps["geofenceId"] != str(device.id) or (trigger.pluginTypeId == "geoFenceExit" and triggertype !='EXIT') or (trigger.pluginTypeId == "geoFenceEnter" and triggertype !='ENTER'):
-                    self.logger.debug("\t\tSkipping Trigger %s (%s), wrong device: %s" % (trigger.name, trigger.id, device.id))
+                    self.logger.debug("Skipping Trigger %s (%s), wrong device: %s" % (trigger.name, trigger.id, device.id))
                     self.logger.debug(u'or Checked Trigger Wrong event.  '+unicode(triggertype))
                 else:
                     idfriend = ''
