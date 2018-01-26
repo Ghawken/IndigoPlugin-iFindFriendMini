@@ -980,7 +980,7 @@ class Plugin(indigo.PluginBase):
 
         self.logger.debug(u"toggleDebugEnabled() method called.")
 
-        if not self.debug:
+        if self.debugLevel == int(logging.INFO):
             self.debug = True
             self.debugLevel = int(logging.DEBUG)
             self.pluginPrefs['showDebugInfo'] = True
