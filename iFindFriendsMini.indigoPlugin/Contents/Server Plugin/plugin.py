@@ -1525,13 +1525,13 @@ class Plugin(indigo.PluginBase):
                         continue #back to check other triggers
 
                     if trigger.pluginTypeId == "geoFenceExit" and triggertype=='EXIT':
-                        self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+                        self.logger.debug("Executing Trigger %s (%d)" % (trigger.name, trigger.id))
                         indigo.trigger.execute(trigger)
                     elif trigger.pluginTypeId == "geoFenceEnter" and triggertype=='ENTER':
-                        self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+                        self.logger.debug("Executing Trigger %s (%d)" % (trigger.name, trigger.id))
                         indigo.trigger.execute(trigger)
-
-                    self.logger.debug("\tNot Run Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+                    else:
+                        self.logger.debug("Not Run Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
 
         except:
             self.logger.exception(u'Exception within Trigger Check')
