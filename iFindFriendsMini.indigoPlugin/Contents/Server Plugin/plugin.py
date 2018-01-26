@@ -1518,11 +1518,11 @@ class Plugin(indigo.PluginBase):
 
                     if idfriend=='':
                         self.logger.info(u'No matching friend :'+unicode(friend)+' found.  Has it been deleted? or renamed?')
-                        return
+                        continue #back to check other triggers
 
                     if trigger.pluginProps["friendId"] != str(idfriend):
                         self.logger.debug(u'Trigger Friend does not equal target friend.  Return.')
-                        return
+                        continue #back to check other triggers
 
                     if trigger.pluginTypeId == "geoFenceExit" and triggertype=='EXIT':
                         self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
