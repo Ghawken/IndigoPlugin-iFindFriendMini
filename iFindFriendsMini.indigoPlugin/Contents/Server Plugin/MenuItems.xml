@@ -13,9 +13,9 @@
         <CallbackMethod>pluginstoreUpdate</CallbackMethod>
     </MenuItem>
 	<MenuItem id="titleSeparator1" type="separator" />
-    <MenuItem id="refreshData">
+    <MenuItem id="menuRefresh">
         <Name>Refresh Data Now</Name>
-        <CallbackMethod>actionrefreshdata</CallbackMethod>
+        <CallbackMethod>menuRefresh</CallbackMethod>
     </MenuItem>
 	<MenuItem id="titleSeparator2" type="separator" />
     <MenuItem id="toggleDebug">

@@ -14,7 +14,9 @@ Enormously based on FindiStuff by Chameleon and GhostXML by DaveL17
 # Stock imports
 
 global MajorProblem
+
 MajorProblem = 0
+startingUp = False
 
 try:
     import locale
@@ -135,7 +137,6 @@ try:
         TransportError,
         HTTPError,
         Timeout
-
     )
 except Exception as e:
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
@@ -160,7 +161,7 @@ __build__ = u""
 __copyright__ = u"There is no copyright for the code base."
 __license__ = u"MIT"
 __title__ = u"FindFriendsMini Plugin for Indigo Home Control"
-__version__ = u"0.3.5"
+__version__ = u"0.4.5"
 
 # Establish default plugin prefs; create them if they don't already exist.
 kDefaultPluginPrefs = {
@@ -178,6 +179,7 @@ class Plugin(indigo.PluginBase):
 
 
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
+        self.startingUp = True
         self.pluginIsInitializing = True
         self.pluginIsShuttingDown = False
         self.prefsUpdated = False
@@ -204,7 +206,7 @@ class Plugin(indigo.PluginBase):
 
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.debug(u"logLevel = " + str(self.logLevel))
-
+        self.triggers = {}
 
         self.debugicloud = self.pluginPrefs.get('debugicloud', False)
         self.debugLevel = int(self.pluginPrefs.get('showDebugLevel', 20))
@@ -226,7 +228,7 @@ class Plugin(indigo.PluginBase):
         self.deviceNeedsUpdated = ''
         self.openStore = self.pluginPrefs.get('openStore',False)
 
-        self.pluginIsInitializing = False
+
 
         if MajorProblem > 0:
             plugin = indigo.server.getPlugin('com.GlennNZ.indigoplugin.FindFriendsMini')
@@ -248,6 +250,9 @@ class Plugin(indigo.PluginBase):
                     #plugin.disable()
 
                     self.sleep(86400)
+
+        self.pluginIsInitializing = False
+
     ###
     ###  Update ghpu Routines.
 
@@ -335,6 +340,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'lastDeptimestamp', 'value': ''},
                 {'key': 'minutessincelastArrival', 'value': 0},
                 {'key': 'minutessincelastDep', 'value': 0},
+                {'key': 'listFriends', 'value': ''},
                 {'key': 'deviceIsOnline', 'value': False, 'uiValue':'Waiting'}]
 
             self.logger.debug(unicode(stateList))
@@ -392,6 +398,11 @@ class Plugin(indigo.PluginBase):
         self.checkHomeOther()
         return
 
+    def menuRefresh(self):
+        self.logger.debug(u'menuRefresh called.')
+        self.actionrefreshdata('nil')
+        return
+
     def changeInterval(self, action):
         self.logger.debug(u"change interval() method called.")
         # If plugin config menu closed update the time for check.  Will apply after first change.
@@ -401,28 +412,18 @@ class Plugin(indigo.PluginBase):
 
     def runConcurrentThread(self):
         """ docstring placeholder """
-
-
         self.logger.debug(u"ronConCurrentThread() method called.")
-
         #secondsbetweencheck = 60*self.configMenuTimeCheck
-
-
         self.logger.debug(u"secondsbetween Check Equal:"+unicode(60*self.configMenuTimeCheck))
-
         # Change to time based looping with second checking.  Allowing to update Geofences minutely and any config changes to be immediately registered
         while self.pluginIsShuttingDown == False:
         # Shutdown nicely
-
-
             self.logger.debug(u'ronConcurrrent loop: pluginshuttingdown=False Loop Running.')
             currenttimenow = time.time()
             nextloopdue = time.time() + 5  # currenttime plus 5 seconds when next loop is due.  Will need to reset with config changes.
-
             self.prefsUpdated = False
             self.sleep(0.5)
             updateGeofencedue = time.time() + 60 # Geofence update due in 65 seconds # should be reset below
-
 
             while self.prefsUpdated == False:
                 if int(updateGeofencedue-time.time()) == 0:
@@ -450,7 +451,6 @@ class Plugin(indigo.PluginBase):
                         nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
                         #reset Geofence time update as done above
                         updateGeofencedue = time.time() + 60
-
                         self.logger.debug(u'ronConcurrrent loop: Next Update due (seconds):'+unicode(int(time.time()-nextloopdue)))
                     except:
                         self.logger.debug(u'Error within RunConcurrentLoop Update cycle')
@@ -458,6 +458,9 @@ class Plugin(indigo.PluginBase):
                 # Move to time for Geofences - so always in sync
                 if time.time() > updateGeofencedue:
                     self.updateGeofencetime()
+                    # after first loops run and 60 seconds has passed, we will be here
+                    # set end of startingUp now.
+                    self.startingUp = False
                     # add 60 seconds
                     updateGeofencedue = time.time() + 60
 
@@ -664,6 +667,7 @@ class Plugin(indigo.PluginBase):
             return
 
         except Exception as e:
+            self.logger.info(u"{0:=^130}".format(""))
             self.logger.info(u'Error within get Data.  ?Network connection or issue:  Error Given: '+unicode(e))
             self.logger.info(u"{0:=^130}".format(""))
             self.logger.info(u'Have you also logged on and setup new account on an Ios/iphone/ipad device?')
@@ -698,11 +702,14 @@ class Plugin(indigo.PluginBase):
         try:
 
             self.logger.debug('Check GeoFences Called..')
+
+
             # need to start with GeofFence and then go through all devices
             # iDevName = dev.states['friendName']
             # Check GeoFences after devices
             for geoDevices in indigo.devices.itervalues('self.FindFriendsGeofence'):
                 if geoDevices.enabled:
+                    listFriends = []
                     igeoFriendsRange = 0
                     localProps = geoDevices.pluginProps
                     if not 'geoName' in localProps:
@@ -713,12 +720,20 @@ class Plugin(indigo.PluginBase):
                     igeoRangeDistance = int(localProps['geoRange'])
                     # old Friends in Range - act on changes.
                     igeoFriendsRangeOld = int(geoDevices.states['friendsInRange'])
+                    iGeolistFriends = []
+                    if geoDevices.states['listFriends'] != '':
+                        iGeolistFriends = geoDevices.states['listFriends'].split(',')
+                    self.logger.debug(u'Old GeoDevice Friends Equals:')
+                    self.logger.debug(unicode(iGeolistFriends))
 
                     for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
                         if dev.enabled:
                             self.logger.debug('Geo Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
                             iDevLatitude = float(dev.states['latitude'])
                             iDevLongitude = float(dev.states['longitude'])
+                            iDevUniqueName = dev.pluginProps['friendName']
+
+                            #self.logger.error(unicode(iDevUniqueName))
                     # Now check the distance for each device
                     # Calculate the distance
 
@@ -736,10 +751,13 @@ class Plugin(indigo.PluginBase):
                             if iSeparationABS <= igeoRangeDistance:
                                 iDevGeoInRange = 'true'
                                 igeoFriendsRange = igeoFriendsRange + 1
+                                listFriends.append(iDevUniqueName)
+
                             else:
                                 iDevGeoInRange = 'false'
                             #End of Device Ieration
                     #Now back to GeoFence iteration
+
                     update_time = t.strftime(self.datetimeFormat)
                     if igeoFriendsRange != igeoFriendsRangeOld:
                                 # Has been change to the igeoFriends Number
@@ -760,6 +778,34 @@ class Plugin(indigo.PluginBase):
                         geoDevices.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                     if igeoFriendsRange >0:
                         geoDevices.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+
+                    geoDevices.updateStateOnServer('listFriends', value=str(",".join(listFriends )))
+                    # go through old list of friends and compare to new list
+                    try:
+                        self.logger.debug(u'Old Friends: iGeolistFriends: '+unicode(iGeolistFriends))
+                        self.logger.debug(u'len of iGeoListFriends:'+unicode(len(iGeolistFriends)))
+                        if len(iGeolistFriends)>0:
+                            for oldfriend in iGeolistFriends:
+                                self.logger.debug(u'OldFriend List iteration: OldFriend:'+unicode(oldfriend))
+                                if listFriends.count(oldfriend)==0:
+                                    self.logger.debug(u'OldFriend no longer present; count=0; must have left')
+                                    self.logger.debug(unicode(oldfriend)+unicode(' Has Left GeoFence:'+igeoName))
+                                    self.triggerCheck(geoDevices, oldfriend, 'EXIT')
+                                #elif listFriends.count(oldfriend) >0:  #probably not needed below
+                                #    self.logger.debug(u'Oldfriend and current friend still present.  Do Nothing.')
+                                #    self.logger.debug(unicode(oldfriend) + unicode(' Still within GeoFence:' + igeoName))
+                        self.logger.debug(u'New Friends: listFriends: ' + unicode(listFriends))
+                        self.logger.debug(u'len of listFriends:' + unicode(len(listFriends)))
+                        if len(listFriends)>0:
+                            for newfriend in listFriends:
+                                self.logger.debug(u'newFriend List iteration:  NewFriend:'+unicode(newfriend))
+                                if iGeolistFriends.count(newfriend)==0:
+                                    self.logger.debug(u'newfriend count =0, means not current friend not present in old list.  Must have arrived.')
+                                    self.logger.debug(unicode(newfriend) + unicode(' Has Arrived with GeoFence:' + igeoName))
+                                    self.triggerCheck( geoDevices, newfriend, 'ENTER')
+                    except:
+                        self.logger.exception(u'Error Comparing old and new friends within GeoFence')
+                        pass
 
                     try:
                         lastArrivaltimestamp = float(geoDevices.states['lastArrivaltimestamp'])
@@ -1430,3 +1476,72 @@ class Plugin(indigo.PluginBase):
         except Exception as e:
             self.logger.exception(u'Problem with distance Calculation')
             return 'FailAPI','','',''
+
+
+##################  Trigger
+
+    def triggerStartProcessing(self, trigger):
+        self.logger.debug("Adding Trigger %s (%d) - %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+        assert trigger.id not in self.triggers
+        self.triggers[trigger.id] = trigger
+
+    def triggerStopProcessing(self, trigger):
+        self.logger.debug("Removing Trigger %s (%d)" % (trigger.name, trigger.id))
+        assert trigger.id in self.triggers
+        del self.triggers[trigger.id]
+
+    def triggerCheck(self, device, friend, triggertype):
+        self.logger.debug('triggerCheck run.  device.id:'+unicode(device.id)+' friend:'+unicode(friend)+' triggertype:'+unicode(triggertype))
+        try:
+
+            if self.startingUp:
+                self.logger.info(u'Trigger: Ignore as FindFriendsMini Just started.')
+                return
+
+            for triggerId, trigger in sorted(self.triggers.iteritems()):
+                self.logger.debug("Checking Trigger %s (%s), Type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+                #self.logger.error(unicode(trigger))
+
+                if trigger.pluginProps["geofenceId"] != str(device.id):
+                    self.logger.debug("\t\tSkipping Trigger %s (%s), wrong device: %s" % (trigger.name, trigger.id, device.id))
+                    return
+
+                if trigger.pluginTypeId == "geoFenceExit" and triggertype !='EXIT':
+                    self.logger.debug(u'Checked Trigger Wrong event.  ')
+                    return
+                if trigger.pluginTypeId == "geoFenceEnter" and triggertype !='ENTER':
+                    self.logger.debug(u'Checked Trigger Wrong event.  Exit.')
+                    return
+
+                idfriend = ''
+                # get id from name
+                # could save id to save this iteration but ugly looking and less useful display
+                for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
+                    if dev.enabled:
+                        iDevUniqueName = dev.pluginProps['friendName']
+                        if iDevUniqueName == friend:
+                            self.logger.debug(u'Matching friend found:'+unicode(friend)+' id is :'+unicode(dev.id))
+                            idfriend = dev.id
+
+                if idfriend=='':
+                    self.logger.info(u'No matching friend :'+unicode(friend)+' found.  Has it been deleted? or renamed?')
+                    return
+
+                if trigger.pluginProps["friendId"] != str(idfriend):
+                    self.logger.debug(u'Trigger Friend does not equal target friend.  Return.')
+                    return
+
+                if trigger.pluginTypeId == "geoFenceExit" and triggertype=='EXIT':
+                    self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+                    indigo.trigger.execute(trigger)
+                elif trigger.pluginTypeId == "geoFenceEnter" and triggertype=='ENTER':
+                    self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+                    indigo.trigger.execute(trigger)
+
+                self.logger.debug("\tUnknown Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+                return
+        except:
+            self.logger.exception(u'Exception within Trigger Check')
+            return
+
+

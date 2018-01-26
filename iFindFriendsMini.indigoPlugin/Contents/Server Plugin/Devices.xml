@@ -52,7 +52,11 @@
 				<TriggerLabel>Timestamp of last arrival</TriggerLabel>
 				<ControlPageLabel>Timestamp of last arrival</ControlPageLabel>
 			</State>
-
+            <State id="listFriends">
+				<ValueType>String</ValueType>
+				<TriggerLabel>List of Friends within Geofence</TriggerLabel>
+				<ControlPageLabel>List of Friends within Geofence</ControlPageLabel>
+			</State>
 			<State id="lastDeptimestamp" readonly="YES">
 				<ValueType>Number</ValueType>
 				<TriggerLabel>Timestamp of last Departure</TriggerLabel>

@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<Events>
+  <SupportURL></SupportURL>
+    <Event id="geoFenceExit">
+        <Name>Trigger on GeoFence Exit</Name>
+        <ConfigUI>
+            <Field id="friendId" type="menu">
+                <Label>Select Friend:</Label>
+                <List class="indigo.devices" filter="self.FindFriendsFriend"/>
+            </Field>
+             <Field id="geofenceId" type="menu">
+                <Label>Select GeoFence:</Label>
+                <List class="indigo.devices" filter="self.FindFriendsGeofence"/>
+            </Field>
+        </ConfigUI>
+    </Event>
+    <Event id="geoFenceEnter">
+        <Name>Trigger on GeoFence Enter</Name>
+        <ConfigUI>
+            <Field id="friendId" type="menu">
+                <Label>Select Friend:</Label>
+                <List class="indigo.devices" filter="self.FindFriendsFriend"/>
+            </Field>
+             <Field id="geofenceId" type="menu">
+                <Label>Select GeoFence:</Label>
+                <List class="indigo.devices" filter="self.FindFriendsGeofence"/>
+            </Field>
+        </ConfigUI>
+    </Event>
+  
+</Events>
+
