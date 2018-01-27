@@ -205,6 +205,11 @@
                 <TriggerLabel>BatteryStatus</TriggerLabel>
                 <ControlPageLabel>BatteryStatus</ControlPageLabel>
             </State>
+            <State id="googleMapUrl">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Http URL link to google map showing device location</TriggerLabel>
+                <ControlPageLabel>Http URL to google map showing device location</ControlPageLabel>
+            </State>
             <State id="locationTimestamp">
                 <ValueType>String</ValueType>
                 <TriggerLabel>locationTimeStamp</TriggerLabel>

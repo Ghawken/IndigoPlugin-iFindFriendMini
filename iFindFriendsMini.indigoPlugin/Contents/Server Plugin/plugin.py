@@ -939,25 +939,28 @@ class Plugin(indigo.PluginBase):
             #Generate single device URL
             drawUrl = self.urlGenerate(latitude ,longitude , self.googleAPI, int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap), dev)
             if self.debugmaps:
-                webbrowser.open_new(drawUrl)
+                webbrowser.open_new(drawUrl[0])
+                webbrowser.open_new(drawUrl[1])
 
-            fileMap = "curl --output '" + file + "' --url '" + drawUrl + "'"
+            fileMap = "curl --output '" + file + "' --url '" + drawUrl[0] + "'"
             os.system(fileMap)
             self.logger.debug('Saving Map...' + file)
 
             filename = 'All_device.jpg'
             file = folderLocation + filename
             # Generate URL for All Maps
-            drawUrl = self.urlAllGenerate(self.googleAPI,  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
-            fileMap = "curl --output '" + file + "' --url '" + drawUrl + "'"
+            drawUrlall = self.urlAllGenerate(self.googleAPI,  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
+            fileMap = "curl --output '" + file + "' --url '" + drawUrlall + "'"
             os.system(fileMap)
 
             self.logger.debug('Saving Map...' + file)
+            dev.updateStateOnServer('googleMapUrl', value=str(drawUrl[1]) )
+
 
             if self.debugmaps:
-                webbrowser.open_new(drawUrl)
+                webbrowser.open_new(drawUrlall)
                 self.logger.debug(u'Mapping URL:')
-                self.logger.debug(unicode(drawUrl))
+                self.logger.debug(unicode(drawUrlall))
             return
 
         except Exception as e:
@@ -1191,14 +1194,21 @@ class Plugin(indigo.PluginBase):
                 latitude) + "," + str(longitude)
             mapGoogle = 'https://maps.googleapis.com/maps/api/staticmap?'
 
+            #urlmapGoogle = 'https://www.google.com/maps/@?api=1&map_action=map&center='+str(latitude)+','+str(longitude)+'&zoom='+str(iZoom)+'&basemap=satellite'
+
+            urlmapGoogle = 'https://maps.google.com/maps?z='+str(iZoom)+'&t=h&q=' + str(latitude) + ',' + str(longitude)
+
             if mapAPIKey == 'No Key':
                 customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone
             else:
                 customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone + '&key=' + mapAPIKey
 
 
-            self.logger.debug(u'Map URL equals:'+unicode(customURL))
-            return customURL
+            self.logger.debug(u'StaticMap URL equals:'+unicode(customURL))
+            self.logger.debug(u'Map URL equals:' + unicode(urlmapGoogle))
+
+
+            return customURL, urlmapGoogle
 
         except Exception as e:
             self.logger.info(u'Mapping Exception/Error:'+unicode(e))
@@ -1512,9 +1522,9 @@ class Plugin(indigo.PluginBase):
         self.logger.debug('triggerCheck run.  device.id:'+unicode(device.id)+' friend:'+unicode(friend)+' triggertype:'+unicode(triggertype))
         try:
 
-            #if self.startingUp:
-            #    self.logger.info(u'Trigger: Ignore as FindFriendsMini Just started.')
-             #   return
+            if self.startingUp:
+                self.logger.info(u'Trigger: Ignore as FindFriendsMini Just started.')
+                return
 
             for triggerId, trigger in sorted(self.triggers.iteritems()):
 
