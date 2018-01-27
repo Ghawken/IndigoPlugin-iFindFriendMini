@@ -4,10 +4,6 @@
         <Name>Refresh Data For All Friends</Name>
         <CallbackMethod>actionrefreshdata</CallbackMethod>
     </Action>
-    <Action id="openGoogleUrl" deviceFilter="self.FindFriendsFriend">
-        <Name>Open Web Browser to Google Url</Name>
-        <CallbackMethod>openGoogleUrl</CallbackMethod>
-    </Action>
 
     <Action id="changeRefresh" uiPath="DeviceActions">
         <Name>Change Refresh Data interval</Name>
