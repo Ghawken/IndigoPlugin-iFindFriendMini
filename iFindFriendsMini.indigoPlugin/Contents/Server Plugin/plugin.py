@@ -1508,44 +1508,54 @@ class Plugin(indigo.PluginBase):
         del self.triggers[trigger.id]
 
     def triggerCheck(self, device, friend, triggertype):
+
         self.logger.debug('triggerCheck run.  device.id:'+unicode(device.id)+' friend:'+unicode(friend)+' triggertype:'+unicode(triggertype))
         try:
 
-            if self.startingUp:
-                self.logger.info(u'Trigger: Ignore as FindFriendsMini Just started.')
-                return
+            #if self.startingUp:
+            #    self.logger.info(u'Trigger: Ignore as FindFriendsMini Just started.')
+             #   return
 
             for triggerId, trigger in sorted(self.triggers.iteritems()):
-                self.logger.debug("Checking Trigger %s (%s), Type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+
+                self.logger.debug("Checking Trigger %s (%s), Type: %s, Friend: %s, and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId, friend, triggertype))
                 #self.logger.error(unicode(trigger))
 
                 if trigger.pluginProps["geofenceId"] != str(device.id) or (trigger.pluginTypeId == "geoFenceExit" and triggertype !='EXIT') or (trigger.pluginTypeId == "geoFenceEnter" and triggertype !='ENTER'):
-                    self.logger.debug("Skipping Trigger %s (%s), wrong device: %s" % (trigger.name, trigger.id, device.id))
-                    self.logger.debug(u'or Checked Trigger Wrong event.  '+unicode(triggertype))
+                    self.logger.debug("Skipping Trigger %s (%s), wrong device: %s, or friend: %s,  or event : %s" % (trigger.name, trigger.id, device.id, friend, triggertype))
+                    #self.logger.debug(u'or Checked Trigger Wrong event.  '+unicode(triggertype))
                 else:
                     idfriend = ''
                     # get id from name
                     # could save id to save this iteration but ugly looking and less useful display
-                    for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
-                        if dev.enabled:
-                            iDevUniqueName = dev.pluginProps['friendName']
-                            if iDevUniqueName == friend:
-                                self.logger.debug(u'Matching friend found:'+unicode(friend)+' id is :'+unicode(dev.id))
-                                idfriend = dev.id
+                    # get indigo device name
+                    # realised could save iteration here by finding name of device of current trigger via looking up name via indigodevice Id
+                    # quicker than iterating through all devices looking for mathcing name
+                    triggerdevice = indigo.devices[int(trigger.pluginProps['friendId'] )]
+                    triggerdeviceFriendName = triggerdevice.pluginProps['friendName']
+                    self.logger.debug(u'Trigger device friendName is: '+unicode(triggerdeviceFriendName))
+                    #self.logger.debug(triggerdevice)
 
+                    if triggerdevice.enabled:
+                        if str(friend) == str(triggerdeviceFriendName):
+                            self.logger.debug(u'Matching friend found:'+unicode(triggerdeviceFriendName)+' and trigger needed is:'+unicode(friend))
+                            idfriend = triggerdevice.id
+
+                    #for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
+                    #    if dev.enabled:
+                     #       iDevUniqueName = dev.pluginProps['friendName']
+                     #       if iDevUniqueName == friend:
+                    #            self.logger.debug(u'Matching friend found:'+unicode(friend)+' id is :'+unicode(dev.id))
+                    #
                     if idfriend=='':
-                        self.logger.info(u'No matching friend :'+unicode(friend)+' found.  Has it been deleted? or renamed?')
-                        continue #back to check other triggers
-
-                    if trigger.pluginProps["friendId"] != str(idfriend):
-                        self.logger.debug(u'Trigger Friend does not equal target friend.  Return.')
+                        self.logger.debug(u'Trigger Does not  match friend :'+unicode(friend)+' to TriggerFriend Needed:'+unicode(triggerdeviceFriendName))
                         continue #back to check other triggers
 
                     if trigger.pluginTypeId == "geoFenceExit" and triggertype=='EXIT':
-                        self.logger.debug("Executing Trigger %s (%d)" % (trigger.name, trigger.id))
+                        self.logger.debug("===== Executing Trigger %s (%d)" % (trigger.name, trigger.id))
                         indigo.trigger.execute(trigger)
                     elif trigger.pluginTypeId == "geoFenceEnter" and triggertype=='ENTER':
-                        self.logger.debug("Executing Trigger %s (%d)" % (trigger.name, trigger.id))
+                        self.logger.debug("======== Executing Trigger %s (%d)" % (trigger.name, trigger.id))
                         indigo.trigger.execute(trigger)
                     else:
                         self.logger.debug("Not Run Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
