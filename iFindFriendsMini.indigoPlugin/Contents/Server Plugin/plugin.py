@@ -363,6 +363,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'homeTimeText', 'value': 'unknown'},
                 {'key': 'otherDistanceText', 'value': 'unknown'},
                 {'key': 'otherTimeText', 'value': 'unknown'},
+                {'key': 'googleMapUrl', 'value': ''},
                 {'key': 'labels', 'value': ''},
                 {'key': 'longitude', 'value': ''},
                 {'key': 'horizontalAccuracy', 'value': ''},
@@ -398,9 +399,34 @@ class Plugin(indigo.PluginBase):
         self.checkHomeOther()
         return
 
+    def openGoogleUrl(self, pluginAction, device):
+        self.logger.debug(u'openGoogleUrl Run')
+        try:
+            page = '<a href="'+str(device.states['googleMapUrl'])+'"></a>'
+
+            return page
+        except:
+            self.looger.exception(u'Issue with OpenGoogleURL')
+            return
+
     def menuRefresh(self):
         self.logger.debug(u'menuRefresh called.')
         self.actionrefreshdata('nil')
+        return
+
+    def updateVar(self, name, value):
+        self.logger.debug(u'updatevar run.')
+        if not ('FindFriendsMini' in indigo.variables.folders):
+            # create folder
+            folderId = indigo.variables.folder.create('FindFriendsMini')
+            folder = folderId.id
+        else:
+            folder = indigo.variables.folders.getId('FindFriendsMini')
+
+        if name not in indigo.variables:
+            NewVar = indigo.variable.create(name, value=value, folder=folder)
+        else:
+            indigo.variable.updateValue(name, value)
         return
 
     def changeInterval(self, action):
@@ -955,6 +981,9 @@ class Plugin(indigo.PluginBase):
 
             self.logger.debug('Saving Map...' + file)
             dev.updateStateOnServer('googleMapUrl', value=str(drawUrl[1]) )
+            self.logger.debug(u'Updating Variable:'+unicode(dev.name))
+            variablename =''.join(dev.name.split())
+            self.updateVar(variablename, str(drawUrl[1]))
 
 
             if self.debugmaps:
