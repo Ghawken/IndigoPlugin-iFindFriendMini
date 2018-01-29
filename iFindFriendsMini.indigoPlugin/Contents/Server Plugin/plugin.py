@@ -758,6 +758,7 @@ class Plugin(indigo.PluginBase):
                             iDevLatitude = float(dev.states['latitude'])
                             iDevLongitude = float(dev.states['longitude'])
                             iDevUniqueName = dev.pluginProps['friendName']
+                            iDevAccuracy = float(dev.states['horizontalAccuracy'])
 
                             #self.logger.error(unicode(iDevUniqueName))
                     # Now check the distance for each device
@@ -774,7 +775,17 @@ class Plugin(indigo.PluginBase):
                             iSeparationABS = abs(iSeparation[1])
                     # if distance between to points smaller than range of GeoFence then is 'InRange' or within Geofence
                     # now need to count numbers.
-                            if iSeparationABS <= igeoRangeDistance:
+                    ##
+                    ##  Deal with horizontal accuracy
+                    ##
+                    ## log it all
+                            ##
+                            self.logger.debug(u'---------------  Horizontal Accuracy :'+unicode(iDevUniqueName)+' & Geo:'+unicode(igeoName))
+                            self.logger.debug(u'---------------- Distance apart:'+unicode(iSeparationABS)+'    Accuracy:'+unicode(iDevAccuracy)+'  Geo Range:'+unicode(igeoRangeDistance)+'-----')
+                            DistanceApartAccuracy = abs(iSeparationABS - iDevAccuracy )
+                            self.logger.debug(u'---------------  Distance Apart Calculation:'+unicode(DistanceApartAccuracy))
+
+                            if DistanceApartAccuracy <= igeoRangeDistance:
                                 iDevGeoInRange = 'true'
                                 igeoFriendsRange = igeoFriendsRange + 1
                                 listFriends.append(iDevUniqueName)
@@ -1225,7 +1236,7 @@ class Plugin(indigo.PluginBase):
 
             #urlmapGoogle = 'https://www.google.com/maps/@?api=1&map_action=map&center='+str(latitude)+','+str(longitude)+'&zoom='+str(iZoom)+'&basemap=satellite'
 
-            urlmapGoogle = 'https://maps.google.com/maps?z='+str(iZoom)+'&t=h&q=' + str(latitude) + ',' + str(longitude)
+            urlmapGoogle = 'comgooglemaps://maps.google.com/maps?z='+str(iZoom)+'&t=h&q=' + str(latitude) + ',' + str(longitude)
 
             if mapAPIKey == 'No Key':
                 customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone
@@ -1434,7 +1445,7 @@ class Plugin(indigo.PluginBase):
         # Calculates the 'As the crow flies' distance between
         # two points and returns value in metres
 
-        global iDebug1, iDebug2, iDebug3, iDebug4, iDebug5, gUnits
+
 
         # First check if numbers are valid
         if lat1+long1 == 0.0 or lat2+long2 == 0.0:
