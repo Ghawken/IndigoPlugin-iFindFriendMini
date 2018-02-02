@@ -194,6 +194,8 @@ class Plugin(indigo.PluginBase):
         self.logger.info(u"{0:<30} {1}".format("Major Problem equals: ", MajorProblem))
         self.logger.info(u"{0:=^130}".format(""))
 
+
+
         #Change to logging
         pfmt = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s',
                                  datefmt='%Y-%m-%d %H:%M:%S')
@@ -206,16 +208,28 @@ class Plugin(indigo.PluginBase):
 
         ## Create new Log File
         try:
-            self.newloggerhandler = logging.FileHandler(u"{0}/Logs/com.GlennNZ.indigoplugin.FindFriendsMini/NewLogger.log".format(
+            self.newloggerhandler = logging.FileHandler(u"{0}/Logs/com.GlennNZ.indigoplugin.FindFriendsMini/FFM-GeofenceData.log".format(
             indigo.server.getInstallFolderPath()))
             formatter = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s',
                                      datefmt='%Y-%m-%d %H:%M:%S')
             self.newloggerhandler.setFormatter(formatter)
-            self.newlogger = logging.getLogger('NewLogger')
+            self.newlogger = logging.getLogger('FindFriends-GeofenceData')
             self.newlogger.setLevel(logging.DEBUG)
             self.newlogger.addHandler(self.newloggerhandler)
         except:
             self.logger.exception(u'Error in Debug New Log Setup')
+
+        self.newlogger.info(u"")
+        self.newlogger.info(u"{0:=^130}".format(" Initializing New Plugin Session "))
+        self.newlogger.info(u"{0:<30} {1}".format("Plugin name:", pluginDisplayName))
+        self.newlogger.info(u"{0:<30} {1}".format("Plugin version:", pluginVersion))
+        self.newlogger.info(u"{0:<30} {1}".format("Plugin ID:", pluginId))
+        self.newlogger.info(u"{0:<30} {1}".format("Indigo version:", indigo.server.version))
+        self.newlogger.info(u"{0:<30} {1}".format("Python version:", sys.version.replace('\n', '')))
+        self.newlogger.info(u"{0:<30} {1}".format("Python Directory:", sys.prefix.replace('\n', '')))
+        self.newlogger.info(u"{0:<30} {1}".format("Major Problem equals: ", MajorProblem))
+        self.newlogger.info(u"{0:=^130}".format(""))
+
 
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.debug(u"logLevel = " + str(self.logLevel))
@@ -816,50 +830,59 @@ class Plugin(indigo.PluginBase):
                             ##
                             self.logger.debug(u'---------------- Horizontal Accuracy :'+unicode(iDevUniqueName)+' & Geo:'+unicode(igeoName))
                             self.logger.debug(u'---------------- Distance apart:'+unicode(iSeparationABS)+'    Accuracy:'+unicode(iDevAccuracy)+'  Geo Range:'+unicode(igeoRangeDistance)+'-----')
-                            if iDevAccuracy >= 100:
-                                iDevAccuracy = iDevAccuracy - 100
-                            elif iDevAccuracy < 100:
-                                iDevAccuracy = 0
 
-                            DistanceApartAccuracy = abs(iSeparationABS - iDevAccuracy )
-                            self.logger.debug(u'---------------  Distance Apart Calculation:'+unicode(DistanceApartAccuracy))
+# below is not correct and could be plus or minus this distance
+
+                           # DistanceApartAccuracy = abs(iSeparationABS - iDevAccuracy )
+                            RatioAccuracyGeofencerange = float(iDevAccuracy/igeoRangeDistance)
+# need to not update if % of GeoFence versus Accuracy e.g if 100 m Geofence and accuracy 1000m don't add
+# but if 1000m Geofence and accuracy +/- 1000m add.  Trial ratio of 2 as cut-off.
+# Accuracy/GeoFence Range
+
+                    #       self.logger.debug(u'---------------  Distance Apart Calculation:'+unicode(DistanceApartAccuracy))
                     ## only add or remove if accurate - need to check if there already first to enable this
                     ##
 
                             self.logger.debug(u'---------------- Checking :' + unicode(iDevUniqueName) + ' whether appears to be within Lists of Friends (:' + geoDevices.states['listFriends'])
+                            self.logger.debug(u'---------------- Accuracy versus Geofence Range equals:'+unicode(iDevAccuracy/igeoRangeDistance))
 
-                            # if friend in geofence and distance still within.  Does not alter with accuracy ?-
-                            if iDevUniqueName in geoDevices.states['listFriends'] and iSeparationABS <= igeoRangeDistance:  #if already present ignore accuracy data
-                                self.logger.debug(u'---------------- Located via non-accurate WITHIN Geofence:' + unicode(iDevUniqueName) + ' appears to be within Friends.')
+                            if float(iDevAccuracy/igeoRangeDistance) <= 2:
+                                # if friend in geofence and distance still within.  Does not alter with accuracy ?-
 
-                                iDevGeoInRange = 'true'
-                                igeoFriendsRange = igeoFriendsRange + 1
-                                listFriends.append(iDevUniqueName)
+                                #self.logger.debug(u'------------------ iDevAccuracy versus GeoRange Less than 2:  Current='+unicode(RatioAccuracyGeofencerange))
+                                #self.newlogger.debug(u'------------------ iDevAccuracy versus GeoRange Less than 2:  Current=' + unicode(  RatioAccuracyGeofencerange))
 
-                            # if not in friend list and accurate location - yes add to geofence
-                            elif iDevUniqueName not in geoDevices.states['listFriends'] and DistanceApartAccuracy <= igeoRangeDistance:
-                                self.logger.debug(
-                                    u'---------------- Located within Accurate Geofence:' + unicode(iDevUniqueName) + '& appears to be NOT within Friends List: Add to Geofence')
-                                iDevGeoInRange = 'true'
-                                self.logger.debug(u'*****************'+unicode(iDevUniqueName)+u' Added GeoFence: Accurate Distance:'+unicode(DistanceApartAccuracy)+u' Old Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy))
-                                self.newlogger.error(u'*****************'+unicode(iDevUniqueName)+u' Added GeoFence: Accurate Distance:'+unicode(DistanceApartAccuracy)+u' Old Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy))
+                                if iDevUniqueName in geoDevices.states['listFriends'] and iSeparationABS <= igeoRangeDistance:  #if already present ignore accuracy data
+                                    self.logger.debug(u'---------------- Located via accurate WITHIN Geofence:' + unicode(iDevUniqueName) + ' appears to be within Friends.')
 
-                                igeoFriendsRange = igeoFriendsRange + 1
-                                listFriends.append(iDevUniqueName)
-                            #if in geofence use accurate. Don't remove unless acurrate.
-                            elif iDevUniqueName in geoDevices.states['listFriends'] and DistanceApartAccuracy > igeoRangeDistance:
-                                # if in geofence friends list and clearly, accurately left - make as gone.
-                                self.logger.debug(u'---------------- Outside Accurate Range :' + unicode(iDevUniqueName) + ' in Friends List. Dont add to Geofence')
-                                self.logger.debug(u'*****************'+unicode(iDevUniqueName)+u' Removed GeoFence: Accurate Distance:'+unicode(DistanceApartAccuracy)+u' Old Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy))
-                                self.newlogger.error(u'*****************'+unicode(iDevUniqueName)+u' Removed GeoFence: Accurate Distance:'+unicode(DistanceApartAccuracy)+u' Old Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy))
+                                    iDevGeoInRange = 'true'
+                                    igeoFriendsRange = igeoFriendsRange + 1
+                                    listFriends.append(iDevUniqueName)
 
-                                iDevGeoInRange = 'false'
-                            #if not in geofence don't make as absence without accurate data
-                            elif iDevUniqueName not in geoDevices.states['listFriends'] and DistanceApartAccuracy > igeoRangeDistance:
-                                # if not in friends list - can be gone, make sure not added
-                                self.logger.debug(u'---------------- Outside Accurate Range :' + unicode(iDevUniqueName) + ' and not in Friends List. Dont add to Geofence.')
-                                iDevGeoInRange = 'false'
-                            #End of Device Ieration
+                                # if not in friend list and accurate location - yes add to geofence
+                                elif iDevUniqueName not in geoDevices.states['listFriends'] and iSeparationABS <= igeoRangeDistance:
+                                    self.logger.debug(
+                                        u'---------------- Located within Accurate Geofence:' + unicode(iDevUniqueName) + '& appears to be NOT within Friends List: Add to Geofence')
+                                    iDevGeoInRange = 'true'
+                                    self.logger.debug(u'*****************'+unicode(iDevUniqueName)+u' Added GeoFence: Ratio:'+unicode(RatioAccuracyGeofencerange)+u' Old Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy))
+                                    self.newlogger.error(u'*****************'+unicode(iDevUniqueName)+u' Added to GeoFence:'+unicode(igeoName)+' Ratio :'+unicode(RatioAccuracyGeofencerange)+u' Old Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy))
+
+                                    igeoFriendsRange = igeoFriendsRange + 1
+                                    listFriends.append(iDevUniqueName)
+                                #if in geofence use accurate. Don't remove unless acurrate.
+                                elif iDevUniqueName in geoDevices.states['listFriends'] and iSeparationABS > igeoRangeDistance:
+                                    # if in geofence friends list and clearly, accurately left - make as gone.
+                                    self.logger.debug(u'---------------- Outside Accurate Range :' + unicode(iDevUniqueName) + ' in Friends List. Dont add to Geofence')
+                                    self.logger.debug(u'*****************'+unicode(iDevUniqueName)+u' Removed GeoFence:'+unicode(igeoName)+'  Ratio:'+unicode(RatioAccuracyGeofencerange)+u'  Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy))
+                                    self.newlogger.error(u'*****************'+unicode(iDevUniqueName)+u' Removed GeoFence:'+unicode(igeoName)+'  Ratio:'+unicode(RatioAccuracyGeofencerange)+u'  Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy))
+
+                                    iDevGeoInRange = 'false'
+                                #if not in geofence don't make as absence without accurate data
+                                elif iDevUniqueName not in geoDevices.states['listFriends'] and iSeparationABS > igeoRangeDistance:
+                                    # if not in friends list - can be gone, make sure not added
+                                    self.logger.debug(u'---------------- Outside Accurate Range :' + unicode(iDevUniqueName) + ' and not in Friends List. Dont add to Geofence.')
+                                    iDevGeoInRange = 'false'
+                                #End of Device Ieration
                     #Now back to GeoFence iteration
 
                     update_time = t.strftime(self.datetimeFormat)
