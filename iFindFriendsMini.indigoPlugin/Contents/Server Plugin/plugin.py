@@ -864,8 +864,8 @@ class Plugin(indigo.PluginBase):
                                     self.logger.debug(
                                         u'---------------- Located within Accurate Geofence:' + unicode(iDevUniqueName) + '& appears to be NOT within Friends List: Add to Geofence')
                                     iDevGeoInRange = 'true'
-                                    self.logger.debug(u'*****************'+unicode(iDevUniqueName)+u' Added GeoFence: Ratio:'+unicode(RatioAccuracyGeofencerange)+u' Old Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy))
-                                    self.newlogger.error(u'*****************'+unicode(iDevUniqueName)+u' Added to GeoFence:'+unicode(igeoName)+' Ratio :'+unicode(RatioAccuracyGeofencerange)+u' Old Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy))
+                                    self.logger.debug(u'*****************'+unicode(iDevUniqueName)+u' Added GeoFence: Ratio:'+unicode(RatioAccuracyGeofencerange)+u'  Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy))
+                                    self.newlogger.error(u'*****************'+unicode(iDevUniqueName)+u' Added to GeoFence:'+unicode(igeoName)+' Ratio :'+unicode(RatioAccuracyGeofencerange)+u'  Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy))
 
                                     igeoFriendsRange = igeoFriendsRange + 1
                                     listFriends.append(iDevUniqueName)
