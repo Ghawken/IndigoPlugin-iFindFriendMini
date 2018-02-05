@@ -783,7 +783,8 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(unicode(iGeolistFriends))
 
                     for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
-                        if dev.enabled:
+                        #add online check here
+                        if dev.enabled and dev.states['deviceIsOnline'] == True:
                             self.logger.debug('Geo Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
                             iDevLatitude = float(dev.states['latitude'])
                             iDevLongitude = float(dev.states['longitude'])
@@ -876,9 +877,16 @@ class Plugin(indigo.PluginBase):
                                     self.logger.debug(u'---------------- Outside Accurate Range :' + unicode(iDevUniqueName) + ' and not in Friends List. Dont add to Geofence.')
                                     iDevGeoInRange = 'false'
                             elif float(iDevAccuracy / igeoRangeDistance) > 2:
-                                self.logger.debug(u'------------------ Accuracy Poor:  Only Checking whether already within Geofence in which case do not remove')
+                                self.logger.debug(u'------------------ Accuracy Poor:  Checking whether already within Geofence & Distance.  Distance calculated:'+unicode(iSeparationABS)+u' GeoRangDistance:'+unicode(igeoRangeDistance))
+                                self.newlogger.debug(u'------------------ Accuracy Poor:  Checking whether already within Geofence & Distance.  Distance calculated:'+unicode(iSeparationABS)+u' GeoRangDistance:'+unicode(igeoRangeDistance))
+
+                                # may be better to remove distance check here altogether and only remove if good accuracy
+                                # but depends how far away the device is
+                                # this may be the space to look at more complication accuracy versus seperation type calculation
+                                # will run and gather more data first
                                 if iDevUniqueName in geoDevices.states['listFriends'] and iSeparationABS <= igeoRangeDistance:  #if already present ignore accuracy data
-                                    self.logger.debug(u'---------------- Already WITHIN Geofence:' + unicode(iDevUniqueName) + ' and poor accuracy so do not remove.  Distance:'+unicode(iSeparationABS))
+                                    self.logger.debug(u'---------------- Accuracy Poor:  & Is WITHIN Geofence:' + unicode(iDevUniqueName) + ', poor accuracy so do not remove.  Distance:'+unicode(iSeparationABS))
+                                    self.newlogger.debug(u'---------------- Accuracy Poor:  & Is WITHIN Geofence:' + unicode(iDevUniqueName) + ', poor accuracy so do not remove.  Distance:'+unicode(iSeparationABS))
                                     iDevGeoInRange = 'true'
                                     igeoFriendsRange = igeoFriendsRange + 1
                                     listFriends.append(iDevUniqueName)
@@ -949,6 +957,7 @@ class Plugin(indigo.PluginBase):
                     except Exception as e:
                         self.logger.info(u'Error with Departure/Arrival Time Calculation:'+unicode(e))
                         pass
+
                     geoDevices.updateStateOnServer('deviceIsOnline', value=True, uiValue='Online')
 
 

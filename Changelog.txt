@@ -1,3 +1,6 @@
+0.6.0
+Add further check for DeviceIsOnline before checking GeoFences
+
 0.5.9
 Adds ZachBenz fix for 'followers versus following' - Thanks!
 Code was using followers, but should have used those we were following.
