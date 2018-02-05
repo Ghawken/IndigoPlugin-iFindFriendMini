@@ -989,6 +989,10 @@ class Plugin(indigo.PluginBase):
                 labels = follow['location']['labels']
             else:
                 labels =''
+            #another none check
+            if labels is None:
+                labels =''
+
 
             if len(labels) > 0:
                 label = labels[0]
