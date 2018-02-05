@@ -1455,7 +1455,8 @@ class Plugin(indigo.PluginBase):
 
                         #This is home Geo - now update all devices
                         for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
-                            if dev.enabled:
+                            # add check here make sure dev is Online before checking details of GeoFences
+                            if dev.enabled and dev.states['deviceIsOnline'] == True:
                                 self.logger.debug('Home Check Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
                                 iDevLatitude = float(dev.states['latitude'])
                                 iDevLongitude = float(dev.states['longitude'])

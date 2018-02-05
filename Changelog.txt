@@ -1,3 +1,10 @@
+0.5.8
+Check deviceisonline before checking Geofences
+(avoids downstream caught exceptions
+
+0.5.7
+Another check for no Data received - Labels in this case
+
 0.5.6
 Check for existence of icloud label data (?not provided for some set to blank if None
 Change to Accuracy - ignore leaving geofence if poor accuracy
