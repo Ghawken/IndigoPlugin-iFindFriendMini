@@ -1,0 +1,91 @@
+0.5.6
+Check for existence of icloud label data (?not provided for some set to blank if None
+Change to Accuracy - ignore leaving geofence if poor accuracy
+
+0.5.5
+Bug for for icloud debugging - deleted unused pyicloud routines but left one debugging line
+
+
+0.5.4
+Create Variable per device for google map url
+(can use with Jay's Indigo Variable addition https://www.indigodomo.com/library/405/)
+Can use as link to external url to open google maps on this location
+Uses url shortcut for googlemaps application
+
+Changes to Geofence Exit/Entry - uses Accuracy to avoid enter/exits when accuracy is very poor
+
+Further changes to use ratio of Accuracy to GeoFence Range
+
+Will only set entry/exit geofence events and triggers if accuracy versus geofence range is less than 2
+e.g.
+Geo range of 100m. Accuracy is 1000m. (poor) Ratio = 10 won't entry/exit until more accurate reading
+Geo of 100m. Accuracy of 200. Ratio of 2 - will (just allow) entry/exit
+Geo of 100m. Accuracy of 5. Ratio 1/20. Will allow with trigger entry/exit
+
+Create small separate FFM-GeoFence log file for data collection of these accuracy ratio/settings - in normal log file directory. Happy to finetune ratio if more data seems to suggest makes sense.
+
+Currently ratio of 2 - seems to be ideal spot.
+
+0.5.0
+Add comgooglemaps:// shortlink to map url (opens in google maps
+
+0.4.9
+Bug fix to reenable trigger disable for first 60 seconds after startup
+Add new Device url: google maps url showing device center.
+
+0.4.8
+Other changes:
+Change to Indigo 7 Logging across the board (generates debug log for PM if issues)
+Change to config settings given above
+Add enable/disable icloud logging (won't log icloud results)
+Add enable/disable mapping logging
+Add Python DIrectory for Info at startup (for comparison outside indigo if multiple python installs)
+Add Travel Time and Distance to iFriends. Requires googleAPI
+Create Home and Other geofence (recognised by Unique name only, not Indigo Device Name)
+Update google maps to 2.5.1_dev
+Remove pyicloud unused modules.
+Remove module six dependency by above.
+Add action group to allow change in interval checking.
+Can run action to change the refresh interval based on whatever indigo triggers suits
+Fix bug for GetData via action and plugin Menu.
+
+add Events/Triggers for GeoFence Arrive and GeoFence Leave; selectable by GeoFence and iFriend Device.
+
+Create trigger/Event which is selectable within Indigo by Friend and Geofence.
+Two selectable, either exit GeoFence or Enter Geofence.
+When any change at standard interval update will trigger this event/action.
+(is ignored in first 60seconds, to avoid triggered at every startup)
+
+Ignore any startup triggers/events within first 60 seconds
+Add listFriends to Geofence - comma seperated list of friends within GeoFence
+
+0.3.0
+
+Code refactoring; move to time main loop handling/timing
+Some code and logging tidying (only Apple iCloud Debug on Debug level 4 and above
+Updates Geofences arrival time minutely/every 60 seconds
+Better handling of config changes whilst plugin running; will restart main loop and update
+Restart main loop with new devices starting
+New Icon.png
+Fix to Pyicloudexception handling
+(Working on better handling of icloud errors)
+Report pyicloud import errors LOUDLY (Report Message returned)
+Add Debug Maximum Menu Item to Bypass Apple Login issues
+
+0.1.7
+Fix a small debug bug
+
+0.1.6
+Code Tidy
+Add serious amount of icloud logging to troubleshoot connection issues (when on Debug Level 4 )
+
+Version 0.1.4
+Updated Readme with more info
+Delete unused code/node - much smaller now!
+Tidy up uiValue/Values for Geofences
+Add Menu to check PluginStore
+Change Update code to use PluginStore (seems some changes coming to PluginStore - so best to use I suspect
+Change Plugin Config Menus.
+Add option to change update checking time/and enable automatic opening of PluginStore
+Some more logging advice for not setup correctly issues.
+Add icon.png for PluginStore

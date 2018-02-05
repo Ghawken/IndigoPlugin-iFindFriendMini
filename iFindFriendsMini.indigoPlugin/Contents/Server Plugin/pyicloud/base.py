@@ -10,13 +10,19 @@ import os
 from re import match
 import copy
 
-from pyicloud.exceptions import PyiCloudFailedLoginException
+from pyicloud.exceptions import (
+    PyiCloudFailedLoginException,
+    PyiCloudAPIResponseError,
+    PyiCloud2SARequiredError,
+    PyiCloudServiceNotActivatedErrror
+)
+
 from pyicloud.services import (
-    FindMyiPhoneServiceManager,
-    FindFriendsService,
-    CalendarService,
-    UbiquityService,
-    ContactsService
+    #FindMyiPhoneServiceManager,
+    FindFriendsService
+    #CalendarService,
+    #UbiquityService,
+   # ContactsService
 )
 
 
@@ -35,8 +41,11 @@ class PyiCloudService(object):
     """
     def __init__(self, apple_id, password, cookie_directory=None):
         self.discovery = None
+        self.logger = logging.getLogger('Plugin.PyiCloud')
         self.client_id = str(uuid.uuid1()).upper()
         self.user = {'apple_id': apple_id, 'password': password}
+
+        #self.logger.debug(u'------------------------  self.user equals'+unicode(self.user))
 
         self._home_endpoint = 'https://www.icloud.com'
         self._setup_endpoint = 'https://setup.icloud.com/setup/ws/1'
@@ -48,6 +57,8 @@ class PyiCloudService(object):
         #self._base_webauth_url = '%s/refreshWebAuth' % self._push_endpoint
 
         self._cookie_directory = 'cookies'
+
+        self.data ={}
 
         self.session = requests.Session()
         self.session.verify = False
@@ -127,15 +138,30 @@ class PyiCloudService(object):
         data = dict(self.user)
         data.update({'id': self.params['id'], 'extended_login': False})
 
-        req = self.session.post(
-            self._base_login_url,
-            params=self.params,
-            data=json.dumps(data)
-        )
+        try:
+            req = self.session.post(
+                self._base_login_url,
+                params=self.params,
+                data=json.dumps(data)
+            )
+
+
+
+        except PyiCloudAPIResponseError as error:
+            msg ='API Response Error.  Invalid email/passwoprd'
+            #msg = req.json()
+            self.logger.exception(u'PyiCloud Login error:')
+            raise PyiCloudFailedLoginException(msg, error)
+
+        #content_type = req.headers.get('Content-Type', '').split(';')[0]
+        #json_mimetypes = ['application/json', 'text/json']
 
         if not req.ok:
             msg = 'Invalid email/password combination.'
+#           msg = req.json()
+            self.logger.debug(u'PyiCloud Req Not OK:  msg:'+unicode(req))
             raise PyiCloudFailedLoginException(msg)
+
 
         # Glenn added dump and save the Whole Cookie File
         # with open(cookiefile, 'wb') as f:
@@ -158,6 +184,7 @@ class PyiCloudService(object):
         self.refresh_validate()
 
         self.discovery = req.json()
+        self.data = req.json()
         self.webservices = self.discovery['webservices']
 
     '''
@@ -198,6 +225,14 @@ class PyiCloudService(object):
 
         self._cookies = request.cookies
     '''
+    @property
+    def requires_2sa(self):
+        """ Returns True if two-step authentication is required."""
+        return self.data.get('hsaChallengeRequired', False) \
+            and self.data['dsInfo'].get('hsaVersion', 0) >= 1
+        # FIXME: Implement 2FA for hsaVersion == 2
+
+
     @property
     def devices(self):
         """ Return all Friends."""

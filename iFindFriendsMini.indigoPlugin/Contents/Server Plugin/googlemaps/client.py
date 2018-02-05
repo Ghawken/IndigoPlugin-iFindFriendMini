@@ -24,8 +24,10 @@ import base64
 import collections
 from datetime import datetime
 from datetime import timedelta
+import functools
 import hashlib
 import hmac
+import re
 import requests
 import random
 import time
@@ -49,7 +51,8 @@ class Client(object):
     def __init__(self, key=None, client_id=None, client_secret=None,
                  timeout=None, connect_timeout=None, read_timeout=None,
                  retry_timeout=60, requests_kwargs=None,
-                 queries_per_second=10):
+                 queries_per_second=50, channel=None,
+                 retry_over_query_limit=True):
         """
         :param key: Maps API key. Required, unless "client_id" and
             "client_secret" are set.
@@ -61,6 +64,12 @@ class Client(object):
         :param client_secret: (for Maps API for Work customers) Your client
             secret (base64 encoded).
         :type client_secret: string
+
+        :param channel: (for Maps API for Work customers) When set, a channel
+            parameter with this value will be added to the requests.
+            This can be used for tracking purpose.
+            Can only be used with a Maps API client ID.
+        :type channel: str
 
         :param timeout: Combined connect and read timeout for HTTP requests, in
             seconds. Specify "None" for no timeout.
@@ -85,6 +94,11 @@ class Client(object):
             appropriate amount of time before it runs the current query.
         :type queries_per_second: int
 
+        :param retry_over_query_limit: If True, requests that result in a
+            response indicating the query rate limit was exceeded will be
+            retried. Defaults to True.
+        :type retry_over_query_limit: bool
+
         :raises ValueError: when either credentials are missing, incomplete
             or invalid.
         :raises NotImplementedError: if connect_timeout and read_timeout are
@@ -104,16 +118,26 @@ class Client(object):
         if key and not key.startswith("AIza"):
             raise ValueError("Invalid API key provided.")
 
+        if channel:
+            if not client_id:
+                raise ValueError("The channel argument must be used with a "
+                                 "client ID")
+            if not re.match("^[a-zA-Z0-9._-]*$", channel):
+                raise ValueError("The channel argument must be an ASCII "
+                    "alphanumeric string. The period (.), underscore (_)"
+                    "and hyphen (-) characters are allowed.")
+
+        self.session = requests.Session()
         self.key = key
 
         if timeout and (connect_timeout or read_timeout):
-            raise ValueError("Specify either timeout, or connect_timeout " +
+            raise ValueError("Specify either timeout, or connect_timeout "
                              "and read_timeout")
 
         if connect_timeout and read_timeout:
             # Check that the version of requests is >= 2.4.0
             chunks = requests.__version__.split(".")
-            if chunks[0] < 2 or (chunks[0] == 2 and chunks[1] < 4):
+            if int(chunks[0]) < 2 or (int(chunks[0]) == 2 and int(chunks[1]) < 4):
                 raise NotImplementedError("Connect/Read timeouts require "
                                           "requests v2.4.0 or higher")
             self.timeout = (connect_timeout, read_timeout)
@@ -122,6 +146,7 @@ class Client(object):
 
         self.client_id = client_id
         self.client_secret = client_secret
+        self.channel = channel
         self.retry_timeout = timedelta(seconds=retry_timeout)
         self.requests_kwargs = requests_kwargs or {}
         self.requests_kwargs.update({
@@ -130,37 +155,51 @@ class Client(object):
             "verify": True,  # NOTE(cbro): verify SSL certs.
         })
 
+        self.queries_per_second = queries_per_second
+        self.retry_over_query_limit = retry_over_query_limit
         self.sent_times = collections.deque("", queries_per_second)
 
-    def _get(self, url, params, first_request_time=None, retry_counter=0,
-             base_url=_DEFAULT_BASE_URL, accepts_clientid=True, extract_body=None):
-        """Performs HTTP GET request with credentials, returning the body as
+    def _request(self, url, params, first_request_time=None, retry_counter=0,
+             base_url=_DEFAULT_BASE_URL, accepts_clientid=True,
+             extract_body=None, requests_kwargs=None, post_json=None):
+        """Performs HTTP GET/POST with credentials, returning the body as
         JSON.
 
         :param url: URL path for the request. Should begin with a slash.
         :type url: string
+
         :param params: HTTP GET parameters.
         :type params: dict or list of key/value tuples
-        :param first_request_time: The time of the first request (None if no retries
-                have occurred).
+
+        :param first_request_time: The time of the first request (None if no
+            retries have occurred).
         :type first_request_time: datetime.datetime
+
         :param retry_counter: The number of this retry, or zero for first attempt.
         :type retry_counter: int
+
         :param base_url: The base URL for the request. Defaults to the Maps API
-                server. Should not have a trailing slash.
+            server. Should not have a trailing slash.
         :type base_url: string
+
         :param accepts_clientid: Whether this call supports the client/signature
-                params. Some APIs require API keys (e.g. Roads).
+            params. Some APIs require API keys (e.g. Roads).
         :type accepts_clientid: bool
+
         :param extract_body: A function that extracts the body from the request.
-                If the request was not successful, the function should raise a
-                googlemaps.HTTPError or googlemaps.ApiError as appropriate.
+            If the request was not successful, the function should raise a
+            googlemaps.HTTPError or googlemaps.ApiError as appropriate.
         :type extract_body: function
+
+        :param requests_kwargs: Same extra keywords arg for requests as per
+            __init__, but provided here to allow overriding internally on a
+            per-request basis.
+        :type requests_kwargs: dict
 
         :raises ApiError: when the API returns an error.
         :raises Timeout: if the request timed out.
         :raises TransportError: when something went wrong while trying to
-                exceute a request.
+            exceute a request.
         """
 
         if not first_request_time:
@@ -181,73 +220,99 @@ class Client(object):
 
         authed_url = self._generate_auth_url(url, params, accepts_clientid)
 
+        # Default to the client-level self.requests_kwargs, with method-level
+        # requests_kwargs arg overriding.
+        requests_kwargs = requests_kwargs or {}
+        final_requests_kwargs = dict(self.requests_kwargs, **requests_kwargs)
+
+        # Determine GET/POST.
+        requests_method = self.session.get
+        if post_json is not None:
+            requests_method = self.session.post
+            final_requests_kwargs["json"] = post_json
+
         try:
-            resp = requests.get(base_url + authed_url, **self.requests_kwargs)
+            response = requests_method(base_url + authed_url,
+                                       **final_requests_kwargs)
         except requests.exceptions.Timeout:
             raise googlemaps.exceptions.Timeout()
         except Exception as e:
             raise googlemaps.exceptions.TransportError(e)
 
-        if resp.status_code in _RETRIABLE_STATUSES:
+        if response.status_code in _RETRIABLE_STATUSES:
             # Retry request.
-            return self._get(url, params, first_request_time, retry_counter + 1,
-                             base_url, accepts_clientid, extract_body)
+            return self._request(url, params, first_request_time,
+                                 retry_counter + 1, base_url, accepts_clientid,
+                                 extract_body, requests_kwargs, post_json)
 
-        # Check if the time of the nth previous query (where n is queries_per_second)
-        # is under a second ago - if so, sleep for the difference.
-        if self.sent_times and len(self.sent_times) == self.sent_times.maxlen:
+        # Check if the time of the nth previous query (where n is
+        # queries_per_second) is under a second ago - if so, sleep for
+        # the difference.
+        if self.sent_times and len(self.sent_times) == self.queries_per_second:
             elapsed_since_earliest = time.time() - self.sent_times[0]
             if elapsed_since_earliest < 1:
                 time.sleep(1 - elapsed_since_earliest)
 
         try:
             if extract_body:
-                result = extract_body(resp)
+                result = extract_body(response)
             else:
-                result = self._get_body(resp)
+                result = self._get_body(response)
             self.sent_times.append(time.time())
             return result
-        except googlemaps.exceptions._RetriableRequest:
+        except googlemaps.exceptions._RetriableRequest as e:
+            if isinstance(e, googlemaps.exceptions._OverQueryLimit) and not self.retry_over_query_limit:
+                raise
+
             # Retry request.
-            return self._get(url, params, first_request_time, retry_counter + 1,
-                             base_url, accepts_clientid, extract_body)
+            return self._request(url, params, first_request_time,
+                                 retry_counter + 1, base_url, accepts_clientid,
+                                 extract_body, requests_kwargs, post_json)
 
-    def _get_body(self, resp):
-        if resp.status_code != 200:
-            raise googlemaps.exceptions.HTTPError(resp.status_code)
+    def _get(self, *args, **kwargs):  # Backwards compatibility.
+        return self._request(*args, **kwargs)
 
-        body = resp.json()
+    def _get_body(self, response):
+        if response.status_code != 200:
+            raise googlemaps.exceptions.HTTPError(response.status_code)
+
+        body = response.json()
 
         api_status = body["status"]
         if api_status == "OK" or api_status == "ZERO_RESULTS":
             return body
 
         if api_status == "OVER_QUERY_LIMIT":
-            raise googlemaps.exceptions._RetriableRequest()
+            raise googlemaps.exceptions._OverQueryLimit(
+                api_status, body.get("error_message"))
 
-        if "error_message" in body:
-            raise googlemaps.exceptions.ApiError(api_status,
-                    body["error_message"])
-        else:
-            raise googlemaps.exceptions.ApiError(api_status)
+        raise googlemaps.exceptions.ApiError(api_status,
+                                             body.get("error_message"))
 
     def _generate_auth_url(self, path, params, accepts_clientid):
         """Returns the path and query string portion of the request URL, first
         adding any necessary parameters.
+
         :param path: The path portion of the URL.
         :type path: string
+
         :param params: URL parameters.
         :type params: dict or list of key/value tuples
+
         :rtype: string
+
         """
         # Deterministic ordering through sorting by key.
         # Useful for tests, and in the future, any caching.
+        extra_params = getattr(self, "_extra_params", None) or {}
         if type(params) is dict:
-            params = sorted(params.items())
+            params = sorted(dict(extra_params, **params).items())
         else:
-            params = params[:] # Take a copy.
+            params = sorted(extra_params.items()) + params[:] # Take a copy.
 
         if accepts_clientid and self.client_id and self.client_secret:
+            if self.channel:
+                params.append(("channel", self.channel))
             params.append(("client", self.client_id))
 
             path = "?".join([path, urlencode_params(params)])
@@ -268,29 +333,73 @@ from googlemaps.elevation import elevation
 from googlemaps.elevation import elevation_along_path
 from googlemaps.geocoding import geocode
 from googlemaps.geocoding import reverse_geocode
+from googlemaps.geolocation import geolocate
 from googlemaps.timezone import timezone
 from googlemaps.roads import snap_to_roads
+from googlemaps.roads import nearest_roads
 from googlemaps.roads import speed_limits
 from googlemaps.roads import snapped_speed_limits
+from googlemaps.places import places
+from googlemaps.places import places_nearby
+from googlemaps.places import places_radar
+from googlemaps.places import place
+from googlemaps.places import places_photo
+from googlemaps.places import places_autocomplete
+from googlemaps.places import places_autocomplete_query
 
-Client.directions = directions
-Client.distance_matrix = distance_matrix
-Client.elevation = elevation
-Client.elevation_along_path = elevation_along_path
-Client.geocode = geocode
-Client.reverse_geocode = reverse_geocode
-Client.timezone = timezone
-Client.snap_to_roads = snap_to_roads
-Client.speed_limits = speed_limits
-Client.snapped_speed_limits = snapped_speed_limits
+
+def make_api_method(func):
+    """
+    Provides a single entry point for modifying all API methods.
+    For now this is limited to allowing the client object to be modified
+    with an `extra_params` keyword arg to each method, that is then used
+    as the params for each web service request.
+
+    Please note that this is an unsupported feature for advanced use only.
+    It's also currently incompatibile with multiple threads, see GH #160.
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        args[0]._extra_params = kwargs.pop("extra_params", None)
+        result = func(*args, **kwargs)
+        try:
+            del args[0]._extra_params
+        except AttributeError:
+            pass
+        return result
+    return wrapper
+
+
+Client.directions = make_api_method(directions)
+Client.distance_matrix = make_api_method(distance_matrix)
+Client.elevation = make_api_method(elevation)
+Client.elevation_along_path = make_api_method(elevation_along_path)
+Client.geocode = make_api_method(geocode)
+Client.reverse_geocode = make_api_method(reverse_geocode)
+Client.geolocate = make_api_method(geolocate)
+Client.timezone = make_api_method(timezone)
+Client.snap_to_roads = make_api_method(snap_to_roads)
+Client.nearest_roads = make_api_method(nearest_roads)
+Client.speed_limits = make_api_method(speed_limits)
+Client.snapped_speed_limits = make_api_method(snapped_speed_limits)
+Client.places = make_api_method(places)
+Client.places_nearby = make_api_method(places_nearby)
+Client.places_radar = make_api_method(places_radar)
+Client.place = make_api_method(place)
+Client.places_photo = make_api_method(places_photo)
+Client.places_autocomplete = make_api_method(places_autocomplete)
+Client.places_autocomplete_query = make_api_method(places_autocomplete_query)
 
 
 def sign_hmac(secret, payload):
     """Returns a base64-encoded HMAC-SHA1 signature of a given string.
+
     :param secret: The key used for the signature, base64 encoded.
     :type secret: string
+
     :param payload: The payload to sign.
     :type payload: string
+
     :rtype: string
     """
     payload = payload.encode('ascii', 'strict')
@@ -302,8 +411,11 @@ def sign_hmac(secret, payload):
 
 def urlencode_params(params):
     """URL encodes the parameters.
+
     :param params: The parameters
     :type params: list of key/value tuples.
+
+    :rtype: string
     """
     # urlencode does not handle unicode strings in Python 2.
     # Firstly, normalize the values so they get encoded correctly.

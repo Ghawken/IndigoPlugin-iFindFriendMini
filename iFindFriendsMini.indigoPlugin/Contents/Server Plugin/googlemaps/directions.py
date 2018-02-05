@@ -24,16 +24,17 @@ def directions(client, origin, destination,
                mode=None, waypoints=None, alternatives=False, avoid=None,
                language=None, units=None, region=None, departure_time=None,
                arrival_time=None, optimize_waypoints=False, transit_mode=None,
-               transit_routing_preference=None):
+               transit_routing_preference=None, traffic_model=None):
     """Get directions between an origin point and a destination point.
 
     :param origin: The address or latitude/longitude value from which you wish
-            to calculate directions.
-    :type origin: string or dict or tuple
+        to calculate directions.
+    :type origin: string, dict, list, or tuple
 
     :param destination: The address or latitude/longitude value from which
-        you wish to calculate directions.
-    :type destination: string or dict or tuple
+        you wish to calculate directions. You can use a place_id as destination
+        by putting 'place_id:' as a preffix in the passing parameter.
+    :type destination: string, dict, list, or tuple
 
     :param mode: Specifies the mode of transport to use when calculating
         directions. One of "driving", "walking", "bicycling" or "transit"
@@ -41,6 +42,8 @@ def directions(client, origin, destination,
 
     :param waypoints: Specifies an array of waypoints. Waypoints alter a
         route by routing it through the specified location(s).
+    :type waypoints: a single location, or a list of locations, where a
+        location is a string, dict, list, or tuple
 
     :param alternatives: If True, more than one route may be returned in the
         response.
@@ -83,12 +86,19 @@ def directions(client, origin, destination,
         requests. Valid values are "less_walking" or "fewer_transfers"
     :type transit_routing_preference: string
 
+    :param traffic_model: Specifies the predictive travel time model to use.
+        Valid values are "best_guess" or "optimistic" or "pessimistic".
+        The traffic_model parameter may only be specified for requests where
+        the travel mode is driving, and where the request includes a
+        departure_time.
+    :type units: string
+
     :rtype: list of routes
     """
 
     params = {
-        "origin": _convert_waypoint(origin),
-        "destination": _convert_waypoint(destination)
+        "origin": convert.latlng(origin),
+        "destination": convert.latlng(destination)
     }
 
     if mode:
@@ -99,13 +109,10 @@ def directions(client, origin, destination,
         params["mode"] = mode
 
     if waypoints:
-        waypoints = convert.as_list(waypoints)
-        waypoints = [_convert_waypoint(waypoint) for waypoint in waypoints]
-
+        waypoints = convert.location_list(waypoints)
         if optimize_waypoints:
-            waypoints = ["optimize:true"] + waypoints
-
-        params["waypoints"] = convert.join_list("|", waypoints)
+            waypoints = "optimize:true|" + waypoints
+        params["waypoints"] = waypoints
 
     if alternatives:
         params["alternatives"] = "true"
@@ -138,10 +145,7 @@ def directions(client, origin, destination,
     if transit_routing_preference:
         params["transit_routing_preference"] = transit_routing_preference
 
-    return client._get("/maps/api/directions/json", params)["routes"]
+    if traffic_model:
+        params["traffic_model"] = traffic_model
 
-def _convert_waypoint(waypoint):
-    if not convert.is_string(waypoint):
-        return convert.latlng(waypoint)
-
-    return waypoint
+    return client._request("/maps/api/directions/json", params).get("routes", [])

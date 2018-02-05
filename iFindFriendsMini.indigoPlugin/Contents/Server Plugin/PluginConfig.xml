@@ -1,13 +1,15 @@
 <?xml version="1.0"?>
 <PluginConfig>
 
-    <Field id="infoLabel0" type="label" fontColor="black">
+    <Field id="infoLabel0" type="label" fontColor="black" alignText="right" >
         <Label>FindFriendsMini Plugin</Label>
     </Field>
 
-    <Field id="space0" type="label" fontColor="black" fontSize="small">
+    <Field id="space0" type="label" fontColor="black" fontSize="small" alignText="right">
         <Label>Developed by: GlennNZ</Label>
     </Field>
+
+    <Field id="sepnew44" type="separator"/>
 
 			<Field id="appleId"
 				   type="textfield"
@@ -30,6 +32,7 @@
 				<Label>Apple Account ID:</Label>
 			</Field>
 
+    <Field id="sep44aa" type="separator"/>
 
     <Field id="space4" type="label" fontColor="black" alignText="right">
         <Label>Checking Frequency:</Label>
@@ -44,7 +47,8 @@
     <Field id="configMenuTimeCheck" type="menu" defaultValue="15" tooltip="Select frequency for checking Devices">
         <Label>Time for Updates:</Label>
         <List>
-            <Option value="5">5 Minutes</Option>
+            <Option value="2">2 Minutes</Option>
+            <Option value="5">5 Minutes (Default)</Option>
             <Option value="10">10 Minutes</Option>
             <Option value="15">15 Minutes</Option>
             <Option value="20">20 Minutes</Option>
@@ -55,7 +59,7 @@
         </List>
     </Field>
 
-    <Field id="space6" type="label"/>
+    <Field id="asep44" type="separator"/>
 
     <Field id="space20" type="label" alignText="right">
         <Label>Mapping:</Label>
@@ -91,6 +95,9 @@
      <Label>Enter Google API Here:</Label><Label/>
      <Description>Google API Key for Mapping</Description>
     </Field>
+
+    <Field id="space226" type="separator"/>
+
     <Field id="space210" type="label" alignText="right">
         <Label>Date/Time format:</Label>
     </Field>
@@ -109,8 +116,30 @@
      <Description>Format for datetime LastUpdate field eg. %c </Description>
     </Field>
 
+    <Field id="space2226" type="separator"/>
+
+    <Field id="space120" type="label" alignText="right">
+        <Label>Update Frequency:</Label>
+    </Field>
+
+    <Field id="sep400" type="separator"/>
+
+    <Field id="space121" type="label" fontSize="small">
+        <Label>Frequency of Update checking.  If update needed after check can Open Plugin Store to Download.</Label>
+    </Field>
+    <Field id="updateFrequency" type="textfield" tooltip="Size of Map" defaultValue="24">
+     <Label>Frequency of Update Checks [in Hours] </Label>
+     <Description>Hours between checking for Plugin Update.  Default 24 hours.</Description>
+    </Field>
+
+    <Field id="openStore" type="checkbox" tooltip='Enabling with open Plugin Store for download'>
+        <Label>Automatically Open Plugin Store if an update is available.</Label>
+        <Description>Enable/Disable</Description>
+    </Field>
+    <Field id="space21126" type="separator"/>
+
     <Field id="space10" type="label" alignText="right">
-        <Label>Debugging:</Label>
+        <Label>Debugging Options:</Label>
     </Field>
 
     <Field id="sep4" type="separator"/>
@@ -119,18 +148,30 @@
         <Label>Turn on debugging only when needed. Be careful when posting the output to the forums or other public places as it could expose sensitive information.</Label>
     </Field>
 
-    <Field id="showDebugInfo" type="checkbox" tooltip="Enabling will result in verbose logging.">
+    <Field id="debugicloud" type="checkbox" tooltip="Enabling will result in verbose logging of icloud connection.">
         <Label/>
-        <Description>Enable/Disable</Description>
+        <Description>Debug Apple iCloud</Description>
     </Field>
 
-    <Field id="showDebugLevel" type="menu" defaultValue="1" tooltip="Controls the amount of debug information written to the log.">
+    <Field id="debugmaps" type="checkbox" tooltip="Enabling will result in Browser showing maps.">
+        <Label/>
+        <Description>Debug and Show Maps</Description>
+    </Field>
+    <Field id="debugdistance" type="checkbox" tooltip="Enabling will result Debuggin Distance Matrix API showing maps.">
+        <Label/>
+        <Description>Debug Google Distance Matrix API</Description>
+    </Field>
+
+    <Field id="showDebugLevel" type="menu" defaultValue="20" tooltip="Controls the amount of debug information written to the log.">
         <Label>Debug level:</Label>
-        <Description>Enable/Disable</Description>
+        <Description>Level of Debug information to show in Indigo</Description>
         <List>
-            <Option value="1">Low</Option>
-            <Option value="2">Medium</Option>
-            <Option value="3">High</Option>
+            <Option value="5">Detailed Debugging Messages</Option>
+            <Option value="10">Debugging Messages</Option>
+            <Option value="20">Informational Messages</Option>
+            <Option value="30">Warning Messages</Option>
+            <Option value="40">Error Messages</Option>
+            <Option value="50">Critical Errors Only</Option>
         </List>
     </Field>
 

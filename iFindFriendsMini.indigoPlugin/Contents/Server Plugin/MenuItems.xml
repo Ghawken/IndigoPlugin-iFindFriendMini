@@ -8,23 +8,22 @@
         <Name>Check for Updates</Name>
         <CallbackMethod>checkForUpdates</CallbackMethod>
     </MenuItem>
-    <MenuItem id="updatePlugin">
-        <Name>Update Plugin</Name>
-        <CallbackMethod>updatePlugin</CallbackMethod>
-    </MenuItem>
     <MenuItem id="forceUpdate">
-        <Name>Force Update</Name>
-        <CallbackMethod>forceUpdate</CallbackMethod>
+        <Name>Open PluginStore for Download</Name>
+        <CallbackMethod>pluginstoreUpdate</CallbackMethod>
     </MenuItem>
 	<MenuItem id="titleSeparator1" type="separator" />
-    <MenuItem id="refreshData">
+    <MenuItem id="menuRefresh">
         <Name>Refresh Data Now</Name>
-        <CallbackMethod>actionrefreshdata</CallbackMethod>
+        <CallbackMethod>menuRefresh</CallbackMethod>
     </MenuItem>
 	<MenuItem id="titleSeparator2" type="separator" />
     <MenuItem id="toggleDebug">
         <Name>Toggle Debugging</Name>
         <CallbackMethod>toggleDebugEnabled</CallbackMethod>
     </MenuItem>
-
+    <MenuItem id="toggleDebugMax">
+        <Name>Set Debug to Max</Name>
+        <CallbackMethod>toggleDebugMax</CallbackMethod>
+    </MenuItem>
 </MenuItems>
