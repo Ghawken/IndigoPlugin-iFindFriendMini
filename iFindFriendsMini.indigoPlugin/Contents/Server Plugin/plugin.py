@@ -1192,11 +1192,11 @@ class Plugin(indigo.PluginBase):
                 iFriendArray.append(iWait)
                 return iFriendArray
 
-            follower = iLogin[1].friends.data['followers']
-            for fol in follower:
+            following = iLogin[1].friends.data['following']
+            for fol in following:
                 # self.logger.info(unicode(fol['id']))
                 # self.logger.info(unicode(fol['invitationFromEmail']))
-                iOption2 = fol['id'], fol['invitationFromEmail']
+                iOption2 = fol['id'], fol['invitationAcceptedByEmail']
                 #self.logger.info(unicode(iOption2))
                 iFriendArray.append(iOption2)
             return iFriendArray
