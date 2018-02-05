@@ -1,3 +1,9 @@
+0.5.9
+Adds ZachBenz fix for 'followers versus following' - Thanks!
+Code was using followers, but should have used those we were following.
+In case a someone we were following isn't a follower!
+See github issue #16
+
 0.5.8
 Check deviceisonline before checking Geofences
 (avoids downstream caught exceptions
