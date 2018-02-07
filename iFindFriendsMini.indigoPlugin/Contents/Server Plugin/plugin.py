@@ -1002,6 +1002,18 @@ class Plugin(indigo.PluginBase):
 # Manage Labels provided by icloud data set
 #
 #
+            #Check for no data received and handle avoiding exception
+            #unless starting up (60 seconds only)
+            if self.startingUp==False:
+                if follow is None or follow['location'] is None:
+                    self.logger.debug(u'No data recevied for device:'+unicode(dev.name)+' . Most likely device is offline/airplane mode or has disabled sharing location')
+                    if dev.states['deviceIsOnline']:
+                        self.logger.info(u'Friend Device:'+unicode(dev.name)+' has become Offline.  Most likely offline/airplane mode or disabled sharing')
+                        dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
+                        dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+                    return
+
+
             UseLabelforState = False
             # Deal with Label Dict either Dict or None
             if 'labels' in follow['location']:

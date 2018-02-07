@@ -1,3 +1,7 @@
+0.6.2
+Add more none checks to politely deal with device off/airplane mode or disabled sharing
+These checks disabled for 60 seconds after startup to enable more helpful setup messaging
+
 0.6.1
 Deal with device becoming offline avoiding a trigger Geofence Exit/Entry whilst offline
 e.g. Server down for 10 minutes; device no longer with Geofence. Exit triggered.
