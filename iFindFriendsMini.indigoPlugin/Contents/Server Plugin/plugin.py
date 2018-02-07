@@ -885,11 +885,21 @@ class Plugin(indigo.PluginBase):
                                 # this may be the space to look at more complication accuracy versus seperation type calculation
                                 # will run and gather more data first
                                 if iDevUniqueName in geoDevices.states['listFriends'] and iSeparationABS <= igeoRangeDistance:  #if already present ignore accuracy data
-                                    self.logger.debug(u'---------------- Accuracy Poor:  & Is WITHIN Geofence:' + unicode(iDevUniqueName) + ', poor accuracy so do not remove.  Distance:'+unicode(iSeparationABS))
-                                    self.newlogger.debug(u'---------------- Accuracy Poor:  & Is WITHIN Geofence:' + unicode(iDevUniqueName) + ', poor accuracy so do not remove.  Distance:'+unicode(iSeparationABS))
+                                    self.logger.debug(u'---------------- Accuracy Poor: ' + unicode(iDevUniqueName) + ' & Is WITHIN Geofence:' + unicode(igeoName) + ', poor accuracy so do not remove.  Distance:'+unicode(iSeparationABS))
+                                    self.newlogger.debug(u'---------------- Accuracy Poor: ' + unicode(iDevUniqueName) + ' & Is WITHIN Geofence:' + unicode(igeoName) + ', poor accuracy so do not remove.  Distance:'+unicode(iSeparationABS))
                                     iDevGeoInRange = 'true'
                                     igeoFriendsRange = igeoFriendsRange + 1
                                     listFriends.append(iDevUniqueName)
+                        elif dev.enabled and dev.states['deviceIsOnline']==False:
+                            # add check here for offline device
+                            # if server down for 1/2 hour for example don't remove from geofence or add to geofence why down.
+                            iDevUniqueName = dev.pluginProps['friendName']
+                            if iDevUniqueName in geoDevices.states['listFriends']:
+                                self.logger.debug(u'-*-*-*-*-*-*-*-*-*-*-*-* Offline Device:'+unicode(iDevUniqueName)+u' is OFFLINE and within Geofence:'+unicode(igeoName) +u'  .Dont remove why offline')
+                                self.newlogger.debug(u'-*-*-*-*-*-*-*-*-*-*-*-* Offline Device:' + unicode(iDevUniqueName) + u' is OFFLINE and within Geofence:' + unicode(igeoName) + u'  .Dont remove why offline')
+                                iDevGeoInRange = 'true'
+                                igeoFriendsRange = igeoFriendsRange + 1
+                                listFriends.append(iDevUniqueName)
 
                         #End of Device Ieration
                     #Now back to GeoFence iteration
@@ -1507,7 +1517,7 @@ class Plugin(indigo.PluginBase):
 
                         # This is home Geo - now update all devices
                         for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
-                            if dev.enabled:
+                            if dev.enabled and dev.states['deviceIsOnline'] == True:
                                 self.logger.debug(
                                     'Other Geo Check Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
                                 iDevLatitude = float(dev.states['latitude'])
@@ -1675,6 +1685,16 @@ class Plugin(indigo.PluginBase):
                 self.logger.info(u'Trigger: Ignore as FindFriendsMini Just started.')
                 return
 
+            ## don't trigger if device is offline.
+            # Device swapping between online and offline can remove & add to Geofence
+            # This will capture the exit
+            # Should check higher in code as well - but no harm? leaving this here.
+
+            if device.states['deviceIsOnline'] == False:
+                self.logger.debug(u'Trigger Cancelled as Device is Not Online')
+                return
+
+
             for triggerId, trigger in sorted(self.triggers.iteritems()):
 
                 self.logger.debug("Checking Trigger %s (%s), Type: %s, Friend: %s, and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId, friend, triggertype))
@@ -1709,6 +1729,15 @@ class Plugin(indigo.PluginBase):
                     if idfriend=='':
                         self.logger.debug(u'Trigger Does not  match friend :'+unicode(friend)+' to TriggerFriend Needed:'+unicode(triggerdeviceFriendName))
                         continue #back to check other triggers
+
+                    ## don't trigger if device is offline.
+                    # Device swapping between online and offline can remove add to Geofence
+                    # This will capture the exit
+                    # Should check higher in code as well - but no harm? leaving this here.
+
+                    if device.states['deviceIsOnline'] == False:
+                        self.logger.debug(u'Trigger Cancelled as Device is Not Online')
+
 
                     if trigger.pluginTypeId == "geoFenceExit" and triggertype=='EXIT':
                         self.logger.debug("===== Executing Trigger %s (%d)" % (trigger.name, trigger.id))

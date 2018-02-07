@@ -1,3 +1,10 @@
+0.6.1
+Deal with device becoming offline avoiding a trigger Geofence Exit/Entry whilst offline
+e.g. Server down for 10 minutes; device no longer with Geofence. Exit triggered.
+Fixed.
+Additional check for dev Online for Geofence Other checking
+
+
 0.6.0
 Add further check for DeviceIsOnline before checking GeoFences
 
