@@ -925,7 +925,7 @@ class Plugin(indigo.PluginBase):
                             iDevUniqueName = dev.pluginProps['friendName']
                             if iDevUniqueName in geoDevices.states['listFriends']:
                                 self.logger.debug(u'-*-*-*-*-*-*-*-*-*-*-*-* Offline Device:'+unicode(iDevUniqueName)+u' is OFFLINE and within Geofence:'+unicode(igeoName) +u'  .Dont remove why offline')
-                                if debuggeofence:
+                                if self.debuggeofence:
                                     self.newlogger.info(u"{0:=^160}".format(""))
                                     self.newlogger.debug(u'Offline Device:' + unicode(iDevUniqueName) + u' is OFFLINE and within Geofence:' + unicode(igeoName) + u'  .Dont remove why offline')
                                     self.newlogger.info(u"{0:=^160}".format(""))
