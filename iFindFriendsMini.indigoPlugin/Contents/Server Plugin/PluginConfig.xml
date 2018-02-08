@@ -161,7 +161,10 @@
         <Label/>
         <Description>Debug Google Distance Matrix API</Description>
     </Field>
-
+    <Field id="debuggeofence" type="checkbox" tooltip="Enabling will result Debugging Geofence Log Creation.">
+        <Label/>
+        <Description>Debug Geofence Exit/Entry Separate Logfile created</Description>
+    </Field>
     <Field id="showDebugLevel" type="menu" defaultValue="20" tooltip="Controls the amount of debug information written to the log.">
         <Label>Debug level:</Label>
         <Description>Level of Debug information to show in Indigo</Description>

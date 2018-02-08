@@ -1,3 +1,13 @@
+0.6.3
+Reformat Geofence logfile - automatic tab indentation
+Add config checkbox for enable/disable Geofence logging
+Use distanceaccurate (which is current distance minus horizontalaccuracy; limited to lowest 0) instead of distance alone
+Continue to use ratio in combination with above - so only will check in/check out if ratio (accuracy versus georange <2)
+I believe this will overcome the occasional Geofence exit I got with accurate reading (ratio <2) but device just out of georange (by 5-20 m or so)
+[by subtracting the accuracy from distance recevied we get the minimum possible distance a device might be - use this - provided ratio is not dreadful)
+
+
+
 0.6.2
 Add more none checks to politely deal with device off/airplane mode or disabled sharing
 These checks disabled for 60 seconds after startup to enable more helpful setup messaging
