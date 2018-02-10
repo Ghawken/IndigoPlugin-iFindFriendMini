@@ -910,7 +910,8 @@ class Plugin(indigo.PluginBase):
                                 # but depends how far away the device is
                                 # this may be the space to look at more complication accuracy versus seperation type calculation
                                 # will run and gather more data first
-                                if iDevUniqueName in geoDevices.states['listFriends'] and iSeparationABS <= igeoRangeDistance:  #if already present ignore accuracy data
+                                # change here - not accurate do not remove rom Geofence
+                                if iDevUniqueName in geoDevices.states['listFriends']:  #if already present ignore accuracy data
                                     self.logger.debug(u'---------------- Accuracy Poor: ' + unicode(iDevUniqueName) + ' & Is WITHIN Geofence:' + unicode(igeoName) + ', poor accuracy so do not remove.  Distance:'+unicode(iSeparationABS)+ u'     -- Not Used -- DistanceAccurate Result equals:'+unicode(DistanceAccurate))
                                     if self.debuggeofence:
                                         self.newlogger.info(u"{0:=^160}".format(""))
