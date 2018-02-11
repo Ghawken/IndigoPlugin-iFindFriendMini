@@ -1,3 +1,6 @@
+0.6.4/5
+Final change to accuracy - make sure accurate before removal
+
 0.6.3
 Reformat Geofence logfile - automatic tab indentation
 Add config checkbox for enable/disable Geofence logging
