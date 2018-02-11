@@ -912,7 +912,7 @@ class Plugin(indigo.PluginBase):
                                 # will run and gather more data first
                                 # change here - not accurate do not remove rom Geofence
                                 if iDevUniqueName in geoDevices.states['listFriends'] and DistanceAccurate <= igeoRangeDistance:  #if already present ignore accuracy data
-                                    self.logger.debug(u'---------------- Accuracy Poor: ' + unicode(iDevUniqueName) + ' & Is WITHIN Geofence:' + unicode(igeoName) + ', poor accuracy so do not remove.  Distance:'+unicode(iSeparationABS)+ u'     -- Not Used -- DistanceAccurate Result equals:'+unicode(DistanceAccurate))
+                                    self.logger.debug(u'---------------- Accuracy Poor: ' + unicode(iDevUniqueName) + ' & Is WITHIN Geofence:' + unicode(igeoName) + ', poor accuracy so do not remove.  Distance:'+unicode(iSeparationABS)+ u'    DistanceAccurate --Used-- Result equals:'+unicode(DistanceAccurate))
                                     if self.debuggeofence:
                                         self.newlogger.info(u"{0:=^160}".format(""))
                                         self.newlogger.debug(unicode(iDevUniqueName)+u' POOR ACCURACY In Geofence: GeoFence:'+unicode(igeoName)+ ' '*(25-len(igeoName))+' Ratio :'+unicode(RatioAccuracyGeofencerange)+ ' '*(18-len(str(RatioAccuracyGeofencerange)))+u'  Distance:'+unicode(iSeparationABS)+ ' '*(18-len(str(iSeparationABS)))+' HorizontalAccuracy:'+unicode(iDevAccuracy)+ ' '*(6-len(str(iDevAccuracy)))+ u' DistanceAccurate Result equals:'+unicode(DistanceAccurate))
