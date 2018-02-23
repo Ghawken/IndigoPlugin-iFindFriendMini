@@ -1,3 +1,7 @@
+0.6.6
+Dont reset geofence Data on restart, or device start.  Leave old data in place.  Minutes since arrival should be accurately recalulcated within 60 seconds
+
+
 0.6.4/5
 Final change to accuracy - make sure accurate before removal
 

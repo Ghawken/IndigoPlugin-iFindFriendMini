@@ -365,14 +365,14 @@ class Plugin(indigo.PluginBase):
 
         if dev.deviceTypeId=='FindFriendsGeofence':
             stateList = [
-                {'key': 'friendsInRange', 'value': 0},
-                {'key': 'lastArrivaltime', 'value': ''},
-                {'key': 'lastDeptime', 'value': ''},
-                {'key': 'lastArrivaltimestamp', 'value': ''},
-                {'key': 'lastDeptimestamp', 'value': ''},
-                {'key': 'minutessincelastArrival', 'value': 0},
-                {'key': 'minutessincelastDep', 'value': 0},
-                {'key': 'listFriends', 'value': ''},
+                #{'key': 'friendsInRange', 'value': 0},
+                #{'key': 'lastArrivaltime', 'value': ''},
+                #{'key': 'lastDeptime', 'value': ''},
+                #{'key': 'lastArrivaltimestamp', 'value': ''},
+                #{'key': 'lastDeptimestamp', 'value': ''},
+                #{'key': 'minutessincelastArrival', 'value': 0},
+                #{'key': 'minutessincelastDep', 'value': 0},
+                #{'key': 'listFriends', 'value': ''},
                 {'key': 'deviceIsOnline', 'value': False, 'uiValue':'Waiting'}]
 
             self.logger.debug(unicode(stateList))
@@ -1270,7 +1270,7 @@ class Plugin(indigo.PluginBase):
             return []
 
     def iAuthorise(self, iUsername, iPassword):
-        ################################################
+        ################################################s
         # Logs in and authorises access to the Find my Phone API
         # Logs into the find my phone API and returns an error if it doesn't work correctly
 
