@@ -131,12 +131,28 @@
                 <TriggerLabel>Device online?</TriggerLabel>
                 <ControlPageLabel>Device online?</ControlPageLabel>
             </State>
+            <State id="mapUpdateNeeded">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Map needs to be updated</TriggerLabel>
+                <ControlPageLabel>Map needs to be updated</ControlPageLabel>
+            </State>
+            <State id="mapLastUpdated">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Time Map Last Updated</TriggerLabel>
+                <ControlPageLabel>Time Map Last Updated</ControlPageLabel>
+            </State>
 
             <State id="deviceLastUpdated">
                 <ValueType>String</ValueType>
                 <TriggerLabel>Device Last Updated</TriggerLabel>
                 <ControlPageLabel>Device Last Updated</ControlPageLabel>
             </State>
+            <State id="distanceSinceCheck">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Distance Travelled since last checked</TriggerLabel>
+                <ControlPageLabel>Distance Travselled since last check</ControlPageLabel>
+            </State>
+
             <State id="deviceTimestamp">
                 <ValueType>String</ValueType>
                 <TriggerLabel>Device Timestamp</TriggerLabel>
@@ -145,13 +161,13 @@
 
             <State id="homeDistance">
                 <ValueType>Number</ValueType>
-                <TriggerLabel>Distance (meters to home</TriggerLabel>
+                <TriggerLabel>Distance meters to home</TriggerLabel>
                 <ControlPageLabel>Distance to home in meters</ControlPageLabel>
             </State>
             <State id="homeTime">
                 <ValueType>Number</ValueType>
-                <TriggerLabel>Time to home Driving, in minutes</TriggerLabel>
-                <ControlPageLabel>Time to home Driving, in minutes</ControlPageLabel>
+                <TriggerLabel>Time to home Driving approx, in seconds</TriggerLabel>
+                <ControlPageLabel>Time to home Driving approx, in seconds</ControlPageLabel>
             </State>
             <State id="homeDistanceText">
                 <ValueType>String</ValueType>
@@ -182,8 +198,8 @@
             </State>
             <State id="otherTime">
                 <ValueType>Number</ValueType>
-                <TriggerLabel>Time to Other Geofence in minutes</TriggerLabel>
-                <ControlPageLabel>Time to Other Geofence in minutes</ControlPageLabel>
+                <TriggerLabel>Time to Other Geofence in seconds</TriggerLabel>
+                <ControlPageLabel>Time to Other Geofence in seconds</ControlPageLabel>
             </State>
             <State id="id">
                 <ValueType>String</ValueType>

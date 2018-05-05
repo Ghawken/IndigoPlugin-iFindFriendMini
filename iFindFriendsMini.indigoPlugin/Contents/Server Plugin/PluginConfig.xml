@@ -91,7 +91,7 @@
      <Description>Zoom Size of Map default 15</Description>
     </Field>
 
-    <Field id="googleAPI" type="textfield" tooltip="Google Mapping API Key" defaultValue="">
+    <Field id="googleAPI" type="textfield" tooltip="Google Mapping API Key" defaultValue="" hidden="true">
      <Label>Enter Google API Here:</Label><Label/>
      <Description>Google API Key for Mapping</Description>
     </Field>
@@ -100,7 +100,11 @@
      <Label>Meters/Second for Travel calculation:</Label><Label/>
      <Description>Enter travel speed for approx travel time calculations in meters/second eg. 16.7 m/s = 60km/hr</Description>
     </Field>
-
+        <Field id="anotherspace221" type="label" fontSize="small" alignText="right">
+        <Label>Approx speed in meters/sec for calculation of travel time from distance
+            eg. 60km/hr average seems to work well - 16.7m/s
+        </Label>
+    </Field>
 
     <Field id="space226" type="separator"/>
 

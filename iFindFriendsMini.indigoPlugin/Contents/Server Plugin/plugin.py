@@ -398,10 +398,12 @@ class Plugin(indigo.PluginBase):
                 {'key': 'otherTimeText', 'value': 'unknown'},
                 {'key': 'googleMapUrl', 'value': ''},
                 {'key': 'labels', 'value': ''},
-                {'key': 'longitude', 'value': ''},
+                {'key': 'longitude', 'value': 'unknown'},
                 {'key': 'horizontalAccuracy', 'value': ''},
                 {'key': 'address', 'value': ''},
-                {'key': 'latitude', 'value': ''}]
+                {'key': 'latitude', 'value': 'unknown'},
+                {'key': 'mapUpdateNeeded', 'value': True}
+                ]
 
             self.logger.debug(unicode(stateList))
             dev.updateStatesOnServer(stateList)
@@ -431,6 +433,16 @@ class Plugin(indigo.PluginBase):
         self.sleep(2)
         self.checkHomeOther()
         return
+
+    def actionrefreshmaps(self, action):
+
+        self.logger.debug(u"actionrefreshmaps() method called.")
+        for dev in indigo.devices.iter('self.FindFriendsFriend'):
+            dev.updateStateOnServer('mapUpdateNeeded', value=True)
+        self.refreshData()
+
+        return
+
 
     def openGoogleUrl(self, pluginAction, device):
         self.logger.debug(u'openGoogleUrl Run')
@@ -1090,6 +1102,14 @@ class Plugin(indigo.PluginBase):
                 if 'locality' in follow['location']['address']:
                     address = address + ' '+ follow['location']['address']['locality']
 
+            if dev.states['latitude'] != 'unknown':
+                iDevLatitude = float(dev.states['latitude'])
+                iDevLongitude = float(dev.states['longitude'])
+            # Check to see whether moved and by how much since last check
+                Distancetravelled = self.iDistance( iDevLatitude, iDevLongitude, float(follow['location']['latitude']), float(follow['location']['longitude']))
+            else:
+                Distancetravelled = False,0
+
             stateList = [
                 {'key': 'id', 'value': follow['id']},
                 {'key': 'status', 'value': follow['status']},
@@ -1103,9 +1123,11 @@ class Plugin(indigo.PluginBase):
                 {'key': 'horizontalAccuracy', 'value': follow['location']['horizontalAccuracy']},
                 {'key': 'address', 'value': address},
                 {'key': 'latitude', 'value': follow['location']['latitude']},
+                {'key': 'distanceSinceCheck', 'value': str(Distancetravelled[1])},
             ]
 
             self.logger.debug(unicode(stateList))
+
             dev.updateStatesOnServer(stateList)
 # Change to strftime user selectable date for DeviceLastUpdate field
 # Is Plugin config selectable
@@ -1118,11 +1140,18 @@ class Plugin(indigo.PluginBase):
             else:
                 dev.updateStateOnServer('deviceIsOnline', value=True, uiValue=dev.states['address'])
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+
+            #
+            if Distancetravelled[0]==True and int(Distancetravelled[1]>100):
+                self.logger.debug(u'Device has travelled - setting mapUpdateNeeded to true')
+                dev.updateStateOnServer('mapUpdateNeeded',value=True)
+
             self.godoMapping(str(follow['location']['latitude']),str(follow['location']['longitude']),dev)
             return
 
         except Exception as e:
             self.logger.info(unicode('Exception in refreshDataforDev: ' + unicode(e)))
+            self.logger.exception('Exception:')
             self.logger.info(unicode('Possibility missing some data from icloud:  Is your account setup with FindFriends enabled on iOS/Mobile device?'))
             dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
@@ -1138,34 +1167,45 @@ class Plugin(indigo.PluginBase):
             filename = dev.name.replace(' ','_')+'_Map.jpg'
             file = folderLocation +filename
             #Generate single device URL
-            drawUrl = self.urlGenerate(latitude ,longitude , self.googleAPI, int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap), dev)
-            if self.debugmaps:
-                webbrowser.open_new(drawUrl[0])
-                webbrowser.open_new(drawUrl[1])
 
-            fileMap = "curl --output '" + file + "' --url '" + drawUrl[0] + "'"
-            os.system(fileMap)
-            self.logger.debug('Saving Map...' + file)
+            if dev.states['mapUpdateNeeded']:
+                self.logger.debug(u'update Map Happening as device moved..')
+                drawUrl = self.urlGenerate(latitude ,longitude , '', int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap), dev)
+                if self.debugmaps:
+                    webbrowser.open_new(drawUrl[0])
+                    #webbrowser.open_new(drawUrl[1])
+                fileMap = "curl --output '" + file + "' --url '" + drawUrl[0] + "'"
+                os.system(fileMap)
+                self.logger.debug('Saving Map...' + file)
 
-            filename = 'All_device.jpg'
-            file = folderLocation + filename
-            # Generate URL for All Maps
-            drawUrlall = self.urlAllGenerate(self.googleAPI,  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
-            fileMap = "curl --output '" + file + "' --url '" + drawUrlall + "'"
-            os.system(fileMap)
+                filename = 'All_device.jpg'
+                file = folderLocation + filename
+                #    Generate URL for All Maps
+                drawUrlall = self.urlAllGenerate('',  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
+                fileMap = "curl --output '" + file + "' --url '" + drawUrlall + "'"
+                os.system(fileMap)
 
-            self.logger.debug('Saving Map...' + file)
-            dev.updateStateOnServer('googleMapUrl', value=str(drawUrl[1]) )
-            self.logger.debug(u'Updating Variable:'+unicode(dev.name))
-            variablename =''.join(dev.name.split())
-            self.updateVar(variablename, str(drawUrl[1]))
+                self.logger.debug('Saving Map...' + file)
 
+                dev.updateStateOnServer('mapUpdateNeeded',value=False)
 
-            if self.debugmaps:
-                webbrowser.open_new(drawUrlall)
-                self.logger.debug(u'Mapping URL:')
-                self.logger.debug(unicode(drawUrlall))
-            return
+                dev.updateStateOnServer('googleMapUrl', value=str(drawUrl[1]) )
+                self.logger.debug(u'Updating Variable:'+unicode(dev.name))
+
+                variablename =''.join(dev.name.split())
+                self.updateVar(variablename, str(drawUrl[1]))
+                update_time = t.strftime(self.datetimeFormat)
+                dev.updateStateOnServer('mapLastUpdated', value=str(update_time))
+
+                if self.debugmaps:
+                    webbrowser.open_new(drawUrlall)
+                    self.logger.debug(u'Mapping URL:')
+                    self.logger.debug(unicode(drawUrlall))
+                return
+            else:
+                self.logger.debug(u'No Mapping Needed.')
+                return
+
 
         except Exception as e:
             self.logger.info(u'Exception within godoMapping: '+unicode(e))
@@ -1402,10 +1442,12 @@ class Plugin(indigo.PluginBase):
 
             urlmapGoogle = 'comgooglemaps://maps.google.com/maps?z='+str(iZoom)+'&t=h&q=' + str(latitude) + ',' + str(longitude)
 
-            if mapAPIKey == 'No Key':
-                customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone
-            else:
-                customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone + '&key=' + mapAPIKey
+            #Remove API usage altogether
+            #if mapAPIKey == 'No Key':
+            customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone
+
+            # else:
+            #     customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone + '&key=' + mapAPIKey
 
 
             self.logger.debug(u'StaticMap URL equals:'+unicode(customURL))
@@ -1475,10 +1517,10 @@ class Plugin(indigo.PluginBase):
 
             mapGoogle = 'https://maps.googleapis.com/maps/api/staticmap?'
 
-            if mapAPIKey == 'No Key':
-                customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone
-            else:
-                customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone+'&key='+mapAPIKey
+            #if mapAPIKey == 'No Key':
+            customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone
+            #else:
+            #   customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone+'&key='+mapAPIKey
 
             return customURL
 
@@ -1497,12 +1539,12 @@ class Plugin(indigo.PluginBase):
             # Check GeoFences after devices
 
 
-
-            if len(self.googleAPI) <5:
-                self.logger.info(u"{0:=^130}".format(""))
-                self.logger.info(u'Need to enter and approve GoogleAPI key for distance calculation')
-                self.logger.info(u"{0:=^130}".format(""))
-                return
+            #
+            # if len(self.googleAPI) <5:
+            #     self.logger.info(u"{0:=^130}".format(""))
+            #     self.logger.info(u'Need to enter and approve GoogleAPI key for distance calculation')
+            #     self.logger.info(u"{0:=^130}".format(""))
+            #     return
 
             for geoDevices in indigo.devices.itervalues('self.FindFriendsGeofence'):
                 if geoDevices.enabled:
@@ -1695,59 +1737,59 @@ class Plugin(indigo.PluginBase):
 
         distance = arc * mt_radius_of_earth
 
-        return True, distance
+        return True, int(distance)
 
-    def distanceCalculation(self, origin, final, APIKey, mode='driving',units="metric"):
-
-        ################################################
-        # Uses Google Maps Distance Matrix API to calculate travel distance and time.
-        # Note that output is in km or m that must be converted to current units.
-        # Limited to 2.500 uses/day and plugin restricts to 10 min frequency/device
-
-        self.logger.debug(u'distanceCalculation run')
-
-
-        try:
-            gmaps = googlemaps.Client(APIKey)
-        except:
-
-            self.logger.info(u"{0:=^130}".format(""))
-            self.logger.info(u'Google API Connection Error.')
-            self.logger.info(u'Incorrect API.  Have you obtained you free Google API Key?')
-            self.logger.info(u'Or Key not approved for both Static Maps API and Distance Matrix API access')
-            self.logger.info(u'Check forum for details on how to authorise key for both APIs')
-            self.logger.info(u"{0:=^130}".format(""))
-            return 'FailAPI','',''
-
-        try:
-            now = datetime.datetime.now()
-            distance_result = gmaps.distance_matrix(origin,final,
-                                                    mode='driving', language=None, avoid=None, units='metric', departure_time=now,
-                                                    arrival_time=None, transit_mode=None, transit_routing_preference=None)
-            if self.debugdistance:
-                self.logger.debug(u'Distance Result from Google:')
-                self.logger.debug(unicode(distance_result))
-
-            iTimeTaken = distance_result['rows'][0]['elements'][0]['duration']['text']
-            iTimeTakenseconds = distance_result['rows'][0]['elements'][0]['duration']['value']
-
-            iDistCalc = distance_result['rows'][0]['elements'][0]['distance']['text']
-            iDistCalcmeters = distance_result['rows'][0]['elements'][0]['distance']['value']
-
-            return iTimeTaken, iTimeTakenseconds, iDistCalc, iDistCalcmeters
-
-        except ApiError:
-            self.logger.info(u"{0:=^130}".format(""))
-            self.logger.info(u'Google API Connection Error.')
-            self.logger.info(u'Incorrect API.  Have you obtained your free Google API key?')
-            self.logger.info(u'or Key not approved for both Static Maps API and Distance Matrix API access')
-            self.logger.info(u'Check forum for details on how to authorise key for both APIs')
-            self.logger.info(u"{0:=^130}".format(""))
-            return 'FailAPI','','',''
-
-        except Exception as e:
-            self.logger.exception(u'Problem with distance Calculation')
-            return 'FailAPI','','',''
+    # def distanceCalculation(self, origin, final, APIKey, mode='driving',units="metric"):
+    #
+    #     ################################################
+    #     # Uses Google Maps Distance Matrix API to calculate travel distance and time.
+    #     # Note that output is in km or m that must be converted to current units.
+    #     # Limited to 2.500 uses/day and plugin restricts to 10 min frequency/device
+    #
+    #     self.logger.debug(u'distanceCalculation run')
+    #
+    #
+    #     try:
+    #         gmaps = googlemaps.Client(APIKey)
+    #     except:
+    #
+    #         self.logger.info(u"{0:=^130}".format(""))
+    #         self.logger.info(u'Google API Connection Error.')
+    #         self.logger.info(u'Incorrect API.  Have you obtained you free Google API Key?')
+    #         self.logger.info(u'Or Key not approved for both Static Maps API and Distance Matrix API access')
+    #         self.logger.info(u'Check forum for details on how to authorise key for both APIs')
+    #         self.logger.info(u"{0:=^130}".format(""))
+    #         return 'FailAPI','',''
+    #
+    #     try:
+    #         now = datetime.datetime.now()
+    #         distance_result = gmaps.distance_matrix(origin,final,
+    #                                                 mode='driving', language=None, avoid=None, units='metric', departure_time=now,
+    #                                                 arrival_time=None, transit_mode=None, transit_routing_preference=None)
+    #         if self.debugdistance:
+    #             self.logger.debug(u'Distance Result from Google:')
+    #             self.logger.debug(unicode(distance_result))
+    #
+    #         iTimeTaken = distance_result['rows'][0]['elements'][0]['duration']['text']
+    #         iTimeTakenseconds = distance_result['rows'][0]['elements'][0]['duration']['value']
+    #
+    #         iDistCalc = distance_result['rows'][0]['elements'][0]['distance']['text']
+    #         iDistCalcmeters = distance_result['rows'][0]['elements'][0]['distance']['value']
+    #
+    #         return iTimeTaken, iTimeTakenseconds, iDistCalc, iDistCalcmeters
+    #
+    #     except ApiError:
+    #         self.logger.info(u"{0:=^130}".format(""))
+    #         self.logger.info(u'Google API Connection Error.')
+    #         self.logger.info(u'Incorrect API.  Have you obtained your free Google API key?')
+    #         self.logger.info(u'or Key not approved for both Static Maps API and Distance Matrix API access')
+    #         self.logger.info(u'Check forum for details on how to authorise key for both APIs')
+    #         self.logger.info(u"{0:=^130}".format(""))
+    #         return 'FailAPI','','',''
+    #
+    #     except Exception as e:
+    #         self.logger.exception(u'Problem with distance Calculation')
+    #         return 'FailAPI','','',''
 
 
 ##################  Trigger
