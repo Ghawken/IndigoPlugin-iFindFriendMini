@@ -96,6 +96,12 @@
      <Description>Google API Key for Mapping</Description>
     </Field>
 
+    <Field id="travelTime" type="textfield" tooltip="Time to travel 1 kilometer" defaultValue="">
+     <Label>Meters/Second for Travel calculation:</Label><Label/>
+     <Description>Enter travel speed for approx travel time calculations in meters/second eg. 16.7 m/s = 60km/hr</Description>
+    </Field>
+
+
     <Field id="space226" type="separator"/>
 
     <Field id="space210" type="label" alignText="right">

@@ -130,18 +130,18 @@ try:
 except ImportError:
     pass
 
-try:
-    from googlemaps import googlemaps
-    from googlemaps.exceptions import (
-        ApiError,
-        TransportError,
-        HTTPError,
-        Timeout
-    )
-except Exception as e:
-    indigo.server.log(u"{0:=^130}".format(""), isError=True)
-    indigo.server.log(u'Error Importing Googlemaps.  Error:'+unicode(e), isError=True)
-    indigo.server.log(u"{0:=^130}".format(""), isError=True)
+# try:
+#     # from googlemaps import googlemaps
+#     # from googlemaps.exceptions import (
+#     #     ApiError,
+#     #     TransportError,
+#     #     HTTPError,
+#     #     Timeout
+#     # )
+# except Exception as e:
+#     indigo.server.log(u"{0:=^130}".format(""), isError=True)
+#     indigo.server.log(u'Error Importing Googlemaps.  Error:'+unicode(e), isError=True)
+#     indigo.server.log(u"{0:=^130}".format(""), isError=True)
 
 import webbrowser
 import os
@@ -256,6 +256,7 @@ class Plugin(indigo.PluginBase):
         self.configZoomMap = self.pluginPrefs.get('ZoomMap', "15")
         self.datetimeFormat = self.pluginPrefs.get('datetimeFormat','%c')
         self.googleAPI = self.pluginPrefs.get('googleAPI','')
+        self.travelTime = self.pluginPrefs.get('travelTime','16.7')
         self.deviceNeedsUpdated = ''
         self.openStore = self.pluginPrefs.get('openStore',False)
 
@@ -1531,28 +1532,30 @@ class Plugin(indigo.PluginBase):
 
                                 origin = igeoLat, igeoLong
                                 destination = iDevLatitude, iDevLongitude
-                                iRealDistanceHome = self.distanceCalculation(origin, destination, self.googleAPI, 'driving',
-                                                                        "metric")
+                                iRealDistanceHome = self.iDistance(igeoLat, igeoLong, iDevLatitude, iDevLongitude)
+
+
+                                #self.distanceCalculation(origin, destination, self.googleAPI, 'driving', "metric")
                                 self.logger.debug(u'Home Calculation: Equals Time/Distance:'+unicode(iRealDistanceHome))
 
-                                if len(iRealDistanceHome[2]) != 0 and iRealDistanceHome[0] != 'FailAPI':
-                                    try:
-                                        iRealDistanceVal = int(float(iRealDistanceHome[3]))
-                                        iTimeMinutes = int(0)
-                                        if int(iRealDistanceHome[1]) ==1:
-                                            iTimeMinutes = 1
-                                        elif int(iRealDistanceHome[1]) >60:
-                                            iTimeMinutes = int(float(iRealDistanceHome[1]/60))
-
-                                    except ValueError:
-                                        self.logger.exception('iGeoLocation')
-                                        iRealDistanceVal = 0.0
-                                        iTimeMinutes =0
-
-                                    dev.updateStateOnServer('homeDistanceText', value=str(iRealDistanceHome[2]))
-                                    dev.updateStateOnServer('homeTimeText', value=str(iRealDistanceHome[0]))
-                                    dev.updateStateOnServer('homeDistance', value=int(iRealDistanceVal) )
-                                    dev.updateStateOnServer('homeTime', value=int(iTimeMinutes))
+                                # if len(iRealDistanceHome[2]) != 0 and iRealDistanceHome[0] != 'FailAPI':
+                                #     try:
+                                #         iRealDistanceVal = int(float(iRealDistanceHome[3]))
+                                #         iTimeMinutes = int(0)
+                                #         if int(iRealDistanceHome[1]) ==1:
+                                #             iTimeMinutes = 1
+                                #         elif int(iRealDistanceHome[1]) >60:
+                                #             iTimeMinutes = int(float(iRealDistanceHome[1]/60))
+                                #
+                                #     except ValueError:
+                                #         self.logger.exception('iGeoLocation')
+                                #         iRealDistanceVal = 0.0
+                                #         iTimeMinutes =0
+                                timeResultsHome = self.iConvertMetersTime(iRealDistanceHome[1])
+                                dev.updateStateOnServer('homeDistanceText', value=self.iConvertMeters(iRealDistanceHome[1]))
+                                dev.updateStateOnServer('homeTimeText', value=str(timeResultsHome[0]))
+                                dev.updateStateOnServer('homeDistance', value=iRealDistanceHome[1] )
+                                dev.updateStateOnServer('homeTime', value=str(timeResultsHome[1]))
 
                     if igeoName == 'Other':
                         igeoLong = float(localProps['geoLongitude'])
@@ -1574,32 +1577,70 @@ class Plugin(indigo.PluginBase):
 
                                 origin = igeoLat, igeoLong
                                 destination = iDevLatitude, iDevLongitude
-                                iRealDistanceHome = self.distanceCalculation(origin, destination, self.googleAPI, 'driving',
-                                                                        "metric")
-                                self.logger.debug(u'Home Calculation: Equals Time/Distance:' + unicode(iRealDistanceHome))
+                                iRealDistanceOther= self.iDistance(igeoLat, igeoLong, iDevLatitude, iDevLongitude)
 
-                                if len(iRealDistanceHome[2]) != 0 and iRealDistanceHome[0] != 'FailAPI':
-                                    try:
-                                        iRealDistanceVal = int(float(iRealDistanceHome[3]))
-                                        iTimeMinutes = int(0)
-                                        if int(iRealDistanceHome[1]) ==1:
-                                            iTimeMinutes = 1
-                                        elif int(iRealDistanceHome[1]) >60:
-                                            iTimeMinutes = int(float(iRealDistanceHome[1]/60))
 
-                                    except ValueError:
-                                        self.logger.exception('iGeoLocation')
-                                        iRealDistanceVal = 0.0
-                                        iTimeMinutes =0
+                                #self.distanceCalculation(origin, destination, self.googleAPI, 'driving', "metric")
+                                self.logger.debug(u'Home Calculation: Equals Time/Distance:' + unicode(iRealDistanceOther[1]))
 
-                                    dev.updateStateOnServer('otherDistanceText', value=str(iRealDistanceHome[2]))
-                                    dev.updateStateOnServer('otherTimeText', value=str(iRealDistanceHome[0]))
-                                    dev.updateStateOnServer('otherDistance', value=int(iRealDistanceVal))
-                                    dev.updateStateOnServer('otherTime', value=int(iTimeMinutes))
+                                # if len(iRealDistanceHome[2]) != 0 and iRealDistanceHome[0] != 'FailAPI':
+                                #     try:
+                                #         iRealDistanceVal = int(float(iRealDistanceHome[3]))
+                                #         iTimeMinutes = int(0)
+                                #         if int(iRealDistanceHome[1]) ==1:
+                                #             iTimeMinutes = 1
+                                #         elif int(iRealDistanceHome[1]) >60:
+                                #             iTimeMinutes = int(float(iRealDistanceHome[1]/60))
+                                #
+                                #     except ValueError:
+                                #         self.logger.exception('iGeoLocation')
+                                #         iRealDistanceVal = 0.0
+                                #         iTimeMinutes =0
+
+                                timeResultsOther = self.iConvertMetersTime(iRealDistanceOther[1])
+
+                                dev.updateStateOnServer('otherDistanceText', value=self.iConvertMeters(iRealDistanceOther[1]))
+                                dev.updateStateOnServer('otherTimeText', value=timeResultsOther[0])
+                                dev.updateStateOnServer('otherDistance', value=int(iRealDistanceOther[1]))
+                                dev.updateStateOnServer('otherTime', value=timeResultsOther[1])
         except Exception as e:
             self.logger.exception(u'Error Within checkHomeOther:')
             return
 
+    def iConvertMeters(self, meters):
+        self.logger.debug('iConvertMeters Called')
+        try:
+            texttoreturn = ''
+
+            if meters >= 1000:
+                result = int(meters/1000)
+                texttoreturn = str(result)+' kms '
+                # remove the Km from the distance
+                result = int(meters - result*1000)
+            else:
+                result = int(meters)
+
+            texttoreturn = texttoreturn +str(result) +' meters'
+            return texttoreturn
+        except:
+            self.logger.exception('iCovertMeters Exception')
+            return 'Unknown'
+
+    def iConvertMetersTime(self, meters):
+        self.logger.debug('iConvertMetersTime Called')
+        try:
+            texttoreturn = ''
+            secondsoftime = int(meters/float(self.travelTime))
+            hours, remainder = divmod(secondsoftime, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            if hours>0:
+                texttoreturn = '%s hr(s) %s minutes' % (hours, minutes)
+            else:
+                texttoreturn = '%s minutes' % (minutes)
+            return texttoreturn, secondsoftime
+        except:
+            self.logger.exception('iCovertMetersTime Exception')
+            return 'Unknown', 'Unknown'
 
 
     def iDistance(self, lat1, long1, lat2, long2):
