@@ -1413,14 +1413,13 @@ class Plugin(indigo.PluginBase):
             mapLabel =  dev.pluginProps.get('mapLabel','lightblue1')
             # Create Map url
             mapCentre = 'center=' + str(latitude) + "," + str(longitude)
-            # Set zoom
-            if iZoom < 0:
-                iZoom = 0
-            elif iZoom > 21:
-                iZoom = 21
-            mapZoom = 'zoom=' + str(iZoom)
+
             # Set size
             if self.mapType=='google':
+                if iZoom < 0:
+                    iZoom = 0
+                elif iZoom > 21:
+                    iZoom = 21
                 if iHorizontal > 640:
                     iHorizontal = 640
                 elif iHorizontal < 50:
@@ -1429,6 +1428,7 @@ class Plugin(indigo.PluginBase):
                     iVertical = 640
                 elif iVertical < 50:
                     iVertical = 50
+            mapZoom = 'zoom=' + str(iZoom)
 
             mapSize = 'size=' + str(iHorizontal) + 'x' + str(iVertical)
             mapFormat = 'format=jpg&maptype=hybrid'
@@ -1538,8 +1538,6 @@ class Plugin(indigo.PluginBase):
                 #else:
                 #   customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone+'&key='+mapAPIKey
                 return customURL
-
-
 
         except Exception as e:
             self.logger.info(u'urlAllGenerate'+unicode(e))
