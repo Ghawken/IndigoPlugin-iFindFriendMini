@@ -252,6 +252,7 @@ class Plugin(indigo.PluginBase):
         self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
         self.next_update_check = time.time()
         self.configVerticalMap = self.pluginPrefs.get('verticalMap', "600")
+        self.mapType = self.pluginPrefs.get('mapType', "openstreetmap")
         self.configHorizontalMap = self.pluginPrefs.get('horizontalMap', "600")
         self.configZoomMap = self.pluginPrefs.get('ZoomMap', "15")
         self.datetimeFormat = self.pluginPrefs.get('datetimeFormat','%c')
@@ -333,6 +334,7 @@ class Plugin(indigo.PluginBase):
             self.debugdistance = valuesDict.get('debugdistance', False)
             self.datetimeFormat = valuesDict.get('datetimeFormat', '%c')
             self.configVerticalMap = valuesDict.get('verticalMap', "600")
+            self.mapType = self.pluginPrefs.get('mapType', "openstreetmap")
             self.configHorizontalMap = valuesDict.get('horizontalMap', "600")
             self.configZoomMap = valuesDict.get('ZoomMap', "15")
             self.datetimeFormat = valuesDict.get('datetimeFormat', '%c')
@@ -1180,12 +1182,12 @@ class Plugin(indigo.PluginBase):
 
                 filename = 'All_device.jpg'
                 file = folderLocation + filename
-                #    Generate URL for All Maps
-                drawUrlall = self.urlAllGenerate('',  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
-                fileMap = "curl --output '" + file + "' --url '" + drawUrlall + "'"
-                os.system(fileMap)
-
-                self.logger.debug('Saving Map...' + file)
+                #    Generate URL for All Maps - if using Google; not with openstreetmap
+                if self.mapType=='google':
+                    drawUrlall = self.urlAllGenerate('',  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
+                    fileMap = "curl --output '" + file + "' --url '" + drawUrlall + "'"
+                    os.system(fileMap)
+                    self.logger.debug('Saving Map...' + file)
 
                 dev.updateStateOnServer('mapUpdateNeeded',value=False)
 
@@ -1197,7 +1199,7 @@ class Plugin(indigo.PluginBase):
                 update_time = t.strftime(self.datetimeFormat)
                 dev.updateStateOnServer('mapLastUpdated', value=str(update_time))
 
-                if self.debugmaps:
+                if self.debugmaps and self.mapType=='google':
                     webbrowser.open_new(drawUrlall)
                     self.logger.debug(u'Mapping URL:')
                     self.logger.debug(unicode(drawUrlall))
@@ -1208,7 +1210,7 @@ class Plugin(indigo.PluginBase):
 
 
         except Exception as e:
-            self.logger.info(u'Exception within godoMapping: '+unicode(e))
+            self.logger.exception(u'Exception within godoMapping: '+unicode(e))
 
 
     def refreshDataForDevAction(self, valuesDict):
@@ -1394,7 +1396,7 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u'Login Failed General Error.   ' + unicode(e.message) + unicode(e.__dict__))
             return 1, 'NI'
 
-    def urlGenerate(self, latitude, longitude, mapAPIKey, iHorizontal, iVertical, iZoom, dev=0):
+    def urlGenerate(self, latitude, longitude, mapAPIKey, iHorizontal, iVertical, iZoom, dev):
         ################################################
         # Modified by FindiStuff
         # Routine generate a Static Google Maps HTML URL request
@@ -1406,10 +1408,9 @@ class Plugin(indigo.PluginBase):
         # Parameters are separated with the & symbol
         # Need to take care of the piping symbol
         # url pipe = %7C
-
         try:
-
             self.logger.debug('** Device being mapped is:' + str(latitude) + ' ' + str(longitude))
+            mapLabel =  dev.pluginProps.get('mapLabel','lightblue1')
             # Create Map url
             mapCentre = 'center=' + str(latitude) + "," + str(longitude)
             # Set zoom
@@ -1419,42 +1420,63 @@ class Plugin(indigo.PluginBase):
                 iZoom = 21
             mapZoom = 'zoom=' + str(iZoom)
             # Set size
-            if iHorizontal > 640:
-                iHorizontal = 640
-            elif iHorizontal < 50:
-                iHorizontal = 50
-
-            if iVertical > 640:
-                iVertical = 640
-            elif iVertical < 50:
-                iVertical = 50
+            if self.mapType=='google':
+                if iHorizontal > 640:
+                    iHorizontal = 640
+                elif iHorizontal < 50:
+                    iHorizontal = 50
+                if iVertical > 640:
+                    iVertical = 640
+                elif iVertical < 50:
+                    iVertical = 50
 
             mapSize = 'size=' + str(iHorizontal) + 'x' + str(iVertical)
             mapFormat = 'format=jpg&maptype=hybrid'
-
             # Use a standard marker for a GeoFence Centre
             mapMarkerGeo = "markers=color:blue%7Csize:mid%7Clabel:G"
             mapMarkerPhone = "markers=icon:http://chart.apis.google.com/chart?chst=d_map_pin_icon%26chld=mobile%257CFF0000%7C" + str(
                 latitude) + "," + str(longitude)
             mapGoogle = 'https://maps.googleapis.com/maps/api/staticmap?'
-
             #urlmapGoogle = 'https://www.google.com/maps/@?api=1&map_action=map&center='+str(latitude)+','+str(longitude)+'&zoom='+str(iZoom)+'&basemap=satellite'
-
             urlmapGoogle = 'comgooglemaps://maps.google.com/maps?z='+str(iZoom)+'&t=h&q=' + str(latitude) + ',' + str(longitude)
-
             #Remove API usage altogether
             #if mapAPIKey == 'No Key':
             customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone
-
             # else:
             #     customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone + '&key=' + mapAPIKey
-
-
             self.logger.debug(u'StaticMap URL equals:'+unicode(customURL))
             self.logger.debug(u'Map URL equals:' + unicode(urlmapGoogle))
 
+            mapOSM = 'http://staticmap.openstreetmap.de/staticmap.php?center='+str(latitude)+','+str(longitude)+'&'+str(mapZoom)+'&' + mapSize + '&markers='+str(latitude)+','+str(longitude)+','+str(mapLabel)
 
-            return customURL, urlmapGoogle
+            if self.mapType =='arcgisWorld2d' or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap' or self.mapType=='arcgisWorldImageryHybrid':
+                latitude = float(latitude)
+                longitude = float(longitude)
+                # Fudge a similar zoom
+                zoomFactor = 0.0005 * iZoom
+                toplatitude = latitude- zoomFactor
+                toplongitude = longitude - zoomFactor
+                bottomlatitude = latitude + zoomFactor
+                bottomlongitude = longitude +zoomFactor
+                if self.mapType=='arcgisWorld2d':
+                    mapWorld2d = 'https://services.arcgisonline.com/arcgis/rest/services/ESRI_Imagery_World_2D/MapServer/export?bbox='+str(toplongitude)+','+str(toplatitude)+','+str(bottomlongitude)+','+str(bottomlatitude)+'&bboxSR=4326'+'&size='+ str(iHorizontal) + ',' + str(iVertical) +'&f=image'
+                if self.mapType == 'arcgisWorldImagery':
+                    mapWorld2d = 'https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?bbox=' + str(toplongitude) + ',' + str(toplatitude) + ',' + str(bottomlongitude) + ',' + str(bottomlatitude) + '&bboxSR=4326' + '&size=' + str(iHorizontal) + ',' + str(iVertical) + '&f=image' + '&markers=color:purple|'+str(latitude)+','+str(longitude)
+                if self.mapType == 'arcgisWorldStreetMap':
+                    mapWorld2d = 'https://services.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer/export?bbox=' + str(
+                        toplongitude) + ',' + str(toplatitude) + ',' + str(bottomlongitude) + ',' + str(
+                        bottomlatitude) + '&bboxSR=4326' + '&size=' + str(iHorizontal) + ',' + str(iVertical) + '&f=image'
+
+
+
+            if self.mapType=='google':
+                return customURL, urlmapGoogle
+            elif self.mapType=='openstreetmap':
+                return mapOSM, urlmapGoogle
+            elif self.mapType =='arcgisWorld2d' or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap':
+                return mapWorld2d, urlmapGoogle
+
+
 
         except Exception as e:
             self.logger.info(u'Mapping Exception/Error:'+unicode(e))
@@ -1474,55 +1496,50 @@ class Plugin(indigo.PluginBase):
         # Need to take care of the piping symbol
         # url pipe = %7C
 
-        global iDebug1, iDebug2, iDebug3, iDebug4, iDebug5, gIcon
+     #   global iDebug1, iDebug2, iDebug3, iDebug4, iDebug5, gIcon
 
         # Create geoFence list
         try:
-            # Create Map url
-            # URL Centre and Zoom is calculated by Google Maps
-            mapCentre = ''
 
-            # Set zoom
-            mapZoom = ''
-
-            # Set size
-            if iHorizontal>640:
-                iHorizontal=640
-            elif iHorizontal<50:
-                iHorizontal=50
-
-            if iVertical>640:
-                iVertical=640
-            elif iVertical<50:
-                iVertical=50
-
-            mapSize='size='+str(iHorizontal)+'x'+str(iVertical)
-            mapFormat='format=jpg&maptype=hybrid'
-
-            # Use a standard marker for a GeoFence Centre
-            mapMarkerGeo = "markers=color:blue%7Csize:mid%7Clabel:G"
-
-            # Now create the device markers (must be a maximum of 5 different types and less than 64x64 and on a http: server)
-            mapMarkerP = ''
-            mapMarkerPhone = ''
-            for dev in indigo.devices.iter('self.FindFriendsFriend'):
-                mapMarkerP = "markers=icon:http://chart.apis.google.com/chart?chst=d_map_pin_icon%26chld=mobile%257CFF0000%7C"+\
-                                 str(dev.states['latitude'])+","+str(dev.states['longitude'])
-                # Store the custom marker
-                mapMarkerPhone = mapMarkerPhone+'&'+mapMarkerP
-
-            if len(mapMarkerPhone)<2:
-                #Trap no devices
+            if self.mapType=='google':
+                # Create Map url
+                # URL Centre and Zoom is calculated by Google Maps
+                mapCentre = ''
+                # Set zoom
+                mapZoom = ''
+                # Set size
+                if iHorizontal>640:
+                    iHorizontal=640
+                elif iHorizontal<50:
+                    iHorizontal=50
+                if iVertical>640:
+                    iVertical=640
+                elif iVertical<50:
+                    iVertical=50
+                mapSize='size='+str(iHorizontal)+'x'+str(iVertical)
+                mapFormat='format=jpg&maptype=hybrid'
+                # Use a standard marker for a GeoFence Centre
+                mapMarkerGeo = "markers=color:blue%7Csize:mid%7Clabel:G"
+                # Now create the device markers (must be a maximum of 5 different types and less than 64x64 and on a http: server)
+                mapMarkerP = ''
                 mapMarkerPhone = ''
+                for dev in indigo.devices.iter('self.FindFriendsFriend'):
+                    mapMarkerP = "markers=icon:http://chart.apis.google.com/chart?chst=d_map_pin_icon%26chld=mobile%257CFF0000%7C"+\
+                                     str(dev.states['latitude'])+","+str(dev.states['longitude'])
+                    # Store the custom marker
+                    mapMarkerPhone = mapMarkerPhone+'&'+mapMarkerP
 
-            mapGoogle = 'https://maps.googleapis.com/maps/api/staticmap?'
+                if len(mapMarkerPhone)<2:
+                    #Trap no devices
+                    mapMarkerPhone = ''
+                mapGoogle = 'https://maps.googleapis.com/maps/api/staticmap?'
+                #if mapAPIKey == 'No Key':
+                customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone
+                #else:
+                #   customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone+'&key='+mapAPIKey
+                return customURL
 
-            #if mapAPIKey == 'No Key':
-            customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone
-            #else:
-            #   customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone+'&key='+mapAPIKey
 
-            return customURL
 
         except Exception as e:
             self.logger.info(u'urlAllGenerate'+unicode(e))

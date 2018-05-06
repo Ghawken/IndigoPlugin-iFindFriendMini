@@ -68,12 +68,23 @@
     <Field id="sep24" type="separator"/>
 
     <Field id="space211" type="label" fontSize="small">
-        <Label>Create Google Maps with Location data present.</Label>
+        <Label>Create Maps with Location data present.</Label>
     </Field>
 
     <Field id="useMaps" type="checkbox" tooltip="Enabling will result in Map generation.  In Users/">
-        <Label/>
+        <Label>Create Map Images </Label>
         <Description>Enable/Disable</Description>
+    </Field>
+
+    <Field id="mapType" type="menu" >
+        <Label>Map Type: </Label>
+        <List>
+            <Option value="google">Google Maps</Option>
+            <Option value="openstreetmap">OpenStreetMap</Option>
+            <Option value="arcgisWorld2d">ArcGis ESRI 2D Imagery</Option>
+            <Option value="arcgisWorldImagery">ArcGis World Imagery</Option>
+            <Option value="arcgisWorldStreetMap">ArcGis World Street Map</Option>
+        </List>
     </Field>
 
     <Field id="verticalMap" type="textfield" tooltip="Size of Map" defaultValue="600">

@@ -115,6 +115,14 @@
 				   default="">
 				<Label>Unique Friend Name?</Label>
 			</Field>
+
+            <Field id="mapLabel"
+				   type="textfield"
+				   tooltip="Enter a unique name for this device"
+				   default="">
+				<Label>Mapping Label?</Label>
+			</Field>
+
             <Field id="appleFriendID"
 				   type="textfield"
 				   tooltip="Apple API ID"
