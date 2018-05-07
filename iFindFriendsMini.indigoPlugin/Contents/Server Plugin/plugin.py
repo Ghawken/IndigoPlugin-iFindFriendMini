@@ -361,10 +361,10 @@ class Plugin(indigo.PluginBase):
 
     def deviceStartComm(self, dev):
         """ docstring placeholder """
-
-
         self.logger.debug(u"deviceStartComm() method called.")
         self.logger.debug(u'Starting FindFriendsMini device: '+unicode(dev.name)+' and dev.id:'+unicode(dev.id)+ ' and dev.type:'+unicode(dev.deviceTypeId))
+        # Update statelist in case any updates/changes
+        dev.stateListOrDisplayStateIdChanged()
 
         if dev.deviceTypeId=='FindFriendsGeofence':
             stateList = [
@@ -411,8 +411,6 @@ class Plugin(indigo.PluginBase):
             dev.updateStatesOnServer(stateList)
 
         self.prefsUpdated = True
-        # Update statelist in case any updates/changes
-        dev.stateListOrDisplayStateIdChanged()
         dev.updateStateOnServer('deviceIsOnline', value=False, uiValue="Waiting")
         dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
@@ -1096,9 +1094,10 @@ class Plugin(indigo.PluginBase):
 #   Create stateList ? need better checking that exists
 #
             address =""
-            if 'formattedAddressLines' in follow['location']['address']:
-                address = ','.join(follow['location']['address']['formattedAddressLines'])
-            elif 'address' in follow['location']:
+
+            if 'address' in follow['location']:
+                if 'formattedAddressLines' in follow['location']['address']:
+                    address = ','.join(follow['location']['address']['formattedAddressLines'])
                 if 'streetAddress' in follow['location']['address']:
                     address = follow['location']['address']['streetAddress']
                 if 'locality' in follow['location']['address']:
