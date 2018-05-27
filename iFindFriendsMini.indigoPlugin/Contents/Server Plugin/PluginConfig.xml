@@ -84,6 +84,7 @@
             <Option value="arcgisWorld2d">ArcGis ESRI 2D Imagery</Option>
             <Option value="arcgisWorldImagery">ArcGis World Imagery</Option>
             <Option value="arcgisWorldStreetMap">ArcGis World Street Map</Option>
+            <Option value="maps.six">maps.six.nsw.gov.au NSW Au Satellite Maps</Option>
         </List>
     </Field>
 

@@ -1448,7 +1448,7 @@ class Plugin(indigo.PluginBase):
 
             mapOSM = 'http://staticmap.openstreetmap.de/staticmap.php?center='+str(latitude)+','+str(longitude)+'&'+str(mapZoom)+'&' + mapSize + '&markers='+str(latitude)+','+str(longitude)+','+str(mapLabel)
 
-            if self.mapType =='arcgisWorld2d' or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap' or self.mapType=='arcgisWorldImageryHybrid':
+            if self.mapType =='arcgisWorld2d' or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap' or self.mapType=='arcgisWorldImageryHybrid' or self.mapType=='maps.six':
                 latitude = float(latitude)
                 longitude = float(longitude)
                 # Fudge a similar zoom
@@ -1465,14 +1465,16 @@ class Plugin(indigo.PluginBase):
                     mapWorld2d = 'https://services.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer/export?bbox=' + str(
                         toplongitude) + ',' + str(toplatitude) + ',' + str(bottomlongitude) + ',' + str(
                         bottomlatitude) + '&bboxSR=4326' + '&size=' + str(iHorizontal) + ',' + str(iVertical) + '&f=image'
-
-
+                if self.mapType == 'maps.six':
+                    mapWorld2d = 'http://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer/export?bbox=' + str(
+                        toplongitude) + ',' + str(toplatitude) + ',' + str(bottomlongitude) + ',' + str(
+                        bottomlatitude) + '&bboxSR=4326' + '&size=' + str(iHorizontal) + ',' + str(iVertical) + '&f=image'
 
             if self.mapType=='google':
                 return customURL, urlmapGoogle
             elif self.mapType=='openstreetmap':
                 return mapOSM, urlmapGoogle
-            elif self.mapType =='arcgisWorld2d' or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap':
+            elif self.mapType =='arcgisWorld2d' or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap' or self.mapType=='maps.six':
                 return mapWorld2d, urlmapGoogle
 
 
@@ -1705,9 +1707,6 @@ class Plugin(indigo.PluginBase):
         # Once again thanks Mike and iFindStuff!
         # Calculates the 'As the crow flies' distance between
         # two points and returns value in metres
-
-
-
         # First check if numbers are valid
         if lat1+long1 == 0.0 or lat2+long2 == 0.0:
 
@@ -1743,12 +1742,9 @@ class Plugin(indigo.PluginBase):
             self.logger.exception('Error within iDistance Calculation'+unicode(e))
             arc = 1
             pass
-
         # Remember to multiply arc by the radius of the earth
         # e.g. m to get actual distance in m
-
         mt_radius_of_earth = 6373000.0
-
         distance = arc * mt_radius_of_earth
 
         return True, int(distance)
