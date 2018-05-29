@@ -1094,14 +1094,14 @@ class Plugin(indigo.PluginBase):
 #   Create stateList ? need better checking that exists
 #
             address =""
-
-            if 'address' in follow['location']:
-                if 'formattedAddressLines' in follow['location']['address']:
-                    address = ','.join(follow['location']['address']['formattedAddressLines'])
-                if 'streetAddress' in follow['location']['address']:
-                    address = follow['location']['address']['streetAddress']
-                if 'locality' in follow['location']['address']:
-                    address = address + ' '+ follow['location']['address']['locality']
+            if 'location' in follow:
+                if 'address' in follow['location']:
+                    if 'formattedAddressLines' in follow['location']['address']:
+                        address = ','.join(follow['location']['address']['formattedAddressLines'])
+                    if 'streetAddress' in follow['location']['address']:
+                        address = follow['location']['address']['streetAddress']
+                    if 'locality' in follow['location']['address']:
+                        address = address + ' '+ follow['location']['address']['locality']
 
             if dev.states['latitude'] != 'unknown':
                 iDevLatitude = float(dev.states['latitude'])
