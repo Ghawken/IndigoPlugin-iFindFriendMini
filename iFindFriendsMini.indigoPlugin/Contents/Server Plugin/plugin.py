@@ -1062,15 +1062,13 @@ class Plugin(indigo.PluginBase):
 
             UseLabelforState = False
             # Deal with Label Dict either Dict or None
-            if 'labels' in follow['location']:
+            if 'labels' in follow['location'] and 'labels' is not None:
                 labels = follow['location']['labels']
             else:
                 labels =''
-            #another none check
+            #another none check - shouldnt be needed
             if labels is None:
                 labels =''
-
-
             if len(labels) > 0:
                 label = labels[0]
             else:
@@ -1079,8 +1077,9 @@ class Plugin(indigo.PluginBase):
             if self.debugicloud:
                 self.logger.debug(unicode('Label:' + unicode(label) + ' and type is ' + unicode(type(label))))
 
+            labeltouse = 'nil'
             if isinstance(label, dict):
-                if 'label' in label:
+                if 'label' in label and 'label' is not None:
                     labeltouse = label['label']
                     UseLabelforState = True
                     nonletter = '$_<>!'
@@ -1094,14 +1093,15 @@ class Plugin(indigo.PluginBase):
 #   Create stateList ? need better checking that exists
 #
             address =""
-            if 'location' in follow:
-                if 'address' in follow['location']:
-                    if 'formattedAddressLines' in follow['location']['address']:
-                        address = ','.join(follow['location']['address']['formattedAddressLines'])
-                    if 'streetAddress' in follow['location']['address']:
-                        address = follow['location']['address']['streetAddress']
-                    if 'locality' in follow['location']['address']:
-                        address = address + ' '+ follow['location']['address']['locality']
+            if follow is not None:
+                if 'location' in follow:
+                    if 'address' in follow['location'] and 'address' is not None:
+                        if 'formattedAddressLines' in follow['location']['address'] and 'formmatedAddressLines' is not None:
+                            address = ','.join(follow['location']['address']['formattedAddressLines'])
+                        if 'streetAddress' in follow['location']['address'] and 'streetAddress' is not None:
+                            address = follow['location']['address']['streetAddress']
+                        if 'locality' in follow['location']['address'] and 'locality' is not None:
+                            address = address + ' '+ follow['location']['address']['locality']
 
             if dev.states['latitude'] != 'unknown':
                 iDevLatitude = float(dev.states['latitude'])

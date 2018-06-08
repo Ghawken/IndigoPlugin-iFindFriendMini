@@ -1,3 +1,7 @@
+0.8.5
+Fix for labeltouse error if no label given
+Fix for occasional empty address strings (causing caught exception
+
 0.6.6
 Dont reset geofence Data on restart, or device start.  Leave old data in place.  Minutes since arrival should be accurately recalulcated within 60 seconds
 
