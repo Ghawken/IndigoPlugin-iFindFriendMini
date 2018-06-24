@@ -507,7 +507,7 @@ class Plugin(indigo.PluginBase):
                             self.next_update_check = time.time() + self.updateFrequency
                         except:
                             self.logger.debug(u'Error checking for update - ? No Internet connection.  Checking again in 24 hours')
-                            self.next_update_check = self.next_update_check + 86400;
+                            self.next_update_check = self.next_update_check + 86400
                 # Update Loop Check.  Checks Devices and GeoFences.
                 if time.time() > nextloopdue:
                     try:
@@ -1095,12 +1095,12 @@ class Plugin(indigo.PluginBase):
             address =""
             if follow is not None:
                 if 'location' in follow:
-                    if 'address' in follow['location'] and 'address' is not None:
-                        if 'formattedAddressLines' in follow['location']['address'] and 'formmatedAddressLines' is not None:
+                    if 'address' in follow['location'] and follow['location']['address'] is not None:
+                        if 'formattedAddressLines' in follow['location']['address'] and follow['location']['address']['formattedAddressLines'] is not None:
                             address = ','.join(follow['location']['address']['formattedAddressLines'])
-                        if 'streetAddress' in follow['location']['address'] and 'streetAddress' is not None:
+                        if 'streetAddress' in follow['location']['address'] and follow['location']['address']['streetAddress'] is not None:
                             address = follow['location']['address']['streetAddress']
-                        if 'locality' in follow['location']['address'] and 'locality' is not None:
+                        if 'locality' in follow['location']['address'] and follow['location']['address']['locality'] is not None:
                             address = address + ' '+ follow['location']['address']['locality']
 
             if dev.states['latitude'] != 'unknown':
