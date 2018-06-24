@@ -1062,7 +1062,7 @@ class Plugin(indigo.PluginBase):
 
             UseLabelforState = False
             # Deal with Label Dict either Dict or None
-            if 'labels' in follow['location'] and 'labels' is not None:
+            if 'labels' in follow['location'] and follow['location']['labels'] is not None:
                 labels = follow['location']['labels']
             else:
                 labels =''
@@ -1079,7 +1079,7 @@ class Plugin(indigo.PluginBase):
 
             labeltouse = 'nil'
             if isinstance(label, dict):
-                if 'label' in label and 'label' is not None:
+                if 'label' in label and label['label'] is not None:
                     labeltouse = label['label']
                     UseLabelforState = True
                     nonletter = '$_<>!'
