@@ -1090,8 +1090,7 @@ class Plugin(indigo.PluginBase):
             elif label == None:
                 labeltouse = 'nil'
 #
-#   Create stateList ? need better checking that exists
-#
+
             address =""
             if follow is not None:
                 if 'location' in follow:
