@@ -1738,7 +1738,7 @@ class Plugin(indigo.PluginBase):
         try:
             arc = math.acos( cos )
         except Exception as e:
-            self.logger.exception('Error within iDistance Calculation'+unicode(e))
+            self.logger.debug('Expected Error within iDistance Calculation: Cos Equals:'+unicode(cos) +' Exception Caught:'+unicode(e))
             arc = 1
             pass
         # Remember to multiply arc by the radius of the earth
