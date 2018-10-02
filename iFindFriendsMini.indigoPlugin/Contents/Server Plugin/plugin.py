@@ -257,6 +257,7 @@ class Plugin(indigo.PluginBase):
         self.configZoomMap = self.pluginPrefs.get('ZoomMap', "15")
         self.datetimeFormat = self.pluginPrefs.get('datetimeFormat','%c')
         self.googleAPI = self.pluginPrefs.get('googleAPI','')
+
         self.travelTime = self.pluginPrefs.get('travelTime','16.7')
         self.deviceNeedsUpdated = ''
         self.openStore = self.pluginPrefs.get('openStore',False)
@@ -589,8 +590,10 @@ class Plugin(indigo.PluginBase):
 
         self.logger.debug(u"validatePrefsConfigUi() method called.")
 
+
         accountOK = False
         errorDict = indigo.Dict()
+
         if 'appleId' in valuesDict:
             iFail = False
             if len(valuesDict['appleId']) == 0:
@@ -642,11 +645,19 @@ class Plugin(indigo.PluginBase):
                 # dev = indigo.devices[devId]
                 accountOK = True
                 valuesDict['appleAPIid'] = valuesDict['appleId']
-                return True, valuesDict
+                #return True, valuesDict
 
             if iFail:
                 self.logger.info("Login to Apple Server Failed")
                 return (False, valuesDict, errorDict)
+
+        self.logger.debug(u'Checking Travel Time...')
+        if valuesDict.get('travelTime',"") == "" or valuesDict.get('travelTime') == 0 or 'travelTime' not in valuesDict:
+            errorDict['travelTime']= 'Need to set this to appropriate number'
+            errorDict['showAlertText'] = 'Travel Time not correctly set'
+            return (False, valuesDict, errorDict)
+
+        self.travelTime = valuesDict.get('travelTime')
 
         return True, valuesDict
 
@@ -1051,7 +1062,7 @@ class Plugin(indigo.PluginBase):
             #Check for no data received and handle avoiding exception
             #unless starting up (60 seconds only)
             if self.startingUp==False:
-                if follow is None or follow['location'] is None:
+                if follow is None or 'location' not in follow:
                     self.logger.debug(u'No data recevied for device:'+unicode(dev.name)+' . Most likely device is offline/airplane mode or has disabled sharing location')
                     if dev.states['deviceIsOnline']:
                         self.logger.info(u'Friend Device:'+unicode(dev.name)+' has become Offline.  Most likely offline/airplane mode or disabled sharing')
@@ -1696,7 +1707,8 @@ class Plugin(indigo.PluginBase):
                 texttoreturn = '%s minutes' % (minutes)
             return texttoreturn, secondsoftime
         except:
-            self.logger.exception('iCovertMetersTime Exception')
+            self.logger.exception('iCovertMetersTime Exception:  Is Plugin Config probably setup? Is Travel Time a number?')
+
             return 'Unknown', 'Unknown'
 
 
