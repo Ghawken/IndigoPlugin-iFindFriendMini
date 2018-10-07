@@ -1,3 +1,6 @@
+0.9.1
+Checks for Label handling error if device offline and just starting up
+
 0.8.5
 Fix for labeltouse error if no label given
 Fix for occasional empty address strings (causing caught exception

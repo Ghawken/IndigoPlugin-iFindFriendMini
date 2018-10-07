@@ -1063,7 +1063,7 @@ class Plugin(indigo.PluginBase):
             #unless starting up (60 seconds only)
             if self.startingUp==False:
                 if follow is None or 'location' not in follow:
-                    self.logger.debug(u'No data recevied for device:'+unicode(dev.name)+' . Most likely device is offline/airplane mode or has disabled sharing location')
+                    self.logger.debug(u'No data received for device:'+unicode(dev.name)+' . Most likely device is offline/airplane mode or has disabled sharing location')
                     if dev.states['deviceIsOnline']:
                         self.logger.info(u'Friend Device:'+unicode(dev.name)+' has become Offline.  Most likely offline/airplane mode or disabled sharing')
                         dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
@@ -1073,13 +1073,14 @@ class Plugin(indigo.PluginBase):
 
             UseLabelforState = False
             # Deal with Label Dict either Dict or None
-            if 'labels' in follow['location'] and follow['location']['labels'] is not None:
-                labels = follow['location']['labels']
-            else:
-                labels =''
+            labels=''
+            if follow is not None:
+                if 'location' in follow:
+                    if 'labels' in follow['location'] and follow['location']['labels'] is not None:
+                        labels = follow['location']['labels']
+                    else:
+                        labels =''
             #another none check - shouldnt be needed
-            if labels is None:
-                labels =''
             if len(labels) > 0:
                 label = labels[0]
             else:
