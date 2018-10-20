@@ -1061,14 +1061,32 @@ class Plugin(indigo.PluginBase):
 #
             #Check for no data received and handle avoiding exception
             #unless starting up (60 seconds only)
-            if self.startingUp==False:
-                if follow is None or 'location' not in follow:
-                    self.logger.debug(u'No data received for device:'+unicode(dev.name)+' . Most likely device is offline/airplane mode or has disabled sharing location')
-                    if dev.states['deviceIsOnline']:
-                        self.logger.info(u'Friend Device:'+unicode(dev.name)+' has become Offline.  Most likely offline/airplane mode or disabled sharing')
-                        dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
-                        dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
-                    return
+            #if self.startingUp==False or self.startingUp==True:
+            if follow is None:
+                self.logger.debug(u'No data received for device:' + unicode(
+                    dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
+                if dev.states['deviceIsOnline']:
+                    self.logger.info(u'Friend Device:' + unicode(
+                        dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
+                    dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
+                    dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+                return
+            if 'location' not in follow:
+                self.logger.debug(u'No data received for device:' + unicode(
+                    dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
+                if dev.states['deviceIsOnline']:
+                    self.logger.info(u'Friend Device:' + unicode(
+                        dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
+                    dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
+                    dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+                return
+            if follow['location'] is None or follow['location'] == 'None':
+                self.logger.debug(u'No data received for device:'+unicode(dev.name)+' . Most likely device is offline/airplane mode or has disabled sharing location')
+                if dev.states['deviceIsOnline']:
+                    self.logger.info(u'Friend Device:'+unicode(dev.name)+' has become Offline.  Most likely offline/airplane mode or disabled sharing')
+                    dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
+                    dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+                return
 
 
             UseLabelforState = False
@@ -1076,10 +1094,10 @@ class Plugin(indigo.PluginBase):
             labels=''
             if follow is not None:
                 if 'location' in follow:
-                    if 'labels' in follow['location'] and follow['location']['labels'] is not None:
-                        labels = follow['location']['labels']
-                    else:
-                        labels =''
+                    if follow['location'] is not None:
+                        if 'labels' in follow['location']:
+                            if follow['location']['labels'] is not None:
+                                labels = follow['location']['labels']
             #another none check - shouldnt be needed
             if len(labels) > 0:
                 label = labels[0]
@@ -1106,13 +1124,14 @@ class Plugin(indigo.PluginBase):
             address =""
             if follow is not None:
                 if 'location' in follow:
-                    if 'address' in follow['location'] and follow['location']['address'] is not None:
-                        if 'formattedAddressLines' in follow['location']['address'] and follow['location']['address']['formattedAddressLines'] is not None:
-                            address = ','.join(follow['location']['address']['formattedAddressLines'])
-                        if 'streetAddress' in follow['location']['address'] and follow['location']['address']['streetAddress'] is not None:
-                            address = follow['location']['address']['streetAddress']
-                        if 'locality' in follow['location']['address'] and follow['location']['address']['locality'] is not None:
-                            address = address + ' '+ follow['location']['address']['locality']
+                    if follow['location'] is not None:
+                        if 'address' in follow['location'] and follow['location']['address'] is not None:
+                            if 'formattedAddressLines' in follow['location']['address'] and follow['location']['address']['formattedAddressLines'] is not None:
+                                address = ','.join(follow['location']['address']['formattedAddressLines'])
+                            if 'streetAddress' in follow['location']['address'] and follow['location']['address']['streetAddress'] is not None:
+                                address = follow['location']['address']['streetAddress']
+                            if 'locality' in follow['location']['address'] and follow['location']['address']['locality'] is not None:
+                                address = address + ' '+ follow['location']['address']['locality']
 
             if dev.states['latitude'] != 'unknown':
                 iDevLatitude = float(dev.states['latitude'])
@@ -1162,8 +1181,8 @@ class Plugin(indigo.PluginBase):
             return
 
         except Exception as e:
-            self.logger.info(unicode('Exception in refreshDataforDev: ' + unicode(e)))
-            self.logger.exception('Exception:')
+            self.logger.debug(unicode('Exception in refreshDataforDev: ' + unicode(e)))
+            self.logger.debug('Exception:')
             self.logger.info(unicode('Possibility missing some data from icloud:  Is your account setup with FindFriends enabled on iOS/Mobile device?'))
             dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
