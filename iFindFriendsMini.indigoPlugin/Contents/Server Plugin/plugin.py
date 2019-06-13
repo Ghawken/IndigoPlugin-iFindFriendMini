@@ -223,7 +223,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"logLevel = " + str(self.logLevel))
         self.triggers = {}
 
-        self.debugicloud = self.pluginPrefs.get('debugicloud', False)
+        self.debugicloud = self.pluginPrefs.get('debugicloud', True)
         self.debugLevel = int(self.pluginPrefs.get('showDebugLevel', 20))
         self.debugmaps = self.pluginPrefs.get('debugmaps', False)
         self.debuggeofence   = self.pluginPrefs.get('debuggeofence', False)
@@ -1423,6 +1423,7 @@ class Plugin(indigo.PluginBase):
 
         except Exception as e:
             self.logger.error(u'Login Failed General Error.   ' + unicode(e.message) + unicode(e.__dict__))
+            self.logger.error(e)
             return 1, 'NI'
 
     def urlGenerate(self, latitude, longitude, mapAPIKey, iHorizontal, iVertical, iZoom, dev):
@@ -1699,7 +1700,6 @@ class Plugin(indigo.PluginBase):
         self.logger.debug('iConvertMeters Called')
         try:
             texttoreturn = ''
-
             if meters >= 1000:
                 result = int(meters/1000)
                 texttoreturn = str(result)+' kms '

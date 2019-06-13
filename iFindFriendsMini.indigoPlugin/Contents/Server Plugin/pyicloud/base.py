@@ -24,7 +24,7 @@ from pyicloud.services import (
     #UbiquityService,
    # ContactsService
 )
-
+import hack as hack
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,8 @@ class PyiCloudService(object):
         self.discovery = None
         self.logger = logging.getLogger('Plugin.PyiCloud')
         self.client_id = str(uuid.uuid1()).upper()
+        self.apple_id = apple_id
+        self.password = password
         self.user = {'apple_id': apple_id, 'password': password}
 
         #self.logger.debug(u'------------------------  self.user equals'+unicode(self.user))
@@ -51,7 +53,7 @@ class PyiCloudService(object):
         self._setup_endpoint = 'https://setup.icloud.com/setup/ws/1'
         self._push_endpoint = 'https://p12-pushws.icloud.com'
 
-        self._base_login_url = '%s/login' % self._setup_endpoint
+        self._base_login_url = '%s/accountLogin' % self._setup_endpoint
         self._base_validate_url = '%s/validate' % self._setup_endpoint
         #self._base_system_url = '%s/system/version.json' % self._home_endpoint
         #self._base_webauth_url = '%s/refreshWebAuth' % self._push_endpoint
@@ -136,12 +138,28 @@ class PyiCloudService(object):
             webKBCookie = None
 
         data = dict(self.user)
-        data.update({'id': self.params['id'], 'extended_login': False})
+        #data.update({'id': self.params['id'], 'extended_login': False})
+
+        myICloud = hack.PyiCloudServiceHack()
+        sess_token = myICloud.get_session_token ( self.apple_id, self.password )
+
+        #Logger.Info('Session Token'+sess_token)
+
+        self.session.headers = {
+            'Origin': 'https://www.icloud.com',
+            'Referer': 'https://www.icloud.com/',
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/javascript, */*; q=0.01'
+        }
+        data = {'accountCountryCode': "AU",
+                    'extended_login': False,
+                    'dsWebAuthToken': sess_token
+               }
 
         try:
             req = self.session.post(
                 self._base_login_url,
-                params=self.params,
                 data=json.dumps(data)
             )
 
