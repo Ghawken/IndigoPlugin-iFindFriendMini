@@ -223,7 +223,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"logLevel = " + str(self.logLevel))
         self.triggers = {}
 
-        self.debugicloud = self.pluginPrefs.get('debugicloud', True)
+        self.debugicloud = self.pluginPrefs.get('debugicloud', False)
         self.debugLevel = int(self.pluginPrefs.get('showDebugLevel', 20))
         self.debugmaps = self.pluginPrefs.get('debugmaps', False)
         self.debuggeofence   = self.pluginPrefs.get('debuggeofence', False)
