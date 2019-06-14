@@ -152,7 +152,7 @@ class PyiCloudService(object):
             'Content-Type': 'application/json',
             'Accept': 'application/json, text/javascript, */*; q=0.01'
         }
-        data = {'accountCountryCode': "AU",
+        data = {
                     'extended_login': False,
                     'dsWebAuthToken': sess_token
                }
