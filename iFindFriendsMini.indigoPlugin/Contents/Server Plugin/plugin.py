@@ -28,7 +28,7 @@ except Exception as e:
 import sys
 import math
 
-
+import OpenSSL
 
 import time as t
 
@@ -150,7 +150,7 @@ import os
 import logging
 import datetime
 
-from ghpu import GitHubPluginUpdater
+#from ghpu import GitHubPluginUpdater
 
 global accountOK
 global appleAPI
@@ -292,18 +292,6 @@ class Plugin(indigo.PluginBase):
     ###
     ###  Update ghpu Routines.
 
-    def checkForUpdates(self):
-
-        updateavailable = self.updater.getLatestVersion()
-        if updateavailable and self.openStore:
-            self.logger.info(u'FindFriendsMini: Update Checking.  Update is Available.  Taking you to plugin Store. ')
-            self.sleep(2)
-            self.pluginstoreUpdate()
-        elif updateavailable and not self.openStore:
-            self.errorLog(u'FindFriendsMini: Update Checking.  Update is Available.  Please check Store for details/download.')
-
-    def updatePlugin(self):
-        self.updater.update()
 
     def pluginstoreUpdate(self):
         iurl = 'http://www.indigodomo.com/pluginstore/139/'
@@ -503,14 +491,7 @@ class Plugin(indigo.PluginBase):
                 if int(updateGeofencedue-time.time()) == 0:
                     self.logger.debug(u'ronConcurrrent internal loop: self.prefsUpdated False: Next Update:'+unicode(int(time.time()-nextloopdue))+' and updateGeofenceDue:'+unicode(int(updateGeofencedue-time.time())))
                 # Update Plugin Frequency Loop
-                if self.updateFrequency > 0:
-                    if time.time() > self.next_update_check:
-                        try:
-                            self.checkForUpdates()
-                            self.next_update_check = time.time() + self.updateFrequency
-                        except:
-                            self.logger.debug(u'Error checking for update - ? No Internet connection.  Checking again in 24 hours')
-                            self.next_update_check = self.next_update_check + 86400
+
                 # Update Loop Check.  Checks Devices and GeoFences.
                 if time.time() > nextloopdue:
                     try:
@@ -556,7 +537,7 @@ class Plugin(indigo.PluginBase):
 
 
         self.logger.debug(u"Starting FindFriendsMini. startup() method called.")
-        self.updater = GitHubPluginUpdater(self)
+        #self.updater = GitHubPluginUpdater(self)
         # Set appleAPI account as not verified on start of startup
         accountOK = False
         MAChome = os.path.expanduser("~") + "/"

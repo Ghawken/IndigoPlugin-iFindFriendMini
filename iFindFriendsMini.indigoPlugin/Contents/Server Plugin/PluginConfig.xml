@@ -44,7 +44,7 @@
         <Label>Minutes between rechecking Friend Devices Location.</Label>
     </Field>
 
-    <Field id="configMenuTimeCheck" type="menu" defaultValue="15" tooltip="Select frequency for checking Devices">
+    <Field id="configMenuTimeCheck" type="menu" defaultValue="15" tooltip="Select frequency for checking Devices" >
         <Label>Time for Updates:</Label>
         <List>
             <Option value="2">2 Minutes</Option>
@@ -140,25 +140,25 @@
 
     <Field id="space2226" type="separator"/>
 
-    <Field id="space120" type="label" alignText="right">
+    <Field id="space120" type="label" alignText="right" hidden="true">
         <Label>Update Frequency:</Label>
     </Field>
 
-    <Field id="sep400" type="separator"/>
+    <Field id="sep400" type="separator" hidden="true"/>
 
-    <Field id="space121" type="label" fontSize="small">
+    <Field id="space121" type="label" fontSize="small" hidden="true">
         <Label>Frequency of Update checking.  If update needed after check can Open Plugin Store to Download.</Label>
     </Field>
-    <Field id="updateFrequency" type="textfield" tooltip="Size of Map" defaultValue="24">
+    <Field id="updateFrequency" type="textfield" tooltip="Size of Map" defaultValue="24" hidden="true">
      <Label>Frequency of Update Checks [in Hours] </Label>
      <Description>Hours between checking for Plugin Update.  Default 24 hours.</Description>
     </Field>
 
-    <Field id="openStore" type="checkbox" tooltip='Enabling with open Plugin Store for download'>
+    <Field id="openStore" type="checkbox" tooltip='Enabling with open Plugin Store for download' hidden="true">
         <Label>Automatically Open Plugin Store if an update is available.</Label>
         <Description>Enable/Disable</Description>
     </Field>
-    <Field id="space21126" type="separator"/>
+    <Field id="space21126" type="separator" hidden="true"/>
 
     <Field id="space10" type="label" alignText="right">
         <Label>Debugging Options:</Label>

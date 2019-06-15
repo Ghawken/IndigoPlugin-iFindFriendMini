@@ -3,11 +3,6 @@
 
     <MenuItem id="titleSeparator" type="separator"/>
 
-
-    <MenuItem id="checkForUpdates">
-        <Name>Check for Updates</Name>
-        <CallbackMethod>checkForUpdates</CallbackMethod>
-    </MenuItem>
     <MenuItem id="forceUpdate">
         <Name>Open PluginStore for Download</Name>
         <CallbackMethod>pluginstoreUpdate</CallbackMethod>
