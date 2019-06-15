@@ -227,7 +227,7 @@ __metaclass__ = type
 class PyiCloudServiceHack (HTTPService, object):
     def __init__ (self):
         self.session = requests.Session()
-        self.session.verify = True
+        self.session.verify = False
         self.response = Pointer(None)
         self.origin = "https://www.icloud.com"
         self.referer = "https://www.icloud.com"
