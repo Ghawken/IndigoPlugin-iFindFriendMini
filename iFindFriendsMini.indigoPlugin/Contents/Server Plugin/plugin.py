@@ -256,11 +256,13 @@ class Plugin(indigo.PluginBase):
         self.configVerticalMap = self.pluginPrefs.get('verticalMap', "600")
         self.useMaps = self.pluginPrefs.get('useMaps',False)
         self.mapType = self.pluginPrefs.get('mapType', "openstreetmap")
+        if self.mapType == None:
+            self.useMaps = False
         self.configHorizontalMap = self.pluginPrefs.get('horizontalMap', "600")
         self.configZoomMap = self.pluginPrefs.get('ZoomMap', "15")
         self.datetimeFormat = self.pluginPrefs.get('datetimeFormat','%c')
         self.googleAPI = self.pluginPrefs.get('googleAPI','')
-
+        self.BingAPI = self.pluginPrefs.get('BingAPI','')
         self.travelTime = self.pluginPrefs.get('travelTime','16.7')
         self.deviceNeedsUpdated = ''
         self.openStore = self.pluginPrefs.get('openStore',False)
@@ -332,6 +334,7 @@ class Plugin(indigo.PluginBase):
             self.configZoomMap = valuesDict.get('ZoomMap', "15")
             self.datetimeFormat = valuesDict.get('datetimeFormat', '%c')
             self.googleAPI = valuesDict.get('googleAPI', '')
+            self.BingAPI = valuesDict.get('BingAPI','')
             self.openStore = valuesDict.get('openStore', False)
             self.updateFrequency = float(valuesDict.get('updateFrequency', "24")) * 60.0 * 60.0
             # If plugin config menu closed update the time for check.  Will apply after first change.
@@ -1173,12 +1176,27 @@ class Plugin(indigo.PluginBase):
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             return
 
+    def requestSaveUrl(self, url, file):
+        try:
+            self.logger.debug("Saving url"+url+" as file:"+file)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+
+            r = requests.get(url, headers=headers, stream=True, timeout=10)
+            with open(file, 'wb') as f:
+                for chunk in r.iter_content():
+                    f.write(chunk)
+        except:
+            self.logger.exception("Exception in saveURL Requests")
+
+
     def godoMapping(self, latitude, longitude, dev):
 
         self.logger.debug(u"godoMapping() method called.")
         try:
             if not self.useMaps:
-                self.logger.debug("UseMaps not enabled.  Returning.")
+                if self.debugmaps:
+                    self.logger.debug("UseMaps not enabled.  Returning.")
                 return
 
             MAChome = os.path.expanduser("~") + "/"
@@ -1192,10 +1210,18 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u'update Map Happening as device moved..')
                 drawUrl = self.urlGenerate(latitude ,longitude ,self.googleAPI, int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap), dev)
                 if self.debugmaps:
+                    self.logger.debug(u'drawURL 0=:'+unicode(drawUrl[0]))
+
+                if self.debugmaps:
                     webbrowser.open_new(drawUrl[0])
                     #webbrowser.open_new(drawUrl[1])
-                fileMap = "curl --output '" + file + "' --url '" + drawUrl[0] + "'"
-                os.system(fileMap)
+
+                #fileMap = "curl --output '" + file + "' --url '" + drawUrl[0] + "'"
+                #os.system(fileMap)
+
+                self.requestSaveUrl(drawUrl[0],file)
+
+
                 self.logger.debug('Saving Map...' + file)
 
                 filename = 'All_device.jpg'
@@ -1203,9 +1229,11 @@ class Plugin(indigo.PluginBase):
                 #    Generate URL for All Maps - if using Google; not with openstreetmap
                 if self.mapType=='google':
                     drawUrlall = self.urlAllGenerate(self.googleAPI,  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
-                    fileMap = "curl --output '" + file + "' --url '" + drawUrlall + "'"
-                    os.system(fileMap)
-                    self.logger.debug('Saving Map...' + file)
+                    #fileMap = "curl --output '" + file + "' --url '" + drawUrlall + "'"
+                    #os.system(fileMap)
+                    self.requestSaveUrl(drawUrlall, file)
+                    if self.debugmaps:
+                        self.logger.debug('Saving Map...' + file)
 
                 dev.updateStateOnServer('mapUpdateNeeded',value=False)
 
@@ -1433,6 +1461,7 @@ class Plugin(indigo.PluginBase):
             # Create Map url
             mapCentre = 'center=' + str(latitude) + "," + str(longitude)
 
+
             # Set size
             if self.mapType=='google':
                 if iZoom < 0:
@@ -1447,6 +1476,15 @@ class Plugin(indigo.PluginBase):
                     iVertical = 640
                 elif iVertical < 50:
                     iVertical = 50
+                mapAPIKey = self.googleAPI
+
+            if 'Bing' in self.mapType:
+                if iZoom < 0:
+                    iZoom = 0
+                elif iZoom > 20:
+                    iZoom = 20
+                mapAPIKey = self.BingAPI
+
             mapZoom = 'zoom=' + str(iZoom)
 
             mapSize = 'size=' + str(iHorizontal) + 'x' + str(iVertical)
@@ -1465,7 +1503,7 @@ class Plugin(indigo.PluginBase):
 
             mapOSM = 'http://staticmap.openstreetmap.de/staticmap.php?center='+str(latitude)+','+str(longitude)+'&'+str(mapZoom)+'&' + mapSize + '&markers='+str(latitude)+','+str(longitude)+','+str(mapLabel)
 
-            if self.mapType =='arcgisWorld2d' or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap' or self.mapType=='arcgisWorldImageryHybrid' or self.mapType=='maps.six':
+            if self.mapType =='arcgisWorld2d' or 'Bing' in self.mapType or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap' or self.mapType=='arcgisWorldImageryHybrid' or self.mapType=='maps.six':
                 latitude = float(latitude)
                 longitude = float(longitude)
                 # Fudge a similar zoom
@@ -1486,6 +1524,36 @@ class Plugin(indigo.PluginBase):
                     mapWorld2d = 'http://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer/export?bbox=' + str(
                         toplongitude) + ',' + str(toplatitude) + ',' + str(bottomlongitude) + ',' + str(
                         bottomlatitude) + '&bboxSR=4326' + '&size=' + str(iHorizontal) + ',' + str(iVertical) + '&f=image'
+                if 'Bing' in self.mapType:
+                    mapWorld2d = 'http://bing.com/maps/embed?cp=' + str(latitude) + '~' + str(longitude) + "&h="+str(iVertical)+ "&w="+str(iHorizontal)
+                    BingStatic = 'http://dev.virtualearth.net/REST/v1/Imagery/Map'
+                    
+                    if 'Satellite' in self.mapType:
+                        mapWorld2d = mapWorld2d + "&style=h"
+                        if 'SatelliteWO' in self.mapType:
+                            BingStatic = BingStatic + "/Aerial"
+                        else:
+                            BingStatic = BingStatic + "/AerialWithLabels"
+                    elif 'Road' in self.mapType:
+                        mapWorld2d = mapWorld2d + "&style=r"
+                        BingStatic = BingStatic + '/Road'
+                    elif 'Gray' in self.mapType:
+                        mapWorld2d = mapWorld2d + "&style=r"
+                        BingStatic = BingStatic + '/CanvasGray'
+                    elif 'BirdsEye' in self.mapType:
+                        mapWorld2d = mapWorld2d + "&style=h"
+                        BingStatic = BingStatic + '/BirdsEye'
+                    elif 'Canvas' in self.mapType:
+                        mapWorld2d = mapWorld2d + "&style=r"
+                        BingStatic = BingStatic + '/CanvasLight'
+
+                    mapWorld2d= mapWorld2d + "&lvl="+str(iZoom)
+                    BingStatic = BingStatic + '/'+ str(latitude) + "," + str(longitude) + "/" + str(iZoom)+ "?mapsize="+str(iHorizontal)+","+str(iVertical)
+                    if 'Roads' in self.mapType or 'Canvas' in self.mapType:
+                        BingStatic = BingStatic + '&mapLayer=Basemap,Buildings'
+                    BingStatic = BingStatic + "&key="+self.BingAPI
+
+                    
 
             if self.mapType=='google':
                 return customURL, urlmapGoogle
@@ -1493,7 +1561,10 @@ class Plugin(indigo.PluginBase):
                 return mapOSM, urlmapGoogle
             elif self.mapType =='arcgisWorld2d' or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap' or self.mapType=='maps.six':
                 return mapWorld2d, urlmapGoogle
-
+            elif 'Bing' in self.mapType:
+                return BingStatic, mapWorld2d
+            else:
+                return 0,0
 
 
         except Exception as e:

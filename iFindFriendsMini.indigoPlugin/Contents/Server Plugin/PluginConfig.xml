@@ -85,6 +85,12 @@
             <Option value="arcgisWorldImagery">ArcGis World Imagery</Option>
             <Option value="arcgisWorldStreetMap">ArcGis World Street Map</Option>
             <Option value="maps.six">maps.six.nsw.gov.au NSW Au Satellite Maps</Option>
+            <Option value="BingRoad">Bing Road Maps</Option>
+            <Option value="BingSatellite">Bing Aerial with Label Maps</Option>
+            <Option value="BingSatelliteWO">Bing Aerial without Label Maps</Option>
+             <Option value="BingGray">Bing Grayscale Road Maps</Option>
+             <Option value="BingBirdsEye">Bing BirdsEye Maps (if available)</Option>
+             <Option value="BingCanvasLight">Bing Road Maps - Lighter Version</Option>
         </List>
     </Field>
 
@@ -115,6 +121,20 @@
         </Label>
     </Field>
       <Field id="googlesep1" type="separator" visibleBindingId="mapType" visibleBindingValue="google"/>
+
+ <Field id="bingsep2" type="separator" visibleBindingId="mapType" visibleBindingValue="BingRoad,BingSatellite,BingGray,BingBirdsEye,BingCanvasLight,BingSatelliteWO"/>
+    <Field id="BingAPI" type="textfield" tooltip="BING Mapping API Key" defaultValue="" visibleBindingId="mapType" visibleBindingValue="BingRoad,BingSatellite,BingGray,BingBirdsEye,BingCanvasLight,BingSatelliteWO" >
+     <Label>Enter Bing Mapping API Here:</Label><Label/>
+     <Description>Bing API Key for Mapping</Description>
+    </Field>
+    <Field id="bingAPIWarning" type="label" alignText="right" visibleBindingId="mapType" visibleBindingValue="BingRoad,BingSatellite,BingGray,BingBirdsEye,BingCanvasLight,BingSatelliteWO" >
+        <Label>Bing API usage may incur costs, use at own risk...
+            Unlike Google does not need billing details to use free account
+
+        </Label>
+    </Field>
+      <Field id="bingsep1" type="separator" visibleBindingId="mapType" visibleBindingValue="BingRoad,BingSatellite,BingGray,BingBirdsEye,BingCanvasLight,BingSatelliteWO"/>
+
     <Field id="travelTime" type="textfield" tooltip="Time to travel 1 kilometer" defaultValue="">
      <Label>Meters/Second for Travel calculation:</Label><Label/>
      <Description>Enter travel speed for approx travel time calculations in meters/second eg. 16.7 m/s = 60km/hr</Description>
