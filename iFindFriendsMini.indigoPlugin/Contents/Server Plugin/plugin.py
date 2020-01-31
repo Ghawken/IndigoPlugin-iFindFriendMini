@@ -28,7 +28,6 @@ except Exception as e:
 import sys
 import math
 
-
 import OpenSSL
 
 import time as t
@@ -255,6 +254,7 @@ class Plugin(indigo.PluginBase):
         self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
         self.next_update_check = time.time()
         self.configVerticalMap = self.pluginPrefs.get('verticalMap', "600")
+        self.useMaps = self.pluginPrefs.get('useMaps',False)
         self.mapType = self.pluginPrefs.get('mapType', "openstreetmap")
         self.configHorizontalMap = self.pluginPrefs.get('horizontalMap', "600")
         self.configZoomMap = self.pluginPrefs.get('ZoomMap', "15")
@@ -326,6 +326,7 @@ class Plugin(indigo.PluginBase):
             self.debugdistance = valuesDict.get('debugdistance', False)
             self.datetimeFormat = valuesDict.get('datetimeFormat', '%c')
             self.configVerticalMap = valuesDict.get('verticalMap', "600")
+            self.useMaps = valuesDict.get('useMaps',False)
             self.mapType = self.pluginPrefs.get('mapType', "openstreetmap")
             self.configHorizontalMap = valuesDict.get('horizontalMap', "600")
             self.configZoomMap = valuesDict.get('ZoomMap', "15")
@@ -1176,6 +1177,10 @@ class Plugin(indigo.PluginBase):
 
         self.logger.debug(u"godoMapping() method called.")
         try:
+            if not self.useMaps:
+                self.logger.debug("UseMaps not enabled.  Returning.")
+                return
+
             MAChome = os.path.expanduser("~") + "/"
             folderLocation = MAChome + "Documents/Indigo-iFindFriendMini/"
 
@@ -1185,7 +1190,7 @@ class Plugin(indigo.PluginBase):
 
             if dev.states['mapUpdateNeeded']:
                 self.logger.debug(u'update Map Happening as device moved..')
-                drawUrl = self.urlGenerate(latitude ,longitude , '', int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap), dev)
+                drawUrl = self.urlGenerate(latitude ,longitude ,self.googleAPI, int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap), dev)
                 if self.debugmaps:
                     webbrowser.open_new(drawUrl[0])
                     #webbrowser.open_new(drawUrl[1])
@@ -1197,7 +1202,7 @@ class Plugin(indigo.PluginBase):
                 file = folderLocation + filename
                 #    Generate URL for All Maps - if using Google; not with openstreetmap
                 if self.mapType=='google':
-                    drawUrlall = self.urlAllGenerate('',  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
+                    drawUrlall = self.urlAllGenerate(self.googleAPI,  int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap))
                     fileMap = "curl --output '" + file + "' --url '" + drawUrlall + "'"
                     os.system(fileMap)
                     self.logger.debug('Saving Map...' + file)
@@ -1454,10 +1459,7 @@ class Plugin(indigo.PluginBase):
             #urlmapGoogle = 'https://www.google.com/maps/@?api=1&map_action=map&center='+str(latitude)+','+str(longitude)+'&zoom='+str(iZoom)+'&basemap=satellite'
             urlmapGoogle = 'comgooglemaps://maps.google.com/maps?z='+str(iZoom)+'&t=h&q=' + str(latitude) + ',' + str(longitude)
             #Remove API usage altogether
-            #if mapAPIKey == 'No Key':
-            customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone
-            # else:
-            #     customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone + '&key=' + mapAPIKey
+            customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone + '&key=' + mapAPIKey
             self.logger.debug(u'StaticMap URL equals:'+unicode(customURL))
             self.logger.debug(u'Map URL equals:' + unicode(urlmapGoogle))
 
@@ -1550,7 +1552,7 @@ class Plugin(indigo.PluginBase):
                     mapMarkerPhone = ''
                 mapGoogle = 'https://maps.googleapis.com/maps/api/staticmap?'
                 #if mapAPIKey == 'No Key':
-                customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone
+                customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone+ '&key=' + mapAPIKey
                 #else:
                 #   customURL = mapGoogle+mapCentre+'&'+mapZoom+'&'+mapSize+'&'+mapFormat+'&'+mapMarkerGeo+'&'+mapMarkerPhone+'&key='+mapAPIKey
                 return customURL
