@@ -923,7 +923,7 @@ class Plugin(indigo.PluginBase):
                                 # this may be the space to look at more complication accuracy versus seperation type calculation
                                 # will run and gather more data first
                                 # change here - not accurate do not remove rom Geofence
-                                if iDevUniqueName in geoDevices.states['listFriends'] and DistanceAccurate <= igeoRangeDistance:  #if already present ignore accuracy data
+                                if iDevUniqueName in geoDevices.states['listFriends']: #//remoce this check and DistanceAccurate <= igeoRangeDistance:  #if already present ignore accuracy data
                                     self.logger.debug(u'---------------- Accuracy Poor: ' + unicode(iDevUniqueName) + ' & Is WITHIN Geofence:' + unicode(igeoName) + ', poor accuracy so do not remove.  Distance:'+unicode(iSeparationABS)+ u'    DistanceAccurate --Used-- Result equals:'+unicode(DistanceAccurate))
                                     if self.debuggeofence:
                                         self.newlogger.info(u"{0:=^160}".format(""))
@@ -1187,8 +1187,9 @@ class Plugin(indigo.PluginBase):
                 for chunk in r.iter_content():
                     f.write(chunk)
         except:
-            self.logger.exception("Exception in saveURL Requests")
-
+            if self.debugmaps:
+                self.logger.exception("Exception in saveURL Requests")
+            self.logger.debug("Exception in save Map Requests")
 
     def godoMapping(self, latitude, longitude, dev):
 
