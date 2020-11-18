@@ -31,6 +31,35 @@
                    hidden ='True'>
 				<Label>Apple Account ID:</Label>
 			</Field>
+        <Field id="TwoFAenabled" type="checkbox" tooltip="" default="False">
+        <Label/>
+        <Description>Use Two Factor Authenication Enabled Account?</Description>
+        </Field>
+        <Field id="loginDevice"
+				   type="button"
+				   tooltip="Click on this Access Account"
+                    visibleBindingId="TwoFAenabled" visibleBindingValue="true">
+				<Label>Login iCloud Account</Label>
+				<Title>Login iCloud Account</Title>
+				<CallbackMethod>loginAccount</CallbackMethod>
+	</Field>
+        <Field id="verficationcode"
+				   type="textfield"
+				   tooltip="Enter your Apple Account Verification Code"
+				   default=""
+                     visibleBindingId="TwoFAenabled" visibleBindingValue="true"
+        >
+				<Label>Verification Code:</Label>
+			</Field>
+    <Field id="submitcode"
+				   type="button"
+				   tooltip="Click on this Access Account"
+                    visibleBindingId="TwoFAenabled" visibleBindingValue="true">
+			<Title>Press</Title>
+        <Label>Submit Code</Label>
+				<CallbackMethod>submitCode</CallbackMethod>
+	</Field>
+
 
     <Field id="sep44aa" type="separator"/>
 

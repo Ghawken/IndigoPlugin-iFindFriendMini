@@ -39,17 +39,29 @@ except ImportError:
     MajorProblem = 2  #1 to restart, 2 to disable
     pass
 
+# try:
+#     from pyicloud import PyiCloudService
+#     #from pyicloud.exceptions import PyiCloudFailedLoginException
+#     #import moduledoesntexisit
+#     from pyicloud.exceptions import (
+#         PyiCloudFailedLoginException,
+#         PyiCloudAPIResponseError,
+#         PyiCloud2SARequiredError,
+#         PyiCloudServiceNotActivatedErrror
+#     )
 try:
-    from pyicloud import PyiCloudService
+    from custompyicloud.custompyicloud import PyiCloudService
     #from pyicloud.exceptions import PyiCloudFailedLoginException
     #import moduledoesntexisit
-    from pyicloud.exceptions import (
+    from custompyicloud.custompyicloud import (
+        PyiCloudException,
+        PyiCloudAPIResponseException,
+        PyiCloudServiceNotActivatedException,
         PyiCloudFailedLoginException,
-        PyiCloudAPIResponseError,
-        PyiCloud2SARequiredError,
-        PyiCloudServiceNotActivatedErrror
+        PyiCloud2SARequiredException,
+        PyiCloudNoStoredPasswordAvailableException,
+        PyiCloudNoDevicesException
     )
-
 
 except Exception as e:
     MajorProblem =2
@@ -183,6 +195,7 @@ class Plugin(indigo.PluginBase):
 
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
         self.startingUp = True
+        self.appleAPI = None
         self.pluginIsInitializing = True
         self.pluginIsShuttingDown = False
         self.prefsUpdated = False
@@ -197,8 +210,7 @@ class Plugin(indigo.PluginBase):
         self.logger.info(u"{0:<30} {1}".format("Major Problem equals: ", MajorProblem))
         self.logger.info(u"{0:=^130}".format(""))
 
-
-
+        self.iprefDirectory = '{}/Preferences/Plugins/com.GlennNZ.indigoplugin.FindFriendsMini'.format(indigo.server.getInstallFolderPath())
         #Change to logging
         pfmt = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s',
                                  datefmt='%Y-%m-%d %H:%M:%S')
@@ -231,8 +243,7 @@ class Plugin(indigo.PluginBase):
         self.debugmaps = self.pluginPrefs.get('debugmaps', False)
         self.debuggeofence   = self.pluginPrefs.get('debuggeofence', False)
         self.debugdistance = self.pluginPrefs.get('debugdistance', False)
-        self.logFile = u"{0}/Logs/com.GlennNZ.indigoplugin.FindFriendsMini/plugin.log".format(
-            indigo.server.getInstallFolderPath())
+        self.logFile = u"{0}/Logs/com.GlennNZ.indigoplugin.FindFriendsMini/plugin.log".format( indigo.server.getInstallFolderPath())
 
         if self.debuggeofence:
             self.newlogger.info(u"")
@@ -247,6 +258,7 @@ class Plugin(indigo.PluginBase):
             self.newlogger.info(u"{0:=^130}".format(""))
 
 
+        self.TwoFAverified = False
 
         self.configMenuTimeCheck = int(self.pluginPrefs.get('configMenuTimeCheck', "5"))
         #self.updater = indigoPluginUpdateChecker.updateChecker(self, "http://")
@@ -269,7 +281,8 @@ class Plugin(indigo.PluginBase):
         self.wazeUnits = self.pluginPrefs.get('wazeUnits','km')
         self.deviceNeedsUpdated = ''
         self.openStore = self.pluginPrefs.get('openStore',False)
-
+        self.requires2FA = False   ## If account requires another set to be done, will change from True - False
+        self.requires2SA = False
 
 
         if MajorProblem > 0:
@@ -408,6 +421,31 @@ class Plugin(indigo.PluginBase):
 
             self.logger.debug(unicode(stateList))
             dev.updateStatesOnServer(stateList)
+        elif dev.deviceTypeId=="myDevice":
+            stateList = [
+                {'key': 'id', 'value': ''},
+                {'key': 'status', 'value': ''},
+                {'key': 'batteryStatus', 'value': ''},
+                {'key': 'locationTimestamp', 'value': ''},
+                {'key': 'timestamp', 'value': ''},
+                {'key': 'altitude', 'value': ''},
+                {'key': 'homeDistance', 'value': 0},
+                {'key': 'homeTime', 'value': 0},
+                {'key': 'otherDistance', 'value': 0},
+                {'key': 'otherTime', 'value': 0},
+                {'key': 'homeDistanceText', 'value': 'unknown'},
+                {'key': 'homeTimeText', 'value': 'unknown'},
+                {'key': 'otherDistanceText', 'value': 'unknown'},
+                {'key': 'otherTimeText', 'value': 'unknown'},
+                {'key': 'googleMapUrl', 'value': ''},
+                {'key': 'labels', 'value': ''},
+                {'key': 'longitude', 'value': 'unknown'},
+                {'key': 'horizontalAccuracy', 'value': ''},
+                {'key': 'address', 'value': ''},
+                {'key': 'latitude', 'value': 'unknown'},
+            ]
+            self.logger.debug(unicode(stateList))
+            dev.updateStatesOnServer(stateList)
 
         self.prefsUpdated = True
         dev.updateStateOnServer('deviceIsOnline', value=False, uiValue="Waiting")
@@ -504,17 +542,21 @@ class Plugin(indigo.PluginBase):
                 if time.time() > nextloopdue:
                     try:
                     #self.sleep()
-
-                        self.logger.debug(u'ronConcurrrent loop: Running Update:')
-                        self.refreshData()
-                        self.sleep(2)
-                        self.checkGeofence()   #Check distances etc of GeoFences
-                        self.sleep(2)
-                        self.checkHomeOther()
-                        nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
-                        #reset Geofence time update as done above
-                        updateGeofencedue = time.time() + 60
-                        self.logger.debug(u'ronConcurrrent loop: Next Update due (seconds):'+unicode(int(time.time()-nextloopdue)))
+                        if self.requires2FA == False:
+                            self.logger.debug(u'ronConcurrrent loop: Running Update:')
+                            self.refreshData()
+                            self.sleep(2)
+                            self.checkGeofence()   #Check distances etc of GeoFences
+                            self.sleep(2)
+                            self.checkHomeOther()
+                            nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
+                            #reset Geofence time update as done above
+                            updateGeofencedue = time.time() + 60
+                            self.logger.debug(u'ronConcurrrent loop: Next Update due (seconds):'+unicode(int(time.time()-nextloopdue)))
+                        else:
+                            self.logger.info(u"Account requires verification within Plugin Config.")
+                            nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
+                            updateGeofencedue = time.time() + 60
                     except:
                         self.logger.debug(u'Error within RunConcurrentLoop Update cycle')
                         nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
@@ -553,6 +595,9 @@ class Plugin(indigo.PluginBase):
         if not os.path.exists(folderLocation):
             os.makedirs(folderLocation)
 
+        if not os.path.exists(self.iprefDirectory):
+            os.makedirs(self.iprefDirectory)
+
         appleAPIId = self.pluginPrefs.get('appleAPIid', '')
 
         if appleAPIId != '':
@@ -577,11 +622,7 @@ class Plugin(indigo.PluginBase):
 
     def validatePrefsConfigUi(self, valuesDict):
         """ docstring placeholder """
-
-
         self.logger.debug(u"validatePrefsConfigUi() method called.")
-
-
         accountOK = False
         errorDict = indigo.Dict()
 
@@ -618,19 +659,17 @@ class Plugin(indigo.PluginBase):
                 self.logger.info("applePwd failed")
                 return (False, valuesDict, errorDict)
 
-        if 'applePwd' in valuesDict and 'appleId' in valuesDict:
-
+        if 'applePwd' in valuesDict and 'appleId' in valuesDict and valuesDict['TwoFAenabled']==False:
             # Validate login
             iLogin = self.iAuthorise(valuesDict['appleId'], valuesDict['applePwd'])
             if not iLogin[0] == 0:
                 # Failed login
                 iFail = True
                 errorDict["appleId"] = "Could not log in with that username/password combination"
-                errorDict[
-                    "showAlertText"] = "Login validation failed - check username & password or internet connection"
+                errorDict["showAlertText"] = "Login validation failed - check username & password or internet connection"
             else:
                 # Get account details
-                api = iLogin[1]
+                self.appleAPI = iLogin[1]
                     #self.logger.info(u'Login Details**********:')
                     #self.logger.info(unicode(api.friends.locations))
                 # dev = indigo.devices[devId]
@@ -641,12 +680,6 @@ class Plugin(indigo.PluginBase):
             if iFail:
                 self.logger.info("Login to Apple Server Failed")
                 return (False, valuesDict, errorDict)
-
-        self.logger.debug(u'Checking Travel Time...')
-        if valuesDict.get('travelTime',"") == "" or valuesDict.get('travelTime') == 0 or 'travelTime' not in valuesDict:
-            errorDict['travelTime']= 'Need to set this to appropriate number'
-            errorDict['showAlertText'] = 'Travel Time not correctly set'
-            return (False, valuesDict, errorDict)
 
         self.wazeRegion = valuesDict.get('wazeRegion')
         self.wazeUnits = valuesDict.get('wazeUnits')
@@ -679,15 +712,17 @@ class Plugin(indigo.PluginBase):
             username = self.pluginPrefs.get('appleId', '')
             password = self.pluginPrefs.get('applePwd', '')
             appleAPIId = self.pluginPrefs.get('appleAPIid', '')
+            Twofaenabled = self.pluginPrefs.get('TwoFAenabled', False)
 
             if appleAPIId == '':
-                self.indigo.log(u'Plugin Config Not setup.  Go to Plugin Config')
+                self.logger.info(u'Plugin Config Not setup.  Go to Plugin Config')
                 return
+
+           # if 2faenabled and self.2faverifed:
 
             iLogin = self.iAuthorise(username, password)
 
             if iLogin[0] == 1:
-
                 self.logger.debug(u"Login to icloud Failed.")
                 return
 
@@ -738,6 +773,17 @@ class Plugin(indigo.PluginBase):
                                 self.logger.debug(unicode(follow))
                             # Update device with data from iFindFriends service
                             self.refreshDataForDev(dev, follow)
+
+            for dev in indigo.devices.itervalues("self.myDevice"):
+                # Check AppleID of Device
+                if dev.enabled:
+                    targetFriend = dev.pluginProps['targetFriend']
+                    if self.debugicloud:
+                        self.logger.debug(u'targetDevice of Device equals:' + unicode(targetFriend))
+                    devicetarget = iLogin[1].devices[targetFriend].data
+                    if self.debugicloud:
+                        self.logger.debug (unicode(devicetarget))
+                    self.refreshDataforMyDevice(dev, devicetarget)
             return
 
         except Exception as e:
@@ -1037,10 +1083,87 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u'or issues contacting the www.latlong.net site.  Is internet working?')
         return
 
+    def refreshDataforMyDevice(self,dev,follow):
+        self.logger.debug(u"refreshDataforMyDevice() method called.")
+        try:
+            if self.debugicloud:
+                self.logger.debug(unicode('Now updating Data for : ' + unicode(dev.name) + ' with data received: ' + unicode(follow)))
+
+            if follow is None:
+                self.logger.debug(u'No data received for device:' + unicode(
+                    dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
+                if dev.states['deviceIsOnline']:
+                    self.logger.info(u'Friend Device:' + unicode(
+                        dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
+                    dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
+                    dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+                return
+            if 'location' not in follow:
+                self.logger.debug(u'No data received for device:' + unicode(
+                    dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
+                if dev.states['deviceIsOnline']:
+                    self.logger.info(u'Friend Device:' + unicode(
+                        dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
+                    dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
+                    dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+                return
+            if follow['location'] is None or follow['location'] == 'None':
+                self.logger.debug(u'No data received for device:' + unicode(
+                    dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
+                if dev.states['deviceIsOnline']:
+                    self.logger.info(u'Friend Device:' + unicode( dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
+                    dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
+                    dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+                return
+
+            if dev.states['latitude'] != 'unknown':
+                iDevLatitude = float(dev.states['latitude'])
+                iDevLongitude = float(dev.states['longitude'])
+                # Check to see whether moved and by how much since last check
+                Distancetravelled = self.iDistance(iDevLatitude, iDevLongitude, float(follow['location']['latitude']),
+                                                   float(follow['location']['longitude']))
+            else:
+                Distancetravelled = False, 0
+
+            stateList = [
+                {'key': 'id', 'value': follow['id']},
+                {'key': 'name', 'value': follow['name']},
+                {'key': 'deviceModelkk', 'value': follow['deviceDisplayName']},
+                {'key': 'status', 'value': follow['deviceStatus']},
+                {'key': 'batteryStatus', 'value': follow['batteryStatus']},
+                {'key': 'batteryLevel', 'value': follow['batteryLevel']},
+                {'key': 'locationTimestamp', 'value': follow['location']['timeStamp']},
+                {'key': 'timestamp', 'value': follow['location']['timeStamp']},
+                {'key': 'altitude', 'value': follow['location']['altitude']},
+                {'key': 'longitude', 'value': follow['location']['longitude']},
+                {'key': 'horizontalAccuracy', 'value': follow['location']['horizontalAccuracy']},
+                {'key': 'latitude', 'value': follow['location']['latitude']},
+                {'key': 'distanceSinceCheck', 'value': str(Distancetravelled[1])},
+            ]
+
+            self.logger.debug(unicode(stateList))
+
+            dev.updateStatesOnServer(stateList)
+            # Change to strftime user selectable date for DeviceLastUpdate field
+            # Is Plugin config selectable
+
+            update_time = t.strftime(self.datetimeFormat)
+            dev.updateStateOnServer('deviceLastUpdated', value=str(update_time))
+            dev.updateStateOnServer('deviceTimestamp', value=t.time())
+            dev.updateStateOnServer('deviceIsOnline', value=True)
+            dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+
+        except Exception as e:
+            self.logger.debug(unicode('Exception in refreshDataformyDevice: ' + unicode(e)))
+            self.logger.debug('Exception:')
+            self.logger.exception(unicode('Possibility missing some data from icloud:  Is your account setup with FindFriends enabled on iOS/Mobile device?'))
+            dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
+            dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+            return
+
+
     def refreshDataForDev(self, dev, follow):
         """ Refreshes device data. """
-
-
         self.logger.debug(u"refreshDataForDev() method called.")
         try:
             if self.debugicloud:
@@ -1175,7 +1298,7 @@ class Plugin(indigo.PluginBase):
         except Exception as e:
             self.logger.debug(unicode('Exception in refreshDataforDev: ' + unicode(e)))
             self.logger.debug('Exception:')
-            self.logger.info(unicode('Possibility missing some data from icloud:  Is your account setup with FindFriends enabled on iOS/Mobile device?'))
+            self.logger.exception(unicode('Possibility missing some data from icloud:  Is your account setup with FindFriends enabled on iOS/Mobile device?'))
             dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             return
@@ -1363,6 +1486,50 @@ class Plugin(indigo.PluginBase):
             self.logger.info(u'Error within myFriendsDevices')
             return []
 
+    def myDevices(self, filter=0, valuesDict=None, typeId="", targetId=0):
+
+        ################################################
+        # Internal - Lists the Friends linked to an account
+        try:
+
+            self.logger.debug(unicode(u'myDevices Called...'))
+            # try:
+            # Create an array where each entry is a list - the first item is
+            # the value attribute and last is the display string that will be shown
+            # Devices filtered on the chosen account
+
+            # self.logger.info(unicode(valuesDict))
+            iArray = []
+            username = self.pluginPrefs.get('appleId', '')
+            password = self.pluginPrefs.get('applePwd', '')
+            appleAPIId = self.pluginPrefs.get('appleAPIid', '')
+
+            if appleAPIId == '':
+                iWait = 0, "Set up Apple Account in Plugin Config"
+                iArray.append(iWait)
+                return iArray
+                # go no futher unless have account details entered
+
+            iLogin = self.iAuthorise(username, password)
+
+            if iLogin[0] == 1:
+                self.logger.debug(u"Login to icloud Failed.")
+                iWait = 0, 'Login to icloud Failed'
+                iArray.append(iWait)
+                return iArray
+
+            following = iLogin[1].devices
+            for fol in following:
+                #self.logger.info(unicode(fol.data['id'])+" and "+unicode(fol.data['name']))
+                iOption2 = fol.data['id'], fol.data['name']
+                # self.logger.info(unicode(iOption2))
+                iArray.append(iOption2)
+            return iArray
+
+        except:
+            self.logger.exception(u'Error within myDevices')
+            return []
+
     def iAuthorise(self, iUsername, iPassword):
         ################################################s
         # Logs in and authorises access to the Find my Phone API
@@ -1371,8 +1538,20 @@ class Plugin(indigo.PluginBase):
         self.logger.debug('Attempting login...')
         # Logs into the API as required
         try:
-            appleAPI = PyiCloudService(iUsername, iPassword)
-            self.logger.debug(u'Login successful...')
+            if self.appleAPI == None:
+                self.appleAPI = PyiCloudService(iUsername, iPassword, cookie_directory=self.iprefDirectory, session_directory=self.iprefDirectory+"/session")
+                self.logger.debug(u'Login successful...')
+                self.logger.debug(u"Account Requires 2FA:" + unicode(self.appleAPI.requires_2fa))
+                self.requires2FA = self.appleAPI.requires_2fa
+
+                if self.requires2FA:
+                    self.logger.info(u"Account requires a two step authenication:  Please see Plugin Config box to complete")
+                    return
+
+            if self.appleAPI:
+                self.appleAPI.authenticate(refresh_session=True)
+
+            appleAPI = self.appleAPI
             if self.debugicloud:
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
@@ -1423,14 +1602,22 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(unicode(appleAPI.friends.details))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
-            return 0, appleAPI
+            return 0, self.appleAPI
 
         except PyiCloudFailedLoginException:
             self.logger.error(u'Login failed - Check username/password - has it changed recently.  2FA is not allowed/supported on this account')
             return 1, 'NL'
 
-        except PyiCloud2SARequiredError:
+        except PyiCloud2SARequiredException:
             self.logger.error(u'Login failed - 2SA and 2FA Authenication are NOT supported.  Create new account without.')
+            return 1, 'NL'
+
+        except PyiCloudNoStoredPasswordAvailableException:
+            self.logger.error(u'Login failed - No Stored Pasword Available Exception.')
+            return 1, 'NL'
+
+        except PyiCloudNoDevicesException:
+            self.logger.error(u'Login failed - No Devices Exception. .')
             return 1, 'NL'
 
         except ValueError as e:
@@ -1447,6 +1634,50 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u'Login Failed General Error.   ' + unicode(e.message) + unicode(e.__dict__))
             self.logger.error(e)
             return 1, 'NI'
+
+
+    def loginAccount(self, valuesDict):
+        self.logger.debug(u'loginAccount Button pressed Called.')
+
+        self.validatePrefsConfigUi(valuesDict)
+
+        self.logger.debug(u"Using Details: Username:"+unicode(valuesDict['appleId'])+u" and password:"+unicode(valuesDict['applePwd']))
+        self.appleAPI = None
+        self.pluginPrefs['appleAPIid']= ""
+        valuesDict['appleAPIid']=''
+        iLogin = self.iAuthorise(valuesDict['appleId'], valuesDict['applePwd'])
+
+        self.logger.info(u"Account Requires 2FA to continue:"+unicode(iLogin[1].requires_2fa))
+        self.requires2FA = iLogin[1].requires_2fa
+
+        return valuesDict
+
+    def submitCode(self,valuesDict):
+        self.logger.debug(u'submit Code Button pressed Called.')
+        vercode = valuesDict['verficationcode']
+        if vercode is None:
+            self.logger.error("Please enter code")
+            return
+
+        validcode = self.appleAPI.validate_2fa_code(vercode)
+
+        if validcode == False:
+            self.logger.error("Code Error:  Please try again...")
+            return
+        else:
+            self.logger.info("Verification Code Accepted.")
+            valuesDict['appleAPIid'] = valuesDict['appleId']
+            self.pluginPrefs['appleAPIid'] = valuesDict['appleId']
+            self.logger.info(u"Trusted Session:"+unicode(self.appleAPI.is_trusted_session))
+
+        if not self.appleAPI.is_trusted_session:
+            self.logger.info("Session is not Trusted. Requesting Trust...")
+            result = self.appleAPI.trust_session()
+            self.logger.info("Session Trust Result:"+ unicode(result))
+
+
+        return valuesDict
+
 
     def urlGenerate(self, latitude, longitude, mapAPIKey, iHorizontal, iVertical, iZoom, dev):
         ################################################
