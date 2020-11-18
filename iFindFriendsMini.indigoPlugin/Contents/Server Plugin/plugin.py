@@ -29,6 +29,7 @@ import sys
 import math
 
 import OpenSSL
+import WazeRouteCalculator
 
 import time as t
 
@@ -263,7 +264,9 @@ class Plugin(indigo.PluginBase):
         self.datetimeFormat = self.pluginPrefs.get('datetimeFormat','%c')
         self.googleAPI = self.pluginPrefs.get('googleAPI','')
         self.BingAPI = self.pluginPrefs.get('BingAPI','')
-        self.travelTime = self.pluginPrefs.get('travelTime','16.7')
+
+        self.wazeRegion = self.pluginPrefs.get('wazeRegion','EU')
+        self.wazeUnits = self.pluginPrefs.get('wazeUnits','km')
         self.deviceNeedsUpdated = ''
         self.openStore = self.pluginPrefs.get('openStore',False)
 
@@ -645,7 +648,8 @@ class Plugin(indigo.PluginBase):
             errorDict['showAlertText'] = 'Travel Time not correctly set'
             return (False, valuesDict, errorDict)
 
-        self.travelTime = valuesDict.get('travelTime')
+        self.wazeRegion = valuesDict.get('wazeRegion')
+        self.wazeUnits = valuesDict.get('wazeUnits')
 
         return True, valuesDict
 
@@ -1633,6 +1637,32 @@ class Plugin(indigo.PluginBase):
             self.logger.info(u'urlAllGenerate'+unicode(e))
             return ''
 
+    def useWaze(self, lat, long, endlat, endlong):
+        try:
+            from_loc = str(lat) + "," + str(long)
+            to_loc = str(endlat) + "," + str(endlong)
+            route = WazeRouteCalculator.WazeRouteCalculator(from_loc, to_loc, self.wazeRegion)
+            route_time, route_distance = route.calc_route_info()
+            timedisplay = str('Time %.2f minutes.' % route_time)
+
+            if self.wazeUnits == "km":
+                distancedisplay = str('Distance %.2f km.' % route_distance)
+            else:
+                route_distance = route_distance / 1.609344
+                distancedisplay = str('Distance %.2f miles.' % route_distance)
+
+            route_time = round(route_time, 0)
+            route_distance = round(route_distance, 2)
+
+            return timedisplay, distancedisplay, route_time, route_distance
+
+        except WazeRouteCalculator.WRCError as err:
+            self.logger.debug("Waze Error: "+str(err))
+            return "unknown","unknown",0,0
+        except:
+            self.logger.exception("Exception in using Waze Route Calculator")
+            return "unknown","unknown",0,0
+
 
 
     def checkHomeOther(self):
@@ -1677,13 +1707,13 @@ class Plugin(indigo.PluginBase):
                                 self.logger.debug('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(
                                     iDevLatitude) + ',' + str(iDevLongitude))
 
-                                origin = igeoLat, igeoLong
-                                destination = iDevLatitude, iDevLongitude
-                                iRealDistanceHome = self.iDistance(igeoLat, igeoLong, iDevLatitude, iDevLongitude)
+                                #origin = igeoLat, igeoLong
+                                #destination = iDevLatitude, iDevLongitude
+                                #iRealDistanceHome = self.iDistance(igeoLat, igeoLong, iDevLatitude, iDevLongitude)
 
 
                                 #self.distanceCalculation(origin, destination, self.googleAPI, 'driving', "metric")
-                                self.logger.debug(u'Home Calculation: Equals Time/Distance:'+unicode(iRealDistanceHome))
+                                #self.logger.debug(u'Home Calculation: Equals Time/Distance:'+unicode(iRealDistanceHome))
 
                                 # if len(iRealDistanceHome[2]) != 0 and iRealDistanceHome[0] != 'FailAPI':
                                 #     try:
@@ -1698,11 +1728,17 @@ class Plugin(indigo.PluginBase):
                                 #         self.logger.exception('iGeoLocation')
                                 #         iRealDistanceVal = 0.0
                                 #         iTimeMinutes =0
-                                timeResultsHome = self.iConvertMetersTime(iRealDistanceHome[1])
-                                dev.updateStateOnServer('homeDistanceText', value=self.iConvertMeters(iRealDistanceHome[1]))
-                                dev.updateStateOnServer('homeTimeText', value=str(timeResultsHome[0]))
-                                dev.updateStateOnServer('homeDistance', value=iRealDistanceHome[1] )
-                                dev.updateStateOnServer('homeTime', value=str(timeResultsHome[1]))
+
+
+                                #timeResultsHome = self.iConvertMetersTime(iRealDistanceHome[1])
+
+                                timedisplay, distancedisplay, route_time, route_distance =  self.useWaze(iDevLatitude,iDevLongitude,igeoLat, igeoLong)
+                               # texttodisplay = str('Time %.2f minutes, distance %.2f km.' % route_time, route_distance)
+                                if timedisplay != "unknown":
+                                    dev.updateStateOnServer('homeDistanceText', value=distancedisplay)
+                                    dev.updateStateOnServer('homeTimeText', value=timedisplay)
+                                    dev.updateStateOnServer('homeDistance', value=route_distance )
+                                    dev.updateStateOnServer('homeTime', value=route_time)
 
                     if igeoName == 'Other':
                         igeoLong = float(localProps['geoLongitude'])
@@ -1722,13 +1758,13 @@ class Plugin(indigo.PluginBase):
                                 self.logger.debug('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(
                                     iDevLatitude) + ',' + str(iDevLongitude))
 
-                                origin = igeoLat, igeoLong
-                                destination = iDevLatitude, iDevLongitude
-                                iRealDistanceOther= self.iDistance(igeoLat, igeoLong, iDevLatitude, iDevLongitude)
+                                #origin = igeoLat, igeoLong
+                                #destination = iDevLatitude, iDevLongitude
+                                #iRealDistanceOther= self.iDistance(igeoLat, igeoLong, iDevLatitude, iDevLongitude)
 
 
                                 #self.distanceCalculation(origin, destination, self.googleAPI, 'driving', "metric")
-                                self.logger.debug(u'Home Calculation: Equals Time/Distance:' + unicode(iRealDistanceOther[1]))
+                                #self.logger.debug(u'Home Calculation: Equals Time/Distance:' + unicode(iRealDistanceOther[1]))
 
                                 # if len(iRealDistanceHome[2]) != 0 and iRealDistanceHome[0] != 'FailAPI':
                                 #     try:
@@ -1744,12 +1780,15 @@ class Plugin(indigo.PluginBase):
                                 #         iRealDistanceVal = 0.0
                                 #         iTimeMinutes =0
 
-                                timeResultsOther = self.iConvertMetersTime(iRealDistanceOther[1])
+                                #timeResultsOther = self.iConvertMetersTime(iRealDistanceOther[1])
 
-                                dev.updateStateOnServer('otherDistanceText', value=self.iConvertMeters(iRealDistanceOther[1]))
-                                dev.updateStateOnServer('otherTimeText', value=timeResultsOther[0])
-                                dev.updateStateOnServer('otherDistance', value=int(iRealDistanceOther[1]))
-                                dev.updateStateOnServer('otherTime', value=timeResultsOther[1])
+                                timedisplay, distancedisplay, route_time, route_distance =  self.useWaze(iDevLatitude,iDevLongitude,igeoLat, igeoLong)
+
+                                if timedisplay != "unknown":
+                                    dev.updateStateOnServer('otherDistanceText', value=distancedisplay)
+                                    dev.updateStateOnServer('otherTimeText', value=timedisplay)
+                                    dev.updateStateOnServer('otherDistance', value=route_distance)
+                                    dev.updateStateOnServer('otherTime', value=route_time)
         except Exception as e:
             self.logger.exception(u'Error Within checkHomeOther:')
             return
@@ -1772,22 +1811,22 @@ class Plugin(indigo.PluginBase):
             self.logger.exception('iCovertMeters Exception')
             return 'Unknown'
 
-    def iConvertMetersTime(self, meters):
-        self.logger.debug('iConvertMetersTime Called')
-        try:
-            texttoreturn = ''
-            secondsoftime = int(meters/float(self.travelTime))
-            hours, remainder = divmod(secondsoftime, 3600)
-            minutes, seconds = divmod(remainder, 60)
-            if hours>0:
-                texttoreturn = '%s hr(s) %s minutes' % (hours, minutes)
-            else:
-                texttoreturn = '%s minutes' % (minutes)
-            return texttoreturn, secondsoftime
-        except:
-            self.logger.exception('iCovertMetersTime Exception:  Is Plugin Config probably setup? Is Travel Time a number?')
-
-            return 'Unknown', 'Unknown'
+    # def iConvertMetersTime(self, meters):
+    #     self.logger.debug('iConvertMetersTime Called')
+    #     try:
+    #         texttoreturn = ''
+    #         secondsoftime = int(meters/float(self.travelTime))
+    #         hours, remainder = divmod(secondsoftime, 3600)
+    #         minutes, seconds = divmod(remainder, 60)
+    #         if hours>0:
+    #             texttoreturn = '%s hr(s) %s minutes' % (hours, minutes)
+    #         else:
+    #             texttoreturn = '%s minutes' % (minutes)
+    #         return texttoreturn, secondsoftime
+    #     except:
+    #         self.logger.exception('iCovertMetersTime Exception:  Is Plugin Config probably setup? Is Travel Time a number?')
+    #
+    #         return 'Unknown', 'Unknown'
 
 
     def iDistance(self, lat1, long1, lat2, long2):

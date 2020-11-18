@@ -135,15 +135,29 @@
     </Field>
       <Field id="bingsep1" type="separator" visibleBindingId="mapType" visibleBindingValue="BingRoad,BingSatellite,BingGray,BingBirdsEye,BingCanvasLight,BingSatelliteWO"/>
 
-    <Field id="travelTime" type="textfield" tooltip="Time to travel 1 kilometer" defaultValue="">
-     <Label>Meters/Second for Travel calculation:</Label><Label/>
-     <Description>Enter travel speed for approx travel time calculations in meters/second eg. 16.7 m/s = 60km/hr</Description>
+    <Field id="sepspace226" type="separator"/>
+
+    <Field id="sepspace210" type="label" alignText="right">
+        <Label>Regional:</Label>
     </Field>
-        <Field id="anotherspace221" type="label" fontSize="small" alignText="right">
-        <Label>Approx speed in meters/sec for calculation of travel time from distance
-            eg. 60km/hr average seems to work well - 16.7m/s
-        </Label>
+        <Field id="sepsep44" type="separator"/>
+    <Field id="wazeRegion" type="menu" >
+        <Label>Region Type: </Label>
+        <List>
+            <Option value="EU">Europe</Option>
+            <Option value="US">US or North America</Option>
+            <Option value="AU">Australia</Option>
+            <Option value="IL">Israel</Option>
+        </List>
     </Field>
+    <Field id="wazeUnits" type="menu" >
+        <Label>Distance Units: </Label>
+        <List>
+            <Option value="mi">Miles</Option>
+            <Option value="km">Kilometers</Option>
+        </List>
+    </Field>
+
 
     <Field id="space226" type="separator"/>
 
