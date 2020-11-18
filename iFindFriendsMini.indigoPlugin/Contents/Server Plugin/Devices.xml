@@ -329,17 +329,6 @@
                 <TriggerLabel>Device online?</TriggerLabel>
                 <ControlPageLabel>Device online?</ControlPageLabel>
             </State>
-            <State id="mapUpdateNeeded">
-                <ValueType>Boolean</ValueType>
-                <TriggerLabel>Map needs to be updated</TriggerLabel>
-                <ControlPageLabel>Map needs to be updated</ControlPageLabel>
-            </State>
-            <State id="mapLastUpdated">
-                <ValueType>String</ValueType>
-                <TriggerLabel>Time Map Last Updated</TriggerLabel>
-                <ControlPageLabel>Time Map Last Updated</ControlPageLabel>
-            </State>
-
             <State id="deviceLastUpdated">
                 <ValueType>String</ValueType>
                 <TriggerLabel>Device Last Updated</TriggerLabel>
@@ -350,7 +339,6 @@
                 <TriggerLabel>Distance Travelled since last checked</TriggerLabel>
                 <ControlPageLabel>Distance Travselled since last check</ControlPageLabel>
             </State>
-
             <State id="deviceTimestamp">
                 <ValueType>String</ValueType>
                 <TriggerLabel>Device Timestamp</TriggerLabel>
@@ -448,11 +436,6 @@
                 <ValueType>String</ValueType>
                 <TriggerLabel>altitude</TriggerLabel>
                 <ControlPageLabel>altitude</ControlPageLabel>
-            </State>
-            <State id="labels">
-                <ValueType>String</ValueType>
-                <TriggerLabel>labels</TriggerLabel>
-                <ControlPageLabel>labels</ControlPageLabel>
             </State>
             <State id="longitude">
                 <ValueType>String</ValueType>

@@ -438,7 +438,6 @@ class Plugin(indigo.PluginBase):
                 {'key': 'otherDistanceText', 'value': 'unknown'},
                 {'key': 'otherTimeText', 'value': 'unknown'},
                 {'key': 'googleMapUrl', 'value': ''},
-                {'key': 'labels', 'value': ''},
                 {'key': 'longitude', 'value': 'unknown'},
                 {'key': 'horizontalAccuracy', 'value': ''},
                 {'key': 'address', 'value': ''},
@@ -1127,8 +1126,8 @@ class Plugin(indigo.PluginBase):
 
             stateList = [
                 {'key': 'id', 'value': follow['id']},
-                {'key': 'name', 'value': follow['name']},
-                {'key': 'deviceModelkk', 'value': follow['deviceDisplayName']},
+                {'key': 'deviceName', 'value': follow['name']},
+                {'key': 'deviceModel', 'value': follow['deviceDisplayName']},
                 {'key': 'status', 'value': follow['deviceStatus']},
                 {'key': 'batteryStatus', 'value': follow['batteryStatus']},
                 {'key': 'batteryLevel', 'value': follow['batteryLevel']},
