@@ -38,16 +38,17 @@ try:
 except ImportError:
     MajorProblem = 2  #1 to restart, 2 to disable
     pass
-
+#
 # try:
 #     from pyicloud import PyiCloudService
 #     #from pyicloud.exceptions import PyiCloudFailedLoginException
 #     #import moduledoesntexisit
 #     from pyicloud.exceptions import (
 #         PyiCloudFailedLoginException,
-#         PyiCloudAPIResponseError,
-#         PyiCloud2SARequiredError,
-#         PyiCloudServiceNotActivatedErrror
+#         PyiCloudAPIResponseException,
+#         PyiCloudNoDevicesException,
+#         PyiCloud2SARequiredException,
+#         PyiCloudServiceNotActivatedException,
 #     )
 try:
     from custompyicloud.custompyicloud import PyiCloudService
@@ -166,7 +167,7 @@ import datetime
 #from ghpu import GitHubPluginUpdater
 
 global accountOK
-global appleAPI
+#global self.appleAPI
 
 # Custom imports
 #import iterateXML
@@ -195,7 +196,7 @@ class Plugin(indigo.PluginBase):
 
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
         self.startingUp = True
-        self.appleAPI = None
+        apleAPI = None
         self.pluginIsInitializing = True
         self.pluginIsShuttingDown = False
         self.prefsUpdated = False
@@ -237,6 +238,8 @@ class Plugin(indigo.PluginBase):
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.debug(u"logLevel = " + str(self.logLevel))
         self.triggers = {}
+
+        self.appleAPI = None
 
         self.debugicloud = self.pluginPrefs.get('debugicloud', False)
         self.debugLevel = int(self.pluginPrefs.get('showDebugLevel', 20))
@@ -475,6 +478,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"actionrefreshmaps() method called.")
         for dev in indigo.devices.iter('self.FindFriendsFriend'):
             dev.updateStateOnServer('mapUpdateNeeded', value=True)
+
         self.refreshData()
 
         return
@@ -516,6 +520,24 @@ class Plugin(indigo.PluginBase):
         self.configMenuTimeCheck = int(action.props.get('configMenuTimeCheck', "5"))
         self.prefsUpdated = True
         return
+
+    def playSound(self, action):
+        try:
+            self.logger.debug(u"PlaySound method called.")
+            # If plugin config menu closed update the time for check.  Will apply after first change.
+            targetDevice = action.props.get('targetDevice', "")
+            self.logger.debug("targetDevice: "+unicode(targetDevice))
+            if targetDevice =="":
+                self.logger.info("Please Enter a Device.")
+                return
+
+            if self.appleAPI != None:
+                self.appleAPI.play_sound(targetDevice)
+
+            return
+        except Exception as e:
+            self.logger.exception(u"Exception in PlaySound")
+
 
     def runConcurrentThread(self):
         """ docstring placeholder """
@@ -587,7 +609,7 @@ class Plugin(indigo.PluginBase):
 
         self.logger.debug(u"Starting FindFriendsMini. startup() method called.")
         #self.updater = GitHubPluginUpdater(self)
-        # Set appleAPI account as not verified on start of startup
+        # Set self.appleAPI account as not verified on start of startup
         accountOK = False
         MAChome = os.path.expanduser("~") + "/"
         folderLocation = MAChome + "Documents/Indigo-iFindFriendMini/"
@@ -597,17 +619,17 @@ class Plugin(indigo.PluginBase):
         if not os.path.exists(self.iprefDirectory):
             os.makedirs(self.iprefDirectory)
 
-        appleAPIId = self.pluginPrefs.get('appleAPIid', '')
+        self.appleAPIId = self.pluginPrefs.get('appleAPIid', '')
 
-        if appleAPIId != '':
-
-            self.logger.debug(u"AppleAPIID is not empty - logging in to appleAPI now.")
-            username = self.pluginPrefs.get('appleId')
-            password = self.pluginPrefs.get('applePwd')
-            appleAPI = self.iAuthorise(username, password)
-
-            if appleAPI[0] == 1:
-                self.logger.debug(u"Login to icloud Failed.")
+        # if self.appleAPIId != '':
+        #
+        #     self.logger.debug(u"self.appleAPIID is not empty - logging in to self.appleAPI now.")
+        #     username = self.pluginPrefs.get('appleId')
+        #     password = self.pluginPrefs.get('applePwd')
+        #     self.appleAPI = self.iAuthorise(username, password)
+        #
+        #     if self.appleAPI[0] == 1:
+        #         self.logger.debug(u"Login to icloud Failed.")
 
 
     def validateDeviceConfigUi(self, valuesDict, typeID, devId):
@@ -725,8 +747,9 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"Login to icloud Failed.")
                 return
 
-            appleAPI = iLogin[1]
-            follower = iLogin[1].friends.locations
+            self.appleAPI = iLogin[1]
+            follower = self.appleAPI.friends.locations
+
             if self.debugicloud:
                 self.logger.debug(unicode('Follower is Type: '+ unicode(type(follower))))
             if self.debugicloud:
@@ -734,7 +757,7 @@ class Plugin(indigo.PluginBase):
             if len(follower) == 0:
                 self.logger.info(u'No Followers Found for this Account.  Have you any friends?')
                 if self.debugicloud:
-                    self.logger.debug(u'Full Dump of AppleAPI data follows:')
+                    self.logger.debug(u'Full Dump of self.appleAPI data follows:')
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(unicode(iLogin[1].friends.data))
@@ -747,7 +770,7 @@ class Plugin(indigo.PluginBase):
             if follower is None:
                 self.logger.info(u'No Followers Found for this Account.  Have you any (enabled) friends?')
                 if self.debugicloud:
-                    self.logger.debug(u'Full Dump of AppleAPI data follows:')
+                    self.logger.debug(u'Full Dump of self.appleAPI data follows:')
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(unicode(iLogin[1].friends.data))
@@ -779,10 +802,26 @@ class Plugin(indigo.PluginBase):
                     targetFriend = dev.pluginProps['targetFriend']
                     if self.debugicloud:
                         self.logger.debug(u'targetDevice of Device equals:' + unicode(targetFriend))
-                    devicetarget = iLogin[1].devices[targetFriend].data
+                    devicetarget = self.appleAPI.devices[targetFriend].data
+                    #self.logger.error("********* DeviceTarget: "+unicode(devicetarget))
                     if self.debugicloud:
                         self.logger.debug (unicode(devicetarget))
                     self.refreshDataforMyDevice(dev, devicetarget)
+            return
+
+        except PyiCloudAPIResponseException as e:
+            self.logger.debug(u'Login Failed API Response Error.   ' + unicode(e.message) + unicode(e.__dict__))
+            self.logger.debug(e)
+            return
+
+        except PyiCloudFailedLoginException:
+            self.logger.debug(u'Login failed - Check username/password - has it changed recently?. ')
+            return
+
+        except PyiCloud2SARequiredException:
+            self.logger.info(u'Login failed.  Account requires 2nd factor, verification code setup.  Please see config window')
+            self.requires2FA = True
+            self.triggerCheck2fa()
             return
 
         except Exception as e:
@@ -794,6 +833,8 @@ class Plugin(indigo.PluginBase):
             self.logger.info(u'This needs to be done, for FindmyFriends to work.  You cannot just create account.')
             self.logger.info(u"{0:=^130}".format(""))
             return
+
+
 
     def updateGeofencetime(self):
         try:
@@ -1485,6 +1526,7 @@ class Plugin(indigo.PluginBase):
             self.logger.info(u'Error within myFriendsDevices')
             return []
 
+
     def myDevices(self, filter=0, valuesDict=None, typeId="", targetId=0):
 
         ################################################
@@ -1519,7 +1561,7 @@ class Plugin(indigo.PluginBase):
 
             following = iLogin[1].devices
             for fol in following:
-                #self.logger.info(unicode(fol.data['id'])+" and "+unicode(fol.data['name']))
+                self.logger.info(unicode(fol.data['id'])+" and "+unicode(fol.data['name']))
                 iOption2 = fol.data['id'], fol.data['name']
                 # self.logger.info(unicode(iOption2))
                 iArray.append(iOption2)
@@ -1537,56 +1579,51 @@ class Plugin(indigo.PluginBase):
         self.logger.debug('Attempting login...')
         # Logs into the API as required
         try:
-            if self.appleAPI == None:
-                self.appleAPI = PyiCloudService(iUsername, iPassword, cookie_directory=self.iprefDirectory, session_directory=self.iprefDirectory+"/session")
-                self.logger.debug(u'Login successful...')
-                self.logger.debug(u"Account Requires 2FA:" + unicode(self.appleAPI.requires_2fa))
-                self.requires2FA = self.appleAPI.requires_2fa
+            self.appleAPI = PyiCloudService(iUsername, iPassword, cookie_directory=self.iprefDirectory, session_directory=self.iprefDirectory+"/session", verify=True)
+            self.logger.debug(u'Login successful...')
+            self.logger.debug(u"Account Requires 2FA:" + unicode(self.appleAPI.requires_2fa))
+            self.requires2FA =self.appleAPI.requires_2fa
+            if self.requires2FA:
+                self.logger.info(u"Account requires a two step authenication:  Please see Plugin Config box to complete")
+                return
 
-                if self.requires2FA:
-                    self.logger.info(u"Account requires a two step authenication:  Please see Plugin Config box to complete")
-                    return
-
-            if self.appleAPI:
-                self.appleAPI.authenticate(refresh_session=True)
-
-            appleAPI = self.appleAPI
+            #self.appleAPI = self.self.appleAPI
             if self.debugicloud:
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'type AppleAPI result equals:')
-                self.logger.debug(unicode(type(appleAPI)))
-                #self.logger.debug(u'AppleAPI.devices equals:')
-                #self.logger.debug(unicode(appleAPI.devices))
+                self.logger.debug(u'type self.appleAPI result equals:')
+                self.logger.debug(unicode(type(self.appleAPI)))
+                #self.logger.debug(u'self.appleAPI.devices equals:')
+                #self.logger.debug(unicode(self.appleAPI.devices))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'AppleAPI.friends.details equals:')
-                self.logger.debug(unicode(appleAPI.friends.details))
+                self.logger.debug(u'self.appleAPI.friends.details equals:')
+                self.logger.debug(unicode(self.appleAPI.friends.details))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'AppleAPI.friends.locations equals:')
-                self.logger.debug(unicode(appleAPI.friends.locations))
+                self.logger.debug(u'self.appleAPI.friends.locations equals:')
+                self.logger.debug(unicode(self.appleAPI.friends.locations))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'Type of appleAPI.friends.locations equals:')
-                self.logger.debug(unicode(type(appleAPI.friends.locations)))
+                self.logger.debug(u'Type of self.appleAPI.friends.locations equals:')
+                self.logger.debug(unicode(type(self.appleAPI.friends.locations)))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'Type of appleAPI.friends.data')
-                self.logger.debug(unicode(type(appleAPI.friends.data)))
+                self.logger.debug(u'Type of self.appleAPI.friends.data')
+                self.logger.debug(unicode(type(self.appleAPI.friends.data)))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'AppleAPI.friends.data equals')
-                self.logger.debug(unicode(appleAPI.friends.data))
+                self.logger.debug(u'self.appleAPI.friends.data equals')
+                self.logger.debug(unicode(self.appleAPI.friends.data))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'appleAPI.friends.data[followers] equals:')
-                self.logger.debug(unicode(appleAPI.friends.data['followers']))
+                self.logger.debug(u'self.appleAPI.friends.data[followers] equals:')
+                self.logger.debug(unicode(self.appleAPI.friends.data['followers']))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
 
-                follower = appleAPI.friends.data['followers']
-                self.logger.debug(u'follower or appleAPI.friends.data[followers] equals:')
+                follower = self.appleAPI.friends.data['followers']
+                self.logger.debug(u'follower or self.appleAPI.friends.data[followers] equals:')
                 for fol in follower:
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u"{0:=^130}".format(""))
@@ -1597,26 +1634,20 @@ class Plugin(indigo.PluginBase):
 
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'AppleAPI.friends.details equals:')
-                self.logger.debug(unicode(appleAPI.friends.details))
+                self.logger.debug(u'self.appleAPI.friends.details equals:')
+                self.logger.debug(unicode(self.appleAPI.friends.details))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
             return 0, self.appleAPI
 
         except PyiCloudFailedLoginException:
-            self.logger.error(u'Login failed - Check username/password - has it changed recently.  2FA is not allowed/supported on this account')
+            self.logger.error(u'Login failed - Check username/password - has it changed recently?. ')
             return 1, 'NL'
 
         except PyiCloud2SARequiredException:
-            self.logger.error(u'Login failed - 2SA and 2FA Authenication are NOT supported.  Create new account without.')
-            return 1, 'NL'
-
-        except PyiCloudNoStoredPasswordAvailableException:
-            self.logger.error(u'Login failed - No Stored Pasword Available Exception.')
-            return 1, 'NL'
-
-        except PyiCloudNoDevicesException:
-            self.logger.error(u'Login failed - No Devices Exception. .')
+            self.logger.error(u'Login failed.  Account requires 2nd factor, verification code setup.  Please see config window')
+            self.requires2FA = True
+            self.triggerCheck2fa()
             return 1, 'NL'
 
         except ValueError as e:
@@ -1628,7 +1659,10 @@ class Plugin(indigo.PluginBase):
 
             return 1, 'NL'
 
-
+        except PyiCloudAPIResponseException as e:
+            self.logger.error(u'Login Failed API Response Error.   ' + unicode(e.message) + unicode(e.__dict__))
+            self.logger.error(e)
+            return 1, 'NI'
         except Exception as e:
             self.logger.error(u'Login Failed General Error.   ' + unicode(e.message) + unicode(e.__dict__))
             self.logger.error(e)
@@ -2172,6 +2206,19 @@ class Plugin(indigo.PluginBase):
         assert trigger.id in self.triggers
         del self.triggers[trigger.id]
 
+    def triggerCheck2fa(self):
+        self.logger.debug("Checking trigger as 2FA state called")
+        for triggerId, trigger in sorted(self.triggers.iteritems()):
+            self.logger.debug("Checking Trigger %s (%s), Type: %s, Friend: %s, and event : %s" % (
+            trigger.name, trigger.id, trigger.pluginTypeId))
+            # self.logger.error(unicode(trigger))
+
+            if trigger.pluginTypeId == "account2FAneeded" :
+                # 2fa failed
+                # send trigger.
+                self.logger.debug("======== Executing Trigger %s (%d)" % (trigger.name, trigger.id))
+                indigo.trigger.execute(trigger)
+
     def triggerCheck(self, device, friend, triggertype):
 
         self.logger.debug('triggerCheck run.  device.id:'+unicode(device.id)+' friend:'+unicode(friend)+' triggertype:'+unicode(triggertype))
@@ -2190,11 +2237,17 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u'Trigger Cancelled as Device is Not Online')
                 return
 
-
             for triggerId, trigger in sorted(self.triggers.iteritems()):
 
                 self.logger.debug("Checking Trigger %s (%s), Type: %s, Friend: %s, and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId, friend, triggertype))
                 #self.logger.error(unicode(trigger))
+
+                if trigger.pluginTypeId == "account2FAneeded" and triggertype=='account2FAneeded':
+                    # 2fa failed
+                    # send trigger.
+                    self.logger.debug("======== Executing Trigger %s (%d)" % (trigger.name, trigger.id))
+                    indigo.trigger.execute(trigger)
+
 
                 if trigger.pluginProps["geofenceId"] != str(device.id) or (trigger.pluginTypeId == "geoFenceExit" and triggertype !='EXIT') or (trigger.pluginTypeId == "geoFenceEnter" and triggertype !='ENTER'):
                     self.logger.debug("Skipping Trigger %s (%s), wrong device: %s, or friend: %s,  or event : %s" % (trigger.name, trigger.id, device.id, friend, triggertype))

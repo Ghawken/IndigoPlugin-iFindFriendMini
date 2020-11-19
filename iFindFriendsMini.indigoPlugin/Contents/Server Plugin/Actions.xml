@@ -29,4 +29,14 @@
         </Field>
         </ConfigUI>
     </Action>
+    <Action id="playSound" uiPath="DeviceActions">
+        <Name>Play Sound on Device</Name>
+        <CallbackMethod>playSound</CallbackMethod>
+        <ConfigUI>
+    <Field id="targetDevice" type="menu">
+				<Label>Device:</Label>
+				<List class="self" filter='' method = "myDevices" dynamicReload="true" />
+			</Field>
+        </ConfigUI>
+    </Action>
 </Actions>

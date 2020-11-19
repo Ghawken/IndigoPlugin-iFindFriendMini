@@ -27,6 +27,15 @@
             </Field>
         </ConfigUI>
     </Event>
-  
+
+      <Event id="account2FAneeded">
+        <Name>Trigger on Account needing re-Verification</Name>
+        <ConfigUI>
+            <Field id="geofenceId" type="menu" hidden="true">
+                <Label>Select GeoFence:</Label>
+                <List class="indigo.devices" filter="self.FindFriendsGeofence"/>
+            </Field>
+        </ConfigUI>
+    </Event>
 </Events>
 

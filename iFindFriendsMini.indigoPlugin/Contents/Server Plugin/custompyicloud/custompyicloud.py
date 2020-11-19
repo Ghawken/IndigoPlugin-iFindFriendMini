@@ -35,7 +35,9 @@ from os import path, mkdir
 from re import match
 import cookielib
 
-LOGGER = logging.getLogger(__name__)
+#LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger("Plugin.pyiCloudLibrary")
+
 
 HEADER_DATA = {
     "X-Apple-ID-Account-Country": "account_country",
@@ -107,17 +109,18 @@ class PyiCloudSession(Session):
         # Charge logging to the right service endpoint
         callee = inspect.stack()[2]
         module = inspect.getmodule(callee[0])
-        request_logger = logging.getLogger(module.__name__).getChild("http")
-        if self.service.password_filter not in request_logger.filters:
-            request_logger.addFilter(self.service.password_filter)
 
-        request_logger.debug("REQUEST  -- {method}, {url}, {kwargs.get('data', '')}")
+       # request_logger = logging.getLogger(module.__name__).getChild("http")
+      #  if self.service.password_filter not in request_logger.filters:
+       #     request_logger.addFilter(self.service.password_filter)
+
+        LOGGER.debug("REQUEST  -- "+method +"," +url +"," + kwargs.get('data', '') )
 
         has_retried = kwargs.get("retried", False)
         kwargs.pop("retried", False)
         response = super(PyiCloudSession, self).request(method, url, **kwargs)
 
-        request_logger.debug("RESPONSE -- {response}, StatusCode-{response.status_code}, okStatus-{response.ok}, hasRetried-{has_retried}")
+        LOGGER.debug("RESPONSE -- StatusCode "+ str(response.status_code) +" okStatus-"+str(response.ok)+", hasRetried-"+str(has_retried))
 
         content_type = response.headers.get("Content-Type", "").split(";")[0]
         json_mimetypes = ["application/json", "text/json"]
@@ -135,38 +138,22 @@ class PyiCloudSession(Session):
             LOGGER.debug("Session saved to "+str(self.service.session_path))
         # Save cookies to file
         self.cookies.save(ignore_discard=True, ignore_expires=True)
-        LOGGER.debug("Cookies saved to {self.service.cookiejar_path}")
-
-        if response.status_code != 200 or not response.ok:
-            try:
-                request_logger.debug("RESPONSE CONTENT_TYPE   -- {content_type}")
-            except:
-                request_logger.debug("RESPONSE CONTENT_TYPE   -- NOT AVAILABLE")
-            try:
-                request_logger.debug("RESPONSE JSON_MIMETYPES -- {json_mimetypes}")
-            except:
-                request_logger.debug("RESPONSE JSON_MIMETYPES -- NOT AVAILABLE")
-            try:
-                request_logger.debug("RESPONSE CON_TYPE TEST  -- {content_type not in json_mimetypes}")
-            except:
-                request_logger.debug("RESPONSE CON_TYPE TEST  -- NOT AVAILABLE")
+        LOGGER.debug("Cookies saved to "+ self.service.cookiejar_path)
+        if response.status_code != 200 or not response.ok:  # or True==True:
+            LOGGER.debug("RESPONSE CONTENT_TYPE"+ content_type)
+            LOGGER.debug("RESPONSE INVALID CONTENT TYPE" + (content_type not in json_mimetypes))
             try:
                 data = response.json()
-                request_logger.debug("RESPONSE DATA           -- {data}")
             except:
-                request_logger.debug("RESPONSE DATA           -- NOT AVAILABLE")
-            try:
-                request_logger.debug("RESPONSE HEADERS        -- {response.headers}")
-            except:
-                request_logger.debug("RESPONSE HEADERS        -- NOT AVAILABLE")
-
+                data = None
+            LOGGER.debug("RESPONSE DATA:"+ data)
+            LOGGER.debug("RESPONSE HEADERS"+ response.headers)
+            # 421/450-Auth needed, 500-Device Status Error
         if ((not response.ok and content_type not in json_mimetypes)
-                or response.status_code == 421):
+                or response.status_code in [421, 450, 500]):
 
-            #421/450-Auth needed, 500-Device Status Error
             if (has_retried == False and response.status_code in [421, 450, 500]):
-                message = ("Authentication needed, retrying (Status Code {response.status_code})")
-                request_logger.info(message)
+                LOGGER.debug("AUTHENTICATION NEEDED, Status Code"+ response.status_code)
 
                 api_error = PyiCloudAPIResponseException(
                     response.reason, response.status_code, retry=True)
@@ -182,8 +169,8 @@ class PyiCloudSession(Session):
             data = response.json()
         except:  # pylint: disable=bare-except
             if not response.ok:
-                msg = ("Error handling data returned from iCloud, {response}")
-                request_logger.warning(msg)
+                msg = ("Error handling data returned from iCloud"+response)
+                LOGGER.warning(msg)
             return response
 
         if isinstance(data, dict):
@@ -203,36 +190,37 @@ class PyiCloudSession(Session):
         return response
 
     def _raise_error(self, code, reason):
-        if (
-            self.service.requires_2sa
-            and reason == "Missing X-APPLE-WEBAUTH-TOKEN cookie"
-        ):
+        info_msg = False
+        api_error = None
+        if code in ("ZONE_NOT_FOUND", "AUTHENTICATION_FAILED"):
+            reason = ("Please log into https://icloud.com/ to manually "
+                      "finish setting up your iCloud service")
+            api_error = PyiCloudServiceNotActivatedException(reason, code)
+
+        if (self.service.requires_2sa
+                and reason == "Missing X-APPLE-WEBAUTH-TOKEN cookie"):
             code = 450
 
         if code in [204, 421, 450, 500]:
-            reason = "Authentication Required for Account"
+            reason = "Authentication needed for Account"
+            info_msg = True
 
         elif code in [400, 404]:
             reason = "Apple ID Validation Code Invalid"
 
-        if code in ("ZONE_NOT_FOUND", "AUTHENTICATION_FAILED"):
-            reason = (
-                "Please log into https://icloud.com/ to manually "
-                "finish setting up your iCloud service"
-            )
-            api_error = PyiCloudServiceNotActivatedException(reason, code)
+        elif code == "ACCESS_DENIED":
+            reason = (reason + ".  Please wait a few minutes then try again."
+                               "The remote servers might be trying to throttle requests.")
+
+        if not api_error:
+            api_error = PyiCloudAPIResponseException(reason, code)
+
+        if info_msg:
+            LOGGER.info(api_error)
+        else:
+
             LOGGER.error(api_error)
 
-            raise (api_error)
-
-        if code == "ACCESS_DENIED":
-            reason = (
-                reason + ".  Please wait a few minutes then try again."
-                "The remote servers might be trying to throttle requests."
-            )
-
-        api_error = PyiCloudAPIResponseException(reason, code)
-        LOGGER.error(api_error)
         raise api_error
 
 #================================================================================
@@ -261,28 +249,28 @@ class PyiCloudService(object):
         client_id=None,
         with_family=True,
     ):
-        if password is None:
-            password = get_password_from_keyring(apple_id)
 
         self.user = {"accountName": apple_id, "password": password}
         self.apple_id = apple_id
         self.data = {}
         self.params = {}
-        self.client_id = client_id or "auth-{str(uuid1()).lower()}"
+        self.client_id = client_id or str(uuid1()).upper()
         self.with_family = with_family
+
+
 
         self.session_data = {}
         if session_directory:
             self._session_directory = session_directory
         else:
             self._session_directory = path.join(gettempdir(), "pyicloud-session")
-            LOGGER.debug("Session file {self.session_path}")
+            LOGGER.debug("Session file "+self.session_path)
 
         try:
             with open(self.session_path) as session_f:
                 self.session_data = json.load(session_f)
         except:  # pylint: disable=bare-except
-            LOGGER.info("Session file does not exist")
+            LOGGER.debug("Session file does not exist")
 
         if not path.exists(self._session_directory):
             mkdir(self._session_directory)
@@ -314,12 +302,12 @@ class PyiCloudService(object):
         if path.exists(cookiejar_path):
             try:
                 self.session.cookies.load(ignore_discard=True, ignore_expires=True)
-                LOGGER.debug("Read Cookies from {cookiejar_path}")
+                LOGGER.debug("Read Cookies from "+cookiejar_path)
             except:  # pylint: disable=bare-except
                 # Most likely a pickled cookiejar from earlier versions.
                 # The cookiejar will get replaced with a valid one after
                 # successful authentication.
-                LOGGER.warning("Failed to read cookie file {cookiejar_path}")
+                LOGGER.warning("Failed to read cookie file "+cookiejar_path )
 
         self.authenticate()
 
@@ -347,7 +335,7 @@ class PyiCloudService(object):
         '''
 
         if (not login_successful or refresh_session):
-            LOGGER.info("Authenticating account {self.user['accountName']}")
+            LOGGER.debug("Authenticating account "+self.user['accountName'])
 
             data = dict(self.user)
 
@@ -379,7 +367,7 @@ class PyiCloudService(object):
 
         self._webservices = self.data["webservices"]
 
-        LOGGER.info("Authentication completed successfully")
+        LOGGER.debug("Authentication completed successfully")
 
     def _authenticate_with_token(self):
         """Authenticate using session token."""
@@ -552,12 +540,17 @@ class PyiCloudService(object):
             )
         return self._webservices[ws_key]["url"]
 
+    def play_sound(self, device_id):
+        """Returns all devices."""
+        service_root = self._get_webservice_url("findme")
+        data = FindMyiPhoneServiceManager( service_root, self.session, self.params, self.with_family, task="PlaySound", device_id=device_id)
+        return data
+
     @property
     def devices(self):
         """Returns all devices."""
         service_root = self._get_webservice_url("findme")
-        data = FindMyiPhoneServiceManager(
-                        service_root, self.session, self.params, self.with_family)
+        data = FindMyiPhoneServiceManager( service_root, self.session, self.params, self.with_family)
         return data
 
     @property
@@ -609,16 +602,20 @@ class PyiCloudService(object):
 #from pyicloud.exceptions import PyiCloudNoDevicesException
 
 class FindMyiPhoneServiceManager(object):
-    """The 'Find my iPhone' iCloud service
+    """
+    The 'Find my iPhone' iCloud service
 
     This connects to iCloud and return phone data including the near-realtime
     latitude and longitude.
     """
 
-    def __init__(self, service_root, session, params, with_family=False):
+    def __init__(self, service_root, session, params, with_family=False, task="RefreshData",
+                device_id=None, subject=None, message=None,
+                sounds=False, number="", newpasscode=""):
         self.session = session
         self.params = params
         self.with_family = with_family
+        self.task = task
 
         fmip_endpoint = service_root+"/fmipservice/client/web"
         self._fmip_refresh_url = fmip_endpoint+"/refreshClient"
@@ -626,8 +623,24 @@ class FindMyiPhoneServiceManager(object):
         self._fmip_message_url = fmip_endpoint+"/sendMessage"
         self._fmip_lost_url = fmip_endpoint+"/lostDevice"
 
-        self._devices = {}
-        self.refresh_client()
+        if task == "PlaySound":
+            if device_id:
+                self.play_sound(device_id, subject)
+
+        elif task == "Message":
+            if device_id:
+                self.display_message(device_id, subject, message)
+
+        elif task == "LostDevice":
+            if device_id:
+                self.lost_device(device_id, number, message, newpasscode="")
+
+        else:
+            self._devices = {}
+            self.refresh_client()
+
+#----------------------------------------------------------------------------
+
 
     def refresh_client(self):
         """Refreshes the FindMyiPhoneService endpoint,
@@ -670,6 +683,70 @@ class FindMyiPhoneServiceManager(object):
 
         if not self._devices:
             raise PyiCloudNoDevicesException()
+
+    # ----------------------------------------------------------------------------
+    def play_sound(self, device_id, subject):
+        """
+        Send a request to the device to play a sound.
+        It's possible to pass a custom message by changing the `subject`.
+        """
+        if not subject:
+            subject = "Find My iPhone Alert"
+
+        data = json.dumps(
+            {
+                "device": device_id,
+                "subject": subject,
+                "clientContext": {"fmly": True},
+            }
+        )
+        self.session.post(self._fmip_sound_url, params=self.params, data=data)
+        return
+
+    # ----------------------------------------------------------------------------
+    def display_message(self, device_id, subject="Find My iPhone Alert",
+                        message="This is a note", sounds=False):
+        """
+        Send a request to the device to display a message.
+        It's possible to pass a custom message by changing the `subject`.
+        """
+        data = json.dumps(
+            {
+                "device": device_id,
+                "subject": subject,
+                "sound": sounds,
+                "userText": True,
+                "text": message,
+            }
+        )
+        self.session.post(self._fmip_message_url, params=self.params, data=data)
+        return
+
+    # ----------------------------------------------------------------------------
+    def lost_device(self, device_id,number, message="This iPhone has been lost. Please call me.",
+                    newpasscode=""):
+        """
+        Send a request to the device to trigger 'lost mode'.
+
+        The device will show the message in `text`, and if a number has
+        been passed, then the person holding the device can call
+        the number without entering the passcode.
+        """
+        data = json.dumps(
+            {
+                "text": message,
+                "userText": True,
+                "ownerNbr": number,
+                "lostModeEnabled": True,
+                "trackingEnabled": True,
+                "device": device_id,
+                "passcode": newpasscode,
+            }
+        )
+        self.session.post(self._fmip_lost_url, params=self.params, data=data)
+        return
+
+# ----------------------------------------------------------------------------
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -738,60 +815,6 @@ class AppleDevice(object):
         for field in fields:
             properties[field] = self.content.get(field)
         return properties
-
-    def play_sound(self, subject="Find My iPhone Alert"):
-        """Send a request to the device to play a sound.
-
-        It's possible to pass a custom message by changing the `subject`.
-        """
-        data = json.dumps(
-            {
-                "device": self.content["id"],
-                "subject": subject,
-                "clientContext": {"fmly": True},
-            }
-        )
-        self.session.post(self.sound_url, params=self.params, data=data)
-
-    def display_message(
-        self, subject="Find My iPhone Alert", message="This is a note", sounds=False
-    ):
-        """Send a request to the device to play a sound.
-
-        It's possible to pass a custom message by changing the `subject`.
-        """
-        data = json.dumps(
-            {
-                "device": self.content["id"],
-                "subject": subject,
-                "sound": sounds,
-                "userText": True,
-                "text": message,
-            }
-        )
-        self.session.post(self.message_url, params=self.params, data=data)
-
-    def lost_device(
-        self, number, text="This iPhone has been lost. Please call me.", newpasscode=""
-    ):
-        """Send a request to the device to trigger 'lost mode'.
-
-        The device will show the message in `text`, and if a number has
-        been passed, then the person holding the device can call
-        the number without entering the passcode.
-        """
-        data = json.dumps(
-            {
-                "text": text,
-                "userText": True,
-                "ownerNbr": number,
-                "lostModeEnabled": True,
-                "trackingEnabled": True,
-                "device": self.content["id"],
-                "passcode": newpasscode,
-            }
-        )
-        self.session.post(self.lost_url, params=self.params, data=data)
 
     @property
     def data(self):
@@ -870,30 +893,6 @@ class FindFriendsService(object):
         req = self.session.post(self._friend_endpoint, data=mock_payload, params=params)
         self.response = req.json()
 
-    def refresh_data(self):
-        """
-        Refreshes all data from 'Find My' endpoint,
-        """
-        params = dict(self.params)
-        # This is a request payload we mock to fetch the data
-        mock_payload = json.dumps(
-            {
-                "clientContext": {
-                    "appVersion": "1.0",
-                    "contextApp": "com.icloud.web.fmf",
-                    "mapkitAvailable": True,
-                    "productType": "fmfWeb",
-                    "tileServer": "Apple",
-                    "userInactivityTimeInMS": 537,
-                    "windowInFocus": False,
-                    "windowVisible": True,
-                },
-                "dataContext": None,
-                "serverContext": None,
-            }
-        )
-        req = self.session.post(self._friend_endpoint, data=mock_payload, params=params)
-        self.response = req.json()
 
     @staticmethod
     def should_refresh_client_fnc(response):
@@ -1039,73 +1038,3 @@ class PyiCloudNoStoredPasswordAvailableException(PyiCloudException):
 class PyiCloudNoDevicesException(PyiCloudException):
     """iCloud no device exception."""
     pass
-
-
-####################################################################################
-#
-#   Utilities (utils.py)
-#
-####################################################################################
-"""Utils."""
-import getpass
-import keyring
-import sys
-#from .exceptions import PyiCloudNoStoredPasswordAvailableException
-
-KEYRING_SYSTEM = "pyicloud://icloud-password"
-
-
-def get_password(username, interactive=sys.stdout.isatty()):
-    """Get the password from a username."""
-    try:
-        return get_password_from_keyring(username)
-    except PyiCloudNoStoredPasswordAvailableException:
-        if not interactive:
-            raise
-
-        return getpass.getpass(
-            "Enter iCloud password for {username}: ".format(username=username,)
-        )
-
-
-def password_exists_in_keyring(username):
-    """Return true if the password of a username exists in the keyring."""
-    try:
-        get_password_from_keyring(username)
-    except PyiCloudNoStoredPasswordAvailableException:
-        return False
-
-    return True
-
-
-def get_password_from_keyring(username):
-    """Get the password from a username."""
-    result = keyring.get_password(KEYRING_SYSTEM, username)
-    if result is None:
-        raise PyiCloudNoStoredPasswordAvailableException(
-            "No pyicloud password for {username} could be found "
-            "in the system keychain.  Use the `--store-in-keyring` "
-            "command-line option for storing a password for this "
-            "username.".format(username=username,)
-        )
-
-    return result
-
-
-def store_password_in_keyring(username, password):
-    """Store the password of a username."""
-    return keyring.set_password(KEYRING_SYSTEM, username, password,)
-
-
-def delete_password_in_keyring(username):
-    """Delete the password of a username."""
-    return keyring.delete_password(KEYRING_SYSTEM, username,)
-
-
-def underscore_to_camelcase(word, initial_capital=False):
-    """Transform a word to camelCase."""
-    words = [x.capitalize() or "_" for x in word.split("_")]
-    if not initial_capital:
-        words[0] = words[0].lower()
-
-    return "".join(words)
