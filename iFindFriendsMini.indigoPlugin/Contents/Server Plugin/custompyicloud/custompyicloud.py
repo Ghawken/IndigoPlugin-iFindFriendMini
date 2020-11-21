@@ -105,6 +105,90 @@ class PyiCloudSession(Session):
         Session.__init__(self)
 
     def request(self, method, url, **kwargs):  # pylint: disable=arguments-differ
+        try:
+            # Charge logging to the right service endpoint
+            callee = inspect.stack()[2]
+            module = inspect.getmodule(callee[0])
+
+            LOGGER.debug("REQUEST  -- "+method +"," +url +"," + kwargs.get('data', '') )
+
+            has_retried = kwargs.get("retried", False)
+            kwargs.pop("retried", False)
+            response = super(PyiCloudSession, self).request(method, url, **kwargs)
+
+            LOGGER.debug("RESPONSE -- StatusCode "+ str(response.status_code) +" okStatus-"+str(response.ok)+", hasRetried-"+str(has_retried))
+
+            content_type = response.headers.get("Content-Type", "").split(";")[0]
+            json_mimetypes = ["application/json", "text/json"]
+
+            for header in HEADER_DATA:
+                if response.headers.get(header):
+                    session_arg = HEADER_DATA[header]
+                    self.service.session_data.update(
+                        {session_arg: response.headers.get(header)})
+
+            # Save session_data to file
+            with open(self.service.session_path, "w") as outfile:
+                json.dump(self.service.session_data, outfile)
+                LOGGER.debug("Session saved to "+self.service.session_path )
+
+            # Save cookies to file
+            self.cookies.save(ignore_discard=True, ignore_expires=True)
+            LOGGER.debug("Cookies saved to :"+unicode(self.service.cookiejar_path))
+
+            if response.status_code != 200 or not response.ok:  # or True==True:
+                LOGGER.debug("RESPONSE CONTENT_TYPE:"+unicode(content_type))
+                try:
+                    data = response.json()
+                except:
+                    data = None
+                if data != None:
+                    LOGGER.debug("RESPONSE DATA"+ unicode(data))
+                LOGGER.debug("RESPONSE HEADERS"+unicode( response.headers))
+
+            # 421/450-Auth needed, 500-Device Status Error
+            if ((not response.ok and content_type not in json_mimetypes)
+                    or response.status_code in [421, 450, 500]):
+
+                if (has_retried == False and response.status_code in [421, 450, 500]):
+                    LOGGER.debug("AUTHENTICATION NEEDED, Status Code:"+unicode(response.status_code))
+                    api_error = PyiCloudAPIResponseException(response.reason, response.status_code, retry=True)
+                    kwargs["retried"] = True
+                    return self.request(method, url, **kwargs)
+
+                self._raise_error(response.status_code, response.reason)
+
+            if content_type not in json_mimetypes:
+                return response
+
+            try:
+                data = response.json()
+            except:  # pylint: disable=bare-except
+                if not response.ok:
+                    msg = "Error handling data returned from iCloud:"+str(response)
+                    LOGGER.error(msg)
+                return response
+
+            if isinstance(data, dict):
+                reason = data.get("errorMessage")
+                reason = reason or data.get("reason")
+                reason = reason or data.get("errorReason")
+                if not reason and isinstance(data.get("error"), string_types):
+                    reason = data.get("error")
+                if not reason and data.get("error"):
+                    reason = "Unknown reason, will continue"
+
+                code = data.get("errorCode")
+                code = code or data.get("serverErrorCode")
+                if reason:
+                    self._raise_error(code, reason)
+
+            return response
+        except Exception as e:
+            LOGGER.debug(u"Caught Exception in pyicloud request"+unicode(e))
+            return
+
+    def request_old_delete(self, method, url, **kwargs):  # pylint: disable=arguments-differ
 
         # Charge logging to the right service endpoint
         callee = inspect.stack()[2]
@@ -218,7 +302,6 @@ class PyiCloudSession(Session):
         if info_msg:
             LOGGER.info(api_error)
         else:
-
             LOGGER.error(api_error)
 
         raise api_error
@@ -254,10 +337,8 @@ class PyiCloudService(object):
         self.apple_id = apple_id
         self.data = {}
         self.params = {}
-        self.client_id = client_id or str(uuid1()).upper()
+        self.client_id = client_id or "auth-"+str( uuid1() ).lower()
         self.with_family = with_family
-
-
 
         self.session_data = {}
         if session_directory:
@@ -269,6 +350,9 @@ class PyiCloudService(object):
         try:
             with open(self.session_path) as session_f:
                 self.session_data = json.load(session_f)
+                LOGGER.debug(u"Loaded Session Data: Path:"+self.session_path)
+                LOGGER.debug(u"Session Data: Client_id:"+unicode(self.session_data.get('client_id','NOT FOUND') ) )
+                LOGGER.debug(u"Session Data: Session_Token: "+unicode(self.session_data.get("session_token","NOT FOUND") )  )
         except:  # pylint: disable=bare-except
             LOGGER.debug("Session file does not exist")
 
@@ -298,6 +382,7 @@ class PyiCloudService(object):
         )
 
         cookiejar_path = self.cookiejar_path
+     
         self.session.cookies = cookielib.LWPCookieJar(filename=cookiejar_path)
         if path.exists(cookiejar_path):
             try:
@@ -322,21 +407,24 @@ class PyiCloudService(object):
         """
 
         login_successful = False
-        '''
+
         if (not refresh_session and self.session_data.get("session_token")):
             LOGGER.info("Checking session token validity")
             try:
-                req = self.session.post("{self.SETUP_ENDPOINT}/validate", data="null")
+                req = self.session.post(self.SETUP_ENDPOINT+'/validate', data="null")
                 LOGGER.info("Session token is still valid")
                 self.data = req.json()
                 login_successful = True
+                LOGGER.debug("Cookies Used:"+unicode(self.session.cookies))
+                LOGGER.debug("/validate Data Returned:"+unicode(self.data))
+
             except PyiCloudAPIResponseException:
-                msg = "Invalid authentication token, will log in from scratch."
-        '''
+                LOGGER.info("Caught Invalid authentication token, will log in from scratch.")
+            except Exception as e:  ## can't convert nonetype to Json exception..
+                LOGGER.debug(U"Caught Exception with checking session token validity..."+unicode(e))
 
         if (not login_successful or refresh_session):
             LOGGER.debug("Authenticating account "+self.user['accountName'])
-
             data = dict(self.user)
 
             data["rememberMe"] = True
@@ -351,6 +439,9 @@ class PyiCloudService(object):
 
             if self.session_data.get("session_id"):
                 headers["X-Apple-ID-Session-Id"] = self.session_data.get("session_id")
+            ## Add this
+            if self.session_data.get("session_token"):
+                headers["X-Apple-Session-Token"] = self.session_data.get("session_token")
 
             try:
                 req = self.session.post(
@@ -1004,7 +1095,7 @@ class PyiCloudAPIResponseException(PyiCloudException):
         self.code = code
         message = reason or ""
         if code:
-            message += (" (Status Code {code})")
+            message += " (Status Code "+str(code) + ")"
         if retry:
             message += ". Retrying ..."
 
@@ -1025,7 +1116,7 @@ class PyiCloudFailedLoginException(PyiCloudException):
 class PyiCloud2SARequiredException(PyiCloudException):
     """iCloud 2SA required exception."""
     def __init__(self, apple_id):
-        message = "Two-Step Authentication (2SA) Required for Account {apple_id}"
+        message = "Two-Step Authentication (2SA) Required for Account "+str(apple_id)
         super(PyiCloud2SARequiredException, self).__init__(message)
 
 

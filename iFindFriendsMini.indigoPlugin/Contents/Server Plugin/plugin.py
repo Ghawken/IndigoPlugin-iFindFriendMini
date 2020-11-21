@@ -434,6 +434,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'altitude', 'value': ''},
                 {'key': 'homeDistance', 'value': 0},
                 {'key': 'homeTime', 'value': 0},
+                {'key': 'batteryCharge', 'value': 0},
                 {'key': 'otherDistance', 'value': 0},
                 {'key': 'otherTime', 'value': 0},
                 {'key': 'homeDistanceText', 'value': 'unknown'},
@@ -746,6 +747,10 @@ class Plugin(indigo.PluginBase):
             if iLogin[0] == 1:
                 self.logger.debug(u"Login to icloud Failed.")
                 return
+            if iLogin[0] == None:
+                self.logger.debug("Error:")
+                self.appleAPI = None
+                return
 
             self.appleAPI = iLogin[1]
             follower = self.appleAPI.friends.locations
@@ -819,7 +824,10 @@ class Plugin(indigo.PluginBase):
             return
 
         except PyiCloud2SARequiredException:
-            self.logger.info(u'Login failed.  Account requires 2nd factor, verification code setup.  Please see config window')
+            self.logger.info(u"{0:=^130}".format(""))
+            self.logger.info(u'Login failed.  Account requires 2nd factor, verification code setup.  Please see Plugin config window, enter and submit verification code')
+            self.logger.info(u"{0:=^130}".format(""))
+            self.appleAPI = None
             self.requires2FA = True
             self.triggerCheck2fa()
             return
@@ -828,9 +836,10 @@ class Plugin(indigo.PluginBase):
             self.logger.info(u"{0:=^130}".format(""))
             self.logger.info(u'Error within get Data.  ?Network connection or issue:  Error Given: '+unicode(e))
             self.logger.info(u"{0:=^130}".format(""))
-            self.logger.info(u'Have you also logged on and setup new account on an Ios/iphone/ipad device?')
-            self.logger.info(u'You need to run and enable iOS FindmyFriends Application, you should see visible friends')
-            self.logger.info(u'This needs to be done, for FindmyFriends to work.  You cannot just create account.')
+            self.logger.exception(u"Caught Exception")
+          #  self.logger.info(u'Have you also logged on and setup new account on an Ios/iphone/ipad device?')
+          #  self.logger.info(u'You need to run and enable iOS FindmyFriends Application, you should see visible friends')
+         #   self.logger.info(u'This needs to be done, for FindmyFriends to work.  You cannot just create account.')
             self.logger.info(u"{0:=^130}".format(""))
             return
 
@@ -1165,13 +1174,20 @@ class Plugin(indigo.PluginBase):
             else:
                 Distancetravelled = False, 0
 
+            batteryLevel = 0
+            try:
+                batteryLevel =  round(float(follow['batteryLevel'])*100,3)
+                self.logger.debug(u"Converted Battery to:"+unicode(batteryLevel))
+            except:
+                self.logger.debug("Error in Battery Level conversion")
+
             stateList = [
                 {'key': 'id', 'value': follow['id']},
                 {'key': 'deviceName', 'value': follow['name']},
                 {'key': 'deviceModel', 'value': follow['deviceDisplayName']},
                 {'key': 'status', 'value': follow['deviceStatus']},
                 {'key': 'batteryStatus', 'value': follow['batteryStatus']},
-                {'key': 'batteryLevel', 'value': follow['batteryLevel']},
+                {'key': 'batteryCharge', 'value': batteryLevel},
                 {'key': 'locationTimestamp', 'value': follow['location']['timeStamp']},
                 {'key': 'timestamp', 'value': follow['location']['timeStamp']},
                 {'key': 'altitude', 'value': follow['location']['altitude']},
@@ -1561,7 +1577,7 @@ class Plugin(indigo.PluginBase):
 
             following = iLogin[1].devices
             for fol in following:
-                self.logger.info(unicode(fol.data['id'])+" and "+unicode(fol.data['name']))
+                self.logger.debug(unicode(fol.data['id'])+" and "+unicode(fol.data['name']))
                 iOption2 = fol.data['id'], fol.data['name']
                 # self.logger.info(unicode(iOption2))
                 iArray.append(iOption2)
@@ -1579,14 +1595,26 @@ class Plugin(indigo.PluginBase):
         self.logger.debug('Attempting login...')
         # Logs into the API as required
         try:
-            self.appleAPI = PyiCloudService(iUsername, iPassword, cookie_directory=self.iprefDirectory, session_directory=self.iprefDirectory+"/session", verify=True)
-            self.logger.debug(u'Login successful...')
-            self.logger.debug(u"Account Requires 2FA:" + unicode(self.appleAPI.requires_2fa))
-            self.requires2FA =self.appleAPI.requires_2fa
-            if self.requires2FA:
-                self.logger.info(u"Account requires a two step authenication:  Please see Plugin Config box to complete")
-                return
+            if self.appleAPI == None:
+                self.appleAPI = PyiCloudService(iUsername, iPassword, cookie_directory=self.iprefDirectory, session_directory=self.iprefDirectory+"/session", verify=True)
+                self.logger.error(u"PyiCloudService reconnecting...")
+                self.logger.debug(u'Login successful...')
+                self.logger.debug(u"Account Requires 2FA:" + unicode(self.appleAPI.requires_2fa))
 
+            if self.appleAPI:
+                self.appleAPI.authenticate(refresh_session=False)
+                self.logger.error(u'Refresh Session appleAPI only.')
+
+            self.requires2FA = self.appleAPI.requires_2fa
+            if self.requires2FA:
+                self.logger.info(u"{0:=^130}".format(""))
+                self.logger.info(u"{0:=^130}".format(""))
+                self.logger.info( u"Account requires a two step authenication:  Please see Plugin Config box to complete")
+                self.logger.info(u"Enter updated verification code in box and press submit.")
+                self.logger.info(u"{0:=^130}".format(""))
+                self.logger.info(u"{0:=^130}".format(""))
+                self.appleAPI = None
+                return
             #self.appleAPI = self.self.appleAPI
             if self.debugicloud:
                 self.logger.debug(u"{0:=^130}".format(""))
@@ -1647,25 +1675,25 @@ class Plugin(indigo.PluginBase):
         except PyiCloud2SARequiredException:
             self.logger.error(u'Login failed.  Account requires 2nd factor, verification code setup.  Please see config window')
             self.requires2FA = True
+            self.appleAPI = None
             self.triggerCheck2fa()
             return 1, 'NL'
 
         except ValueError as e:
             self.logger.error(u"{0:=^130}".format(""))
             self.logger.error(u'Login failed - 2SA and 2FA Authenication are NOT supported.  You need to create new account without')
-
             self.logger.debug(u'Error Given is:'+unicode(e.message)+unicode(e.__dict__))
             self.logger.error(u"{0:=^130}".format(""))
-
             return 1, 'NL'
 
         except PyiCloudAPIResponseException as e:
             self.logger.error(u'Login Failed API Response Error.   ' + unicode(e.message) + unicode(e.__dict__))
             self.logger.error(e)
             return 1, 'NI'
+
         except Exception as e:
             self.logger.error(u'Login Failed General Error.   ' + unicode(e.message) + unicode(e.__dict__))
-            self.logger.error(e)
+            self.logger.exception(e)
             return 1, 'NI'
 
 
@@ -1699,6 +1727,7 @@ class Plugin(indigo.PluginBase):
             return
         else:
             self.logger.info("Verification Code Accepted.")
+            self.requires2FA = False
             valuesDict['appleAPIid'] = valuesDict['appleId']
             self.pluginPrefs['appleAPIid'] = valuesDict['appleId']
             self.logger.info(u"Trusted Session:"+unicode(self.appleAPI.is_trusted_session))
@@ -2209,10 +2238,8 @@ class Plugin(indigo.PluginBase):
     def triggerCheck2fa(self):
         self.logger.debug("Checking trigger as 2FA state called")
         for triggerId, trigger in sorted(self.triggers.iteritems()):
-            self.logger.debug("Checking Trigger %s (%s), Type: %s, Friend: %s, and event : %s" % (
-            trigger.name, trigger.id, trigger.pluginTypeId))
+            self.logger.debug("Checking Trigger %s (%s), Type: %s, Friend: %s, and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
             # self.logger.error(unicode(trigger))
-
             if trigger.pluginTypeId == "account2FAneeded" :
                 # 2fa failed
                 # send trigger.
