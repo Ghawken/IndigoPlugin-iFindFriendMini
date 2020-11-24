@@ -38,31 +38,31 @@ try:
 except ImportError:
     MajorProblem = 2  #1 to restart, 2 to disable
     pass
-#
-# try:
-#     from pyicloud import PyiCloudService
-#     #from pyicloud.exceptions import PyiCloudFailedLoginException
-#     #import moduledoesntexisit
-#     from pyicloud.exceptions import (
-#         PyiCloudFailedLoginException,
-#         PyiCloudAPIResponseException,
-#         PyiCloudNoDevicesException,
-#         PyiCloud2SARequiredException,
-#         PyiCloudServiceNotActivatedException,
-#     )
+
 try:
-    from custompyicloud.custompyicloud import PyiCloudService
+    from pyicloud import PyiCloudService
     #from pyicloud.exceptions import PyiCloudFailedLoginException
     #import moduledoesntexisit
-    from custompyicloud.custompyicloud import (
-        PyiCloudException,
-        PyiCloudAPIResponseException,
-        PyiCloudServiceNotActivatedException,
+    from pyicloud.exceptions import (
         PyiCloudFailedLoginException,
+        PyiCloudAPIResponseException,
+        PyiCloudNoDevicesException,
         PyiCloud2SARequiredException,
-        PyiCloudNoStoredPasswordAvailableException,
-        PyiCloudNoDevicesException
+        PyiCloudServiceNotActivatedException,
     )
+# try:
+#     from custompyicloud.custompyicloud import PyiCloudService
+#     #from pyicloud.exceptions import PyiCloudFailedLoginException
+#     #import moduledoesntexisit
+#     from custompyicloud.custompyicloud import (
+#         PyiCloudException,
+#         PyiCloudAPIResponseException,
+#         PyiCloudServiceNotActivatedException,
+#         PyiCloudFailedLoginException,
+#         PyiCloud2SARequiredException,
+#         PyiCloudNoStoredPasswordAvailableException,
+#         PyiCloudNoDevicesException
+#     )
 
 except Exception as e:
     MajorProblem =2
@@ -746,6 +746,7 @@ class Plugin(indigo.PluginBase):
 
             if iLogin[0] == 1:
                 self.logger.debug(u"Login to icloud Failed.")
+                self.appleAPI = None
                 return
             if iLogin[0] == None:
                 self.logger.debug("Error:")
@@ -1234,11 +1235,9 @@ class Plugin(indigo.PluginBase):
             #unless starting up (60 seconds only)
             #if self.startingUp==False or self.startingUp==True:
             if follow is None:
-                self.logger.debug(u'No data received for device:' + unicode(
-                    dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
+                self.logger.debug(u'No data received for device:' + unicode( dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
                 if dev.states['deviceIsOnline']:
-                    self.logger.info(u'Friend Device:' + unicode(
-                        dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
+                    self.logger.info(u'Friend Device:' + unicode(dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
                     dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
                     dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                 return
@@ -1587,6 +1586,16 @@ class Plugin(indigo.PluginBase):
             self.logger.exception(u'Error within myDevices')
             return []
 
+    def allDevicesOffline(self):
+        self.logger.debug("all Devices Offline")
+        for dev in indigo.devices.itervalues("self"):
+            # add check here make sure dev is Online before checking details of GeoFences
+            if dev.enabled:
+                dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
+                dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+        return
+
+
     def iAuthorise(self, iUsername, iPassword):
         ################################################s
         # Logs in and authorises access to the Find my Phone API
@@ -1602,7 +1611,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"Account Requires 2FA:" + unicode(self.appleAPI.requires_2fa))
 
             if self.appleAPI:
-                self.appleAPI.authenticate(refresh_session=False)
+                self.appleAPI.authenticate(force_refresh=True)
                 self.logger.error(u'Refresh Session appleAPI only.')
 
             self.requires2FA = self.appleAPI.requires_2fa
@@ -1670,12 +1679,15 @@ class Plugin(indigo.PluginBase):
 
         except PyiCloudFailedLoginException:
             self.logger.error(u'Login failed - Check username/password - has it changed recently?. ')
+            self.appleAPI = None
+            self.allDevicesOffline()
             return 1, 'NL'
 
         except PyiCloud2SARequiredException:
             self.logger.error(u'Login failed.  Account requires 2nd factor, verification code setup.  Please see config window')
             self.requires2FA = True
             self.appleAPI = None
+            self.allDevicesOffline()
             self.triggerCheck2fa()
             return 1, 'NL'
 
@@ -1684,6 +1696,7 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u'Login failed - 2SA and 2FA Authenication are NOT supported.  You need to create new account without')
             self.logger.debug(u'Error Given is:'+unicode(e.message)+unicode(e.__dict__))
             self.logger.error(u"{0:=^130}".format(""))
+            self.allDevicesOffline()
             return 1, 'NL'
 
         except PyiCloudAPIResponseException as e:
@@ -1952,8 +1965,9 @@ class Plugin(indigo.PluginBase):
         except WazeRouteCalculator.WRCError as err:
             self.logger.debug("Waze Error: "+str(err))
             return "unknown","unknown",0,0
-        except:
-            self.logger.exception("Exception in using Waze Route Calculator")
+        except Exception as e:
+            self.logger.debug("Caught Exception in using Waze Route Calculator:"+unicode(e))
+
             return "unknown","unknown",0,0
 
 

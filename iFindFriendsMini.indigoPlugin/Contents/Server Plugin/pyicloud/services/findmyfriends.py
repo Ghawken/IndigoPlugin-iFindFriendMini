@@ -1,13 +1,12 @@
 from __future__ import absolute_import
-import json
 
 class FindFriendsService(object):
     """
     The 'Find my Friends' iCloud service
-
     This connects to iCloud and returns friend data including the near-realtime
     latitude and longitude.
     """
+
     def __init__(self, service_root, session, params):
         self.session = session
         self.params = params
@@ -22,22 +21,8 @@ class FindFriendsService(object):
         Fetches all data from Find my Friends endpoint
         """
         params = dict(self.params)
-        fake_data = json.dumps({
-            'clientContext': {
-                'appVersion': '1.0',
-                'contextApp': 'com.icloud.web.fmf',
-                'mapkitAvailable': True,
-                'productType': 'fmfWeb',
-                'tileServer': 'Apple',
-                'userInactivityTimeInMS': 537,
-                'windowInFocus': False,
-                'windowVisible': True
-            },
-            'dataContext': None,
-            'serverContext': None
-        })
-        req = self.session.post(self._friend_endpoint,
-                                data=fake_data, params=params)
+        fake_data = '{"dataContext":null,"serverContext":null,"clientContext":{"productType":"fmfWeb","appVersion":"1.0","contextApp":"com.icloud.web.fmf","userInactivityTimeInMS":537,"windowInFocus":false,"windowVisible":true,"mapkitAvailable":true,"tileServer":"Apple"}}'
+        req = self.session.post(self._friend_endpoint, data=fake_data, params=params)
         self.response = req.json()
         return self.response
 
