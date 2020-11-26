@@ -277,8 +277,21 @@ class PyiCloudService(object):
                 req = self.session.post("%s/validate" % self.SETUP_ENDPOINT, params=self.params, data="null")
                 LOGGER.debug("Session token is still valid")
                 self.data = req.json()
-                LOGGER.debug("Session Data Returned:"+unicode(self.data))
+                LOGGER.debug("Session Data Returned:" + unicode(self.data))
                 login_successful = True
+                ## check for correct valid using dsid
+                if 'dsInfo' in self.data:
+                    if 'dsid' in self.data['dsInfo']:
+                        if 'dsid' in self.params:  # already checked above, but recheck
+                            self.params.update({"dsid": self.data["dsInfo"]["dsid"]}) ## should already be set, but no harm...
+                    else:
+                        login_successful = False
+                        self.logger.error(u"No DSID in return data:"+unicode(self.data))
+                else:
+                    login_successful = False
+                    self.logger.error(u"No DSID in return data:" + unicode(self.data))
+
+
             except PyiCloudAPIResponseException:
                 LOGGER.debug("Invalid authentication token, will log in from scratch.")
 
