@@ -1,5 +1,5 @@
 """
-Modified version of iCloud as below:
+Modified version of iCloud3 as below:
 With thanks - converted back to Python2.7 and only part used..
 But many thanks for getting up-to-date !!
 
@@ -382,7 +382,7 @@ class PyiCloudService(object):
         )
 
         cookiejar_path = self.cookiejar_path
-     
+
         self.session.cookies = cookielib.LWPCookieJar(filename=cookiejar_path)
         if path.exists(cookiejar_path):
             try:
@@ -412,9 +412,10 @@ class PyiCloudService(object):
             LOGGER.info("Checking session token validity")
             try:
                 req = self.session.post(self.SETUP_ENDPOINT+'/validate', data="null")
-                LOGGER.info("Session token is still valid")
+
                 self.data = req.json()
                 login_successful = True
+                LOGGER.info("Session token is still valid")
                 LOGGER.debug("Cookies Used:"+unicode(self.session.cookies))
                 LOGGER.debug("/validate Data Returned:"+unicode(self.data))
 
@@ -422,6 +423,7 @@ class PyiCloudService(object):
                 LOGGER.info("Caught Invalid authentication token, will log in from scratch.")
             except Exception as e:  ## can't convert nonetype to Json exception..
                 LOGGER.debug(U"Caught Exception with checking session token validity..."+unicode(e))
+                raise PyiCloudFailedLoginException("Exception in Session Token", str(e))
 
         if (not login_successful or refresh_session):
             LOGGER.debug("Authenticating account "+self.user['accountName'])

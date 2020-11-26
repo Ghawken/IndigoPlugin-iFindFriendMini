@@ -105,7 +105,7 @@ class PyiCloudSession(Session):
                 api_error = PyiCloudAPIResponseException( response.reason, response.status_code, retry=True   )
                 request_logger.debug(api_error)
                 kwargs["retried"] = True
-                return self.request(method, url, timeout=15, **kwargs)
+                return self.request(method, url, **kwargs)
             self._raise_error(response.status_code, response.reason)
 
         if content_type not in json_mimetypes:
@@ -201,16 +201,9 @@ class PyiCloudService(object):
             "clientBuildNumber": "2021Project52",
             "clientMasteringNumber": "2021B29",
             "ckjsBuildVersion": "17DProjectDev77",
-            "dsid": "00000000",
-            "clientId": self.client_id[5:],  ## remove auth - not used here just raw client ID
+            "clientId": self.client_id[5:],  ## remove 'auth-' first 5 characters not used here just raw client ID
         }
-
-
         self.with_family = with_family
-
-        # add dsid self
-        self.dsid = "01010"
-
         self.session_data = {}
         if session_directory:
             self._session_directory = session_directory
@@ -274,15 +267,17 @@ class PyiCloudService(object):
         Handles authentication, and persists cookies so that
         subsequent logins will not cause additional e-mails from Apple.
         """
-
+        LOGGER.debug(u"{0:=^130}".format(""))
+        LOGGER.debug("Self.Params:="+unicode(self.params))
+        LOGGER.debug(u"{0:=^130}".format(""))
         login_successful = False
-        if self.session_data.get("session_token") and not force_refresh:
+        if self.session_data.get("session_token") and not force_refresh and 'dsid' in self.params:
             LOGGER.debug("Checking session token validity")
             try:
                 req = self.session.post("%s/validate" % self.SETUP_ENDPOINT, params=self.params, data="null")
-
                 LOGGER.debug("Session token is still valid")
                 self.data = req.json()
+                LOGGER.debug("Session Data Returned:"+unicode(self.data))
                 login_successful = True
             except PyiCloudAPIResponseException:
                 LOGGER.debug("Invalid authentication token, will log in from scratch.")
@@ -338,18 +333,28 @@ class PyiCloudService(object):
         LOGGER.debug(unicode(self.session.headers))
         try:
             req = self.session.post(
-                "%s/accountLogin" % self.SETUP_ENDPOINT, data=json.dumps(data)
+                "%s/accountLogin?clientBuildNumber=2021Project52&clientMasteringNumber=2021B29&clientId=%s" % (self.SETUP_ENDPOINT, self.client_id[5:]), data=json.dumps(data)
             )
         except PyiCloudAPIResponseException as error:
             msg = "Invalid authentication token."
             raise PyiCloudFailedLoginException(msg, error)
 
         self.data = req.json()
+        self._update_dsid(self.data)
 
+    def _update_dsid(self,data):
         try:
-            self.params.update({"dsid": self.data["dsInfo"]["dsid"]})
+            if 'dsInfo' in data:  ## check self.data returned and contains dsid
+                if 'dsid' in data['dsInfo']:        # as above
+                    self.params["dsid"]= str(data["dsInfo"]["dsid"])
+            else:
+                if 'dsid' in self.params:
+                    self.params.pop("dsid")  ## if no dsid given delete it from self.params - until returned.  Otherwise is passing default incorrect dsid
         except:
-            LOGGER.error(u"Error setting dsid field.")
+            LOGGER.debug(u"Error setting dsid field.")
+            if 'dsid' in self.params:
+                self.params.pop("dsid")  ## if error, self.data None/empty delete
+        return
 
     def _get_auth_headers(self, overrides=None):
         headers = {

@@ -344,6 +344,17 @@
                 <TriggerLabel>Device Timestamp</TriggerLabel>
                 <ControlPageLabel>Device Timestamp</ControlPageLabel>
             </State>
+                        <State id="mapUpdateNeeded">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Map needs to be updated</TriggerLabel>
+                <ControlPageLabel>Map needs to be updated</ControlPageLabel>
+            </State>
+            <State id="mapLastUpdated">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Time Map Last Updated</TriggerLabel>
+                <ControlPageLabel>Time Map Last Updated</ControlPageLabel>
+            </State>
+
             <State id="batteryCharge">
                 <ValueType>Number</ValueType>
                 <TriggerLabel>Percentage Battery</TriggerLabel>
@@ -396,6 +407,11 @@
                 <TriggerLabel>FriendID</TriggerLabel>
                 <ControlPageLabel>FriendID</ControlPageLabel>
             </State>
+            <State id="devSummary">
+                <ValueType>String</ValueType>
+                <TriggerLabel>device Summary Sentence</TriggerLabel>
+                <ControlPageLabel>device Summary Sentence</ControlPageLabel>
+            </State>
             <State id="status">
                 <ValueType>String</ValueType>
                 <TriggerLabel>Status</TriggerLabel>
@@ -415,6 +431,11 @@
                 <ValueType>String</ValueType>
                 <TriggerLabel>deviceModel</TriggerLabel>
                 <ControlPageLabel>deviceModel</ControlPageLabel>
+            </State>
+                                                <State id="deviceStatus">
+                <ValueType>String</ValueType>
+                <TriggerLabel>deviceStatus</TriggerLabel>
+                <ControlPageLabel>deviceStatus</ControlPageLabel>
             </State>
             <State id="googleMapUrl">
                 <ValueType>String</ValueType>
@@ -462,7 +483,7 @@
 
         </States>
 
-        <UiDisplayStateId>deviceIsOnline</UiDisplayStateId>
+        <UiDisplayStateId>devSummary</UiDisplayStateId>
 
     </Device>
 </Devices>

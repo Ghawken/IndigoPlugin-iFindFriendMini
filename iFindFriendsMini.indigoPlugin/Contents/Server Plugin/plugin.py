@@ -393,7 +393,7 @@ class Plugin(indigo.PluginBase):
                 #{'key': 'listFriends', 'value': ''},
                 {'key': 'deviceIsOnline', 'value': False, 'uiValue':'Waiting'}]
 
-            self.logger.debug(unicode(stateList))
+            #self.logger.debug(unicode(stateList))
             dev.updateStatesOnServer(stateList)
 
         if dev.deviceTypeId == 'FindFriendsFriend':
@@ -422,7 +422,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'mapUpdateNeeded', 'value': True}
                 ]
 
-            self.logger.debug(unicode(stateList))
+            #self.logger.debug(unicode(stateList))
             dev.updateStatesOnServer(stateList)
         elif dev.deviceTypeId=="myDevice":
             stateList = [
@@ -446,8 +446,11 @@ class Plugin(indigo.PluginBase):
                 {'key': 'horizontalAccuracy', 'value': ''},
                 {'key': 'address', 'value': ''},
                 {'key': 'latitude', 'value': 'unknown'},
+                {'key': 'devSummary', 'value': 'Offline'},
+                {'key': 'mapUpdateNeeded', 'value': True},
+
             ]
-            self.logger.debug(unicode(stateList))
+            #self.logger.debug(unicode(stateList))
             dev.updateStatesOnServer(stateList)
 
         self.prefsUpdated = True
@@ -817,6 +820,21 @@ class Plugin(indigo.PluginBase):
 
         except PyiCloudAPIResponseException as e:
             self.logger.debug(u'Login Failed API Response Error.   ' + unicode(e.message) + unicode(e.__dict__))
+            if e.code in [450,421,500]:
+                self.logger.info("Error Code 450/421/500 Given: Re-authentication seems to be required.  Reauthenicating now.")
+                self.appleAPI.authenticate(True)
+                try:
+                    self.logger.debug(u"Testing ********************************************")
+                    self.logger.debug( unicode(self.appleAPI.devices[0] ))
+                    self.logger.debug(u"********************************************")
+                    self.sleep(5)
+                    self.refreshData()
+
+                except PyiCloudAPIResponseException:
+                    self.logger.debug("Could not re-authenticate at all... Sorry.")
+                    self.appleAPI = None
+                    self.allDevicesOffline()
+                    return 1, 'NI'
             self.logger.debug(e)
             return
 
@@ -1175,20 +1193,31 @@ class Plugin(indigo.PluginBase):
             else:
                 Distancetravelled = False, 0
 
+
+
+
             batteryLevel = 0
             try:
                 batteryLevel =  round(float(follow['batteryLevel'])*100,3)
                 self.logger.debug(u"Converted Battery to:"+unicode(batteryLevel))
             except:
                 self.logger.debug("Error in Battery Level conversion")
+            devSummary = "Offline"
+            try:
+                devSummary = str("Bat "+str(int(batteryLevel))+"% and "+str(follow['batteryStatus']))
+            except:
+                devSummary = "Unknown"
+                self.logger.debug("Error in devSummary")
 
             stateList = [
                 {'key': 'id', 'value': follow['id']},
                 {'key': 'deviceName', 'value': follow['name']},
-                {'key': 'deviceModel', 'value': follow['deviceDisplayName']},
+                {'key': 'deviceModel', 'value': follow['deviceModel']},
+                {'key': 'deviceStatus', 'value': follow['deviceStatus']},
                 {'key': 'status', 'value': follow['deviceStatus']},
                 {'key': 'batteryStatus', 'value': follow['batteryStatus']},
                 {'key': 'batteryCharge', 'value': batteryLevel},
+                {'key': 'devSummary', 'value': devSummary},
                 {'key': 'locationTimestamp', 'value': follow['location']['timeStamp']},
                 {'key': 'timestamp', 'value': follow['location']['timeStamp']},
                 {'key': 'altitude', 'value': follow['location']['altitude']},
@@ -1209,6 +1238,12 @@ class Plugin(indigo.PluginBase):
             dev.updateStateOnServer('deviceTimestamp', value=t.time())
             dev.updateStateOnServer('deviceIsOnline', value=True)
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+
+            if Distancetravelled[0] == True and int(Distancetravelled[1] > 100):
+                self.logger.debug(u'Device has travelled - setting mapUpdateNeeded to true')
+                dev.updateStateOnServer('mapUpdateNeeded', value=True)
+
+            self.godoMapping(str(follow['location']['latitude']), str(follow['location']['longitude']), dev)
 
         except Exception as e:
             self.logger.debug(unicode('Exception in refreshDataformyDevice: ' + unicode(e)))
@@ -1606,12 +1641,12 @@ class Plugin(indigo.PluginBase):
         try:
             if self.appleAPI == None:
                 self.appleAPI = PyiCloudService(iUsername, iPassword, cookie_directory=self.iprefDirectory, session_directory=self.iprefDirectory+"/session", verify=True)
-                self.logger.error(u"PyiCloudService reconnecting...")
-                self.logger.debug(u'Login successful...')
+                self.logger.error(u"PyiCloudService recreate self.appleAPI full login...")
+                self.logger.error(u'Login successful...')
                 self.logger.debug(u"Account Requires 2FA:" + unicode(self.appleAPI.requires_2fa))
 
             if self.appleAPI:
-                self.appleAPI.authenticate(force_refresh=True)
+                self.appleAPI.authenticate(force_refresh=False)
                 self.logger.error(u'Refresh Session appleAPI only.')
 
             self.requires2FA = self.appleAPI.requires_2fa
@@ -1700,8 +1735,21 @@ class Plugin(indigo.PluginBase):
             return 1, 'NL'
 
         except PyiCloudAPIResponseException as e:
-            self.logger.error(u'Login Failed API Response Error.   ' + unicode(e.message) + unicode(e.__dict__))
-            self.logger.error(e)
+            self.logger.debug(u'Login Failed API Response Error.   ' + unicode(e.message) + unicode(e.__dict__))
+            self.logger.debug(e)
+            if e.code in [450,421,500]:
+                self.logger.info("Error Code 450/421/500 Given: Re-authentication seems to be required.  Reauthenicating now.")
+                self.appleAPI.authenticate(True)
+                try:
+                    self.logger.debug(u"Testing ********************************************")
+                    self.logger.debug( self.appleAPI.devices[0].location() )
+                    self.logger.debug(u"********************************************")
+                    return 0, self.appleAPI
+                except PyiCloudAPIResponseException:
+                    self.logger.debug("Could not re-authenticate at all... Sorry.")
+                    self.appleAPI = None
+                    self.allDevicesOffline()
+                    return 1, 'NI'
             return 1, 'NI'
 
         except Exception as e:
@@ -2001,7 +2049,23 @@ class Plugin(indigo.PluginBase):
                         igeoLat = float(localProps['geoLatitude'])
                         igeoRangeDistance = int(localProps['geoRange'])
                         igeoFriendsRangeOld = int(geoDevices.states['friendsInRange'])
+                        for dev in indigo.devices.itervalues("self.myDevice"):
+                            # add check here make sure dev is Online before checking details of GeoFences
+                            if dev.enabled and dev.states['deviceIsOnline'] == True:
+                                self.logger.debug('Home Check Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
+                                iDevLatitude = float(dev.states['latitude'])
+                                iDevLongitude = float(dev.states['longitude'])
+                                # Now check the distance for each device
+                                # Calculate the distance
+                                self.logger.debug('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(
+                                    iDevLatitude) + ',' + str(iDevLongitude))
 
+                                timedisplay, distancedisplay, route_time, route_distance =  self.useWaze(iDevLatitude,iDevLongitude,igeoLat, igeoLong)
+                                if timedisplay != "unknown":
+                                    dev.updateStateOnServer('homeDistanceText', value=distancedisplay)
+                                    dev.updateStateOnServer('homeTimeText', value=timedisplay)
+                                    dev.updateStateOnServer('homeDistance', value=route_distance )
+                                    dev.updateStateOnServer('homeTime', value=route_time)
                         #This is home Geo - now update all devices
                         for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
                             # add check here make sure dev is Online before checking details of GeoFences
@@ -2013,32 +2077,6 @@ class Plugin(indigo.PluginBase):
                                 # Calculate the distance
                                 self.logger.debug('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(
                                     iDevLatitude) + ',' + str(iDevLongitude))
-
-                                #origin = igeoLat, igeoLong
-                                #destination = iDevLatitude, iDevLongitude
-                                #iRealDistanceHome = self.iDistance(igeoLat, igeoLong, iDevLatitude, iDevLongitude)
-
-
-                                #self.distanceCalculation(origin, destination, self.googleAPI, 'driving', "metric")
-                                #self.logger.debug(u'Home Calculation: Equals Time/Distance:'+unicode(iRealDistanceHome))
-
-                                # if len(iRealDistanceHome[2]) != 0 and iRealDistanceHome[0] != 'FailAPI':
-                                #     try:
-                                #         iRealDistanceVal = int(float(iRealDistanceHome[3]))
-                                #         iTimeMinutes = int(0)
-                                #         if int(iRealDistanceHome[1]) ==1:
-                                #             iTimeMinutes = 1
-                                #         elif int(iRealDistanceHome[1]) >60:
-                                #             iTimeMinutes = int(float(iRealDistanceHome[1]/60))
-                                #
-                                #     except ValueError:
-                                #         self.logger.exception('iGeoLocation')
-                                #         iRealDistanceVal = 0.0
-                                #         iTimeMinutes =0
-
-
-                                #timeResultsHome = self.iConvertMetersTime(iRealDistanceHome[1])
-
                                 timedisplay, distancedisplay, route_time, route_distance =  self.useWaze(iDevLatitude,iDevLongitude,igeoLat, igeoLong)
                                # texttodisplay = str('Time %.2f minutes, distance %.2f km.' % route_time, route_distance)
                                 if timedisplay != "unknown":
@@ -2065,29 +2103,24 @@ class Plugin(indigo.PluginBase):
                                 self.logger.debug('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(
                                     iDevLatitude) + ',' + str(iDevLongitude))
 
-                                #origin = igeoLat, igeoLong
-                                #destination = iDevLatitude, iDevLongitude
-                                #iRealDistanceOther= self.iDistance(igeoLat, igeoLong, iDevLatitude, iDevLongitude)
+                                timedisplay, distancedisplay, route_time, route_distance =  self.useWaze(iDevLatitude,iDevLongitude,igeoLat, igeoLong)
 
+                                if timedisplay != "unknown":
+                                    dev.updateStateOnServer('otherDistanceText', value=distancedisplay)
+                                    dev.updateStateOnServer('otherTimeText', value=timedisplay)
+                                    dev.updateStateOnServer('otherDistance', value=route_distance)
+                                    dev.updateStateOnServer('otherTime', value=route_time)
 
-                                #self.distanceCalculation(origin, destination, self.googleAPI, 'driving', "metric")
-                                #self.logger.debug(u'Home Calculation: Equals Time/Distance:' + unicode(iRealDistanceOther[1]))
-
-                                # if len(iRealDistanceHome[2]) != 0 and iRealDistanceHome[0] != 'FailAPI':
-                                #     try:
-                                #         iRealDistanceVal = int(float(iRealDistanceHome[3]))
-                                #         iTimeMinutes = int(0)
-                                #         if int(iRealDistanceHome[1]) ==1:
-                                #             iTimeMinutes = 1
-                                #         elif int(iRealDistanceHome[1]) >60:
-                                #             iTimeMinutes = int(float(iRealDistanceHome[1]/60))
-                                #
-                                #     except ValueError:
-                                #         self.logger.exception('iGeoLocation')
-                                #         iRealDistanceVal = 0.0
-                                #         iTimeMinutes =0
-
-                                #timeResultsOther = self.iConvertMetersTime(iRealDistanceOther[1])
+                        for dev in indigo.devices.itervalues("self.myDevice"):
+                            if dev.enabled and dev.states['deviceIsOnline'] == True:
+                                self.logger.debug(
+                                    'Other Geo Check Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
+                                iDevLatitude = float(dev.states['latitude'])
+                                iDevLongitude = float(dev.states['longitude'])
+                                # Now check the distance for each device
+                                # Calculate the distance
+                                self.logger.debug('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(
+                                    iDevLatitude) + ',' + str(iDevLongitude))
 
                                 timedisplay, distancedisplay, route_time, route_distance =  self.useWaze(iDevLatitude,iDevLongitude,igeoLat, igeoLong)
 

@@ -51,3 +51,7 @@ class FindFriendsService(object):
     @property
     def details(self):
         return self.data.get('contactDetails')
+
+    @property
+    def following(self):
+        return self.data.get('following')
