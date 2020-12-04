@@ -1,6 +1,7 @@
 """Find my iPhone service."""
 import json
 
+
 from six import PY2, text_type
 
 from pyicloud.exceptions import PyiCloudNoDevicesException

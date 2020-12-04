@@ -78,7 +78,7 @@ class PyiCloudSession(Session):
 
         response = super(PyiCloudSession, self).request(method, url, timeout=15, **kwargs )
 
-        LOGGER.debug(u"Response Headers:"+unicode(response.headers))
+        #LOGGER.debug(u"Response Headers:"+unicode(response.headers))
 
         content_type = response.headers.get("Content-Type", "").split(";")[0]
         json_mimetypes = ["application/json", "text/json"]
@@ -109,10 +109,13 @@ class PyiCloudSession(Session):
             self._raise_error(response.status_code, response.reason)
 
         if content_type not in json_mimetypes:
+            LOGGER.debug("Response:"+unicode(response))
             return response
 
         try:
             data = response.json()
+            LOGGER.debug("Data:" + unicode(data))
+
         except:  # pylint: disable=bare-except
             request_logger.warning("Failed to parse response with JSON mimetype")
             return response
@@ -135,6 +138,7 @@ class PyiCloudSession(Session):
             if reason:
                 self._raise_error(code, reason)
 
+        LOGGER.debug("Response:" + unicode(response))
         return response
 
     def _raise_error(self, code, reason):
@@ -161,7 +165,7 @@ class PyiCloudSession(Session):
             reason = "Authentication required for Account."
 
         api_error = PyiCloudAPIResponseException(reason, code)
-        LOGGER.error(api_error)
+        LOGGER.debug(api_error)
         raise api_error
 
 

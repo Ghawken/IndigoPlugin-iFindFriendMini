@@ -757,19 +757,21 @@ class Plugin(indigo.PluginBase):
                 return
 
             self.appleAPI = iLogin[1]
+
             follower = self.appleAPI.friends.locations
+            friendsdata = iLogin[1].friends.data
 
             if self.debugicloud:
                 self.logger.debug(unicode('Follower is Type: '+ unicode(type(follower))))
             if self.debugicloud:
-                self.logger.debug(unicode('More debugging: Follower: '+unicode(iLogin[1].friends.locations)))
+                self.logger.debug(unicode('More debugging: Follower: '+unicode(follower)))
             if len(follower) == 0:
                 self.logger.info(u'No Followers Found for this Account.  Have you any friends?')
                 if self.debugicloud:
                     self.logger.debug(u'Full Dump of self.appleAPI data follows:')
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(unicode(iLogin[1].friends.data))
+                    self.logger.debug(unicode(friendsdata))
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u'Please PM developer this log.')
@@ -1641,8 +1643,8 @@ class Plugin(indigo.PluginBase):
         try:
             if self.appleAPI == None:
                 self.appleAPI = PyiCloudService(iUsername, iPassword, cookie_directory=self.iprefDirectory, session_directory=self.iprefDirectory+"/session", verify=True)
-                self.logger.error(u"PyiCloudService recreate self.appleAPI full login...")
-                self.logger.error(u'Login successful...')
+                self.logger.info(u"PyiCloudService start or redo FULL self.appleAPI full login...")
+                self.logger.debug(u'Login successful...')
                 self.logger.debug(u"Account Requires 2FA:" + unicode(self.appleAPI.requires_2fa))
 
             if self.appleAPI:
@@ -1753,8 +1755,9 @@ class Plugin(indigo.PluginBase):
             return 1, 'NI'
 
         except Exception as e:
-            self.logger.error(u'Login Failed General Error.   ' + unicode(e.message) + unicode(e.__dict__))
-            self.logger.exception(e)
+            self.logger.debug(u'Login Failed General Error.   ' + unicode(e.message) + unicode(e.__dict__))
+            self.logger.info(u"Issue connecting to icloud.  ?Internet issue, or temp icloud server down...")
+            self.logger.debug(e)
             return 1, 'NI'
 
 
