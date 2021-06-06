@@ -516,7 +516,7 @@ class PyiCloudService(object):
             self._authenticate_with_token()
             return True
         except PyiCloudAPIResponseException:
-            LOGGER.error("Session trust failed.")
+            LOGGER.error("Session trust failed.  Appears to be incorrect Code.")
             return False
 
     def _get_webservice_url(self, ws_key):

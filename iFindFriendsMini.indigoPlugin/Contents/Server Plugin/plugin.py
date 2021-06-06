@@ -740,7 +740,11 @@ class Plugin(indigo.PluginBase):
             Twofaenabled = self.pluginPrefs.get('TwoFAenabled', False)
 
             if appleAPIId == '':
-                self.logger.info(u'Plugin Config Not setup.  Go to Plugin Config')
+                self.logger.info(u"{0:=^130}".format(""))
+                self.logger.info(u"{0:<30} {1}".format("Plugin Config is not complete."))
+                self.logger.info(u"{0:<30} {1}".format("Please go to Plugin Config Page and re-Login"))
+                self.logger.info(u"{0:<30} {1}".format("& enter 2FA as required" ))
+                self.logger.info(u"{0:=^130}".format(""))
                 return
 
            # if 2faenabled and self.2faverifed:
@@ -750,6 +754,9 @@ class Plugin(indigo.PluginBase):
             if iLogin[0] == 1:
                 self.logger.debug(u"Login to icloud Failed.")
                 self.appleAPI = None
+                return
+            if iLogin[0] == 2:
+                self.logger.debug(u"2FA Work flow needed. ")
                 return
             if iLogin[0] == None:
                 self.logger.debug("Error:")
@@ -1638,18 +1645,18 @@ class Plugin(indigo.PluginBase):
         # Logs in and authorises access to the Find my Phone API
         # Logs into the find my phone API and returns an error if it doesn't work correctly
 
-        self.logger.debug('Attempting login...')
+        self.logger.debug('iAuthorise: Attempting login...')
         # Logs into the API as required
         try:
             if self.appleAPI == None:
                 self.appleAPI = PyiCloudService(iUsername, iPassword, cookie_directory=self.iprefDirectory, session_directory=self.iprefDirectory+"/session", verify=True)
-                self.logger.info(u"PyiCloudService start or redo FULL self.appleAPI full login...")
-                self.logger.debug(u'Login successful...')
+                self.logger.debug(u"PyiCloudService start or redo FULL self.appleAPI full login...")
+                self.logger.debug(u'Login to account successful...')
                 self.logger.debug(u"Account Requires 2FA:" + unicode(self.appleAPI.requires_2fa))
 
             if self.appleAPI:
                 self.appleAPI.authenticate(force_refresh=False)
-                self.logger.error(u'Refresh Session appleAPI only.')
+                self.logger.debug(u'Refresh Session appleAPI only.')
 
             self.requires2FA = self.appleAPI.requires_2fa
             if self.requires2FA:
@@ -1659,8 +1666,9 @@ class Plugin(indigo.PluginBase):
                 self.logger.info(u"Enter updated verification code in box and press submit.")
                 self.logger.info(u"{0:=^130}".format(""))
                 self.logger.info(u"{0:=^130}".format(""))
-                self.appleAPI = None
-                return
+                #self.appleAPI = None
+                return 2, self.appleAPI
+            # 2 = 2fa required
             #self.appleAPI = self.self.appleAPI
             if self.debugicloud:
                 self.logger.debug(u"{0:=^130}".format(""))
@@ -1730,7 +1738,7 @@ class Plugin(indigo.PluginBase):
 
         except ValueError as e:
             self.logger.error(u"{0:=^130}".format(""))
-            self.logger.error(u'Login failed - 2SA and 2FA Authenication are NOT supported.  You need to create new account without')
+            self.logger.error(u'Login failed - 2FA Authenication is supported. ')
             self.logger.debug(u'Error Given is:'+unicode(e.message)+unicode(e.__dict__))
             self.logger.error(u"{0:=^130}".format(""))
             self.allDevicesOffline()
@@ -1763,18 +1771,33 @@ class Plugin(indigo.PluginBase):
 
     def loginAccount(self, valuesDict):
         self.logger.debug(u'loginAccount Button pressed Called.')
-
         self.validatePrefsConfigUi(valuesDict)
-
         self.logger.debug(u"Using Details: Username:"+unicode(valuesDict['appleId'])+u" and password:"+unicode(valuesDict['applePwd']))
         self.appleAPI = None
         self.pluginPrefs['appleAPIid']= ""
+        self.logger.info(u"{0:=^130}".format(""))
+        self.logger.info(u'Attempting Login to Apple Account:'+unicode(valuesDict['appleId']))
+
+
         valuesDict['appleAPIid']=''
         iLogin = self.iAuthorise(valuesDict['appleId'], valuesDict['applePwd'])
-
-        self.logger.info(u"Account Requires 2FA to continue:"+unicode(iLogin[1].requires_2fa))
-        self.requires2FA = iLogin[1].requires_2fa
-
+        if self.appleAPI != None:
+            self.logger.info(u"Account username and password has been verifed by Apple")
+            if self.appleAPI.requires_2fa==False:
+                self.logger.info(u"Two Factor Authenication (2FA) is NOT enabled on this account")
+                self.logger.info(u"OR this Computer/Device is a Trusted Session.  Hence Code not needed")
+                self.logger.info(u"This is the ideal setup for iFindFriends")
+                self.logger.info(u"Nothing further is required and the account should be functioning")
+                self.logger.info(u"Please select options and press Save.")
+            else:
+                self.logger.info(u"Two Factor Authenication (2FA) is enabled on this account")
+                self.logger.info(u"Please enable the use 2FA checkbox to continue.")
+                self.logger.info(u"Another device from this account is required to verify the account")
+                self.logger.info(u"From this other device please approve and enter the code displayed")
+                self.logger.info(u"Once Code is enter press Submit Code button")
+            self.logger.debug(u"Account Requires 2FA to continue = "+unicode(self.appleAPI.requires_2fa))
+            self.logger.info(u"{0:=^130}".format(""))
+            self.requires2FA = self.appleAPI.requires_2fa
         return valuesDict
 
     def submitCode(self,valuesDict):
