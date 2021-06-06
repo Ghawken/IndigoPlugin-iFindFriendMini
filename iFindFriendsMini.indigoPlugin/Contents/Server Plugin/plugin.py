@@ -1927,7 +1927,7 @@ class Plugin(indigo.PluginBase):
                         BingStatic = BingStatic + '/CanvasGray'
                     elif 'BirdsEye' in self.mapType:
                         mapWorld2d = mapWorld2d + "&style=h"
-                        BingStatic = BingStatic + '/BirdsEye'
+                        BingStatic = BingStatic + '/BirdsEyeV2'
                     elif 'Canvas' in self.mapType:
                         mapWorld2d = mapWorld2d + "&style=r"
                         BingStatic = BingStatic + '/CanvasLight'
