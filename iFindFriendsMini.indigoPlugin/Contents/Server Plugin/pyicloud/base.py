@@ -8,7 +8,9 @@ from requests import Session
 from tempfile import gettempdir
 from os import path, mkdir
 from re import match
-import http.cookiejar as cookielib
+import cookielib
+
+#import http.cookiejar as cookielib
 
 from pyicloud.exceptions import (
     PyiCloudFailedLoginException,
