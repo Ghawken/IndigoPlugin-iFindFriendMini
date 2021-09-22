@@ -741,9 +741,9 @@ class Plugin(indigo.PluginBase):
 
             if appleAPIId == '':
                 self.logger.info(u"{0:=^130}".format(""))
-                self.logger.info(u"{0:<30} {1}".format("Plugin Config is not complete."))
-                self.logger.info(u"{0:<30} {1}".format("Please go to Plugin Config Page and re-Login"))
-                self.logger.info(u"{0:<30} {1}".format("& enter 2FA as required" ))
+                self.logger.info(u"Plugin Config is not complete.")
+                self.logger.info(u"Please go to Plugin Config Page and re-Login")
+                self.logger.info(u"& enter 2FA as required")
                 self.logger.info(u"{0:=^130}".format(""))
                 return
 
