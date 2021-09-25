@@ -32,7 +32,7 @@ import math
 import WazeRouteCalculator
 
 import time as t
-
+import json
 try:
     import indigo
 except ImportError:
@@ -530,18 +530,50 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"PlaySound method called.")
             # If plugin config menu closed update the time for check.  Will apply after first change.
             targetDevice = action.props.get('targetDevice', "")
+            targetSubject = action.props.get('subject',"Indigo Alert")
             self.logger.debug("targetDevice: "+unicode(targetDevice))
             if targetDevice =="":
                 self.logger.info("Please Enter a Device.")
                 return
 
-            if self.appleAPI != None:
-                self.appleAPI.play_sound(targetDevice)
+            devicetargets = self.appleAPI.devices
+            for devices in devicetargets:
+                # self.logger.error(unicode(devices))
+                # self.logger.error(devices['id'])
+                # self.logger.error(devices.status())
+                # self.logger.error(devices.location())
+                if str(targetDevice) == str(devices['id']):
+                    devices.play_sound(subject=targetSubject)
 
             return
         except Exception as e:
             self.logger.exception(u"Exception in PlaySound")
 
+    def displayMessage(self, action):
+        try:
+            self.logger.debug(u"DisplayMessage method called.")
+            # If plugin config menu closed update the time for check.  Will apply after first change.
+            targetDevice = action.props.get('targetDevice', "")
+            targetSubject = action.props.get('subject',"Indigo Alert")
+            soundenabled = action.props.get('sound',False)
+            targetMessage = action.props.get('message',"")
+            self.logger.debug("targetDevice: "+unicode(targetDevice))
+            if targetDevice =="":
+                self.logger.info("Please Enter a Device.")
+                return
+
+            devicetargets = self.appleAPI.devices
+            for devices in devicetargets:
+                # self.logger.error(unicode(devices))
+                # self.logger.error(devices['id'])
+                # self.logger.error(devices.status())
+                # self.logger.error(devices.location())
+                if str(targetDevice) == str(devices['id']):
+                    devices.display_message(subject=targetSubject, message=targetMessage, sounds=soundenabled)
+
+            return
+        except Exception as e:
+            self.logger.exception(u"Exception in PlaySound")
 
     def runConcurrentThread(self):
         """ docstring placeholder """
@@ -820,11 +852,17 @@ class Plugin(indigo.PluginBase):
                     targetFriend = dev.pluginProps['targetFriend']
                     if self.debugicloud:
                         self.logger.debug(u'targetDevice of Device equals:' + unicode(targetFriend))
-                    devicetarget = self.appleAPI.devices[targetFriend].data
-                    #self.logger.error("********* DeviceTarget: "+unicode(devicetarget))
-                    if self.debugicloud:
-                        self.logger.debug (unicode(devicetarget))
-                    self.refreshDataforMyDevice(dev, devicetarget)
+                    devicetargets = self.appleAPI.devices
+                    for devices in devicetargets:
+                        #self.logger.error(unicode(devices))
+                        #self.logger.error(devices['id'])
+                        #self.logger.error(devices.status())
+                        #self.logger.error(devices.location())
+                        if str(targetFriend) == str(devices['id']):
+                            self.refreshDataforMyDevice( dev, devices)
+
+                    #elf.logger.error("**:"+unicode(targetdevice))
+
             return
 
         except PyiCloudAPIResponseException as e:
@@ -1160,13 +1198,32 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u'or issues contacting the www.latlong.net site.  Is internet working?')
         return
 
-    def refreshDataforMyDevice(self,dev,follow):
+    def refreshDataforMyDevice(self,dev, appleDevice):
         self.logger.debug(u"refreshDataforMyDevice() method called.")
         try:
             if self.debugicloud:
                 self.logger.debug(unicode('Now updating Data for : ' + unicode(dev.name) + ' with data received: ' + unicode(follow)))
 
-            if follow is None:
+            # self.logger.error(unicode(devices))
+            # self.logger.error(devices['id'])
+            # self.logger.error(devices.status())
+            # self.logger.error(devices.location())
+
+            locationdata = appleDevice.location()
+            devicestatus = appleDevice.status(additional=["deviceModel","batteryStatus"])
+            deviceid = appleDevice['id']
+
+            if appleDevice is None:
+                self.logger.debug(u'No data received for device:' + unicode(
+                    dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
+                if dev.states['deviceIsOnline']:
+                    self.logger.info(u'myOwnDevice Device:' + unicode(
+                        dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
+                    dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
+                    dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+                return
+
+            if locationdata is None:
                 self.logger.debug(u'No data received for device:' + unicode(
                     dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
                 if dev.states['deviceIsOnline']:
@@ -1175,16 +1232,8 @@ class Plugin(indigo.PluginBase):
                     dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
                     dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                 return
-            if 'location' not in follow:
-                self.logger.debug(u'No data received for device:' + unicode(
-                    dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
-                if dev.states['deviceIsOnline']:
-                    self.logger.info(u'Friend Device:' + unicode(
-                        dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
-                    dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
-                    dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
-                return
-            if follow['location'] is None or follow['location'] == 'None':
+
+            if locationdata == 'None':
                 self.logger.debug(u'No data received for device:' + unicode(
                     dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
                 if dev.states['deviceIsOnline']:
@@ -1193,46 +1242,46 @@ class Plugin(indigo.PluginBase):
                     dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                 return
 
+            latitude = locationdata['latitude']
+            longitude = locationdata['longitude']
+
             if dev.states['latitude'] != 'unknown':
                 iDevLatitude = float(dev.states['latitude'])
                 iDevLongitude = float(dev.states['longitude'])
                 # Check to see whether moved and by how much since last check
-                Distancetravelled = self.iDistance(iDevLatitude, iDevLongitude, float(follow['location']['latitude']),
-                                                   float(follow['location']['longitude']))
+                Distancetravelled = self.iDistance(iDevLatitude, iDevLongitude, float(latitude),
+                                                   float(longitude))
             else:
                 Distancetravelled = False, 0
 
-
-
-
             batteryLevel = 0
             try:
-                batteryLevel =  round(float(follow['batteryLevel'])*100,3)
+                batteryLevel =  round(float(devicestatus['batteryLevel'])*100,3)
                 self.logger.debug(u"Converted Battery to:"+unicode(batteryLevel))
             except:
                 self.logger.debug("Error in Battery Level conversion")
             devSummary = "Offline"
             try:
-                devSummary = str("Bat "+str(int(batteryLevel))+"% and "+str(follow['batteryStatus']))
+                devSummary = str("Bat "+str(int(batteryLevel))+"% and "+str(devicestatus['batteryStatus']))
             except:
                 devSummary = "Unknown"
                 self.logger.debug("Error in devSummary")
 
             stateList = [
-                {'key': 'id', 'value': follow['id']},
-                {'key': 'deviceName', 'value': follow['name']},
-                {'key': 'deviceModel', 'value': follow['deviceModel']},
-                {'key': 'deviceStatus', 'value': follow['deviceStatus']},
-                {'key': 'status', 'value': follow['deviceStatus']},
-                {'key': 'batteryStatus', 'value': follow['batteryStatus']},
+                {'key': 'id', 'value': deviceid},
+                {'key': 'deviceName', 'value': devicestatus['deviceDisplayName']},
+                {'key': 'deviceModel', 'value': devicestatus['deviceModel']},
+                {'key': 'deviceStatus', 'value': devicestatus['deviceStatus']},
+                {'key': 'status', 'value': devicestatus['deviceStatus']},
+                {'key': 'batteryStatus', 'value': devicestatus['batteryStatus']},
                 {'key': 'batteryCharge', 'value': batteryLevel},
                 {'key': 'devSummary', 'value': devSummary},
-                {'key': 'locationTimestamp', 'value': follow['location']['timeStamp']},
-                {'key': 'timestamp', 'value': follow['location']['timeStamp']},
-                {'key': 'altitude', 'value': follow['location']['altitude']},
-                {'key': 'longitude', 'value': follow['location']['longitude']},
-                {'key': 'horizontalAccuracy', 'value': follow['location']['horizontalAccuracy']},
-                {'key': 'latitude', 'value': follow['location']['latitude']},
+                {'key': 'locationTimestamp', 'value': locationdata['timeStamp']},
+                {'key': 'timestamp', 'value': locationdata['timeStamp']},
+                {'key': 'altitude', 'value': locationdata['altitude']},
+                {'key': 'longitude', 'value': longitude},
+                {'key': 'horizontalAccuracy', 'value': locationdata['horizontalAccuracy']},
+                {'key': 'latitude', 'value': latitude},
                 {'key': 'distanceSinceCheck', 'value': str(Distancetravelled[1])},
             ]
 
@@ -1252,7 +1301,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u'Device has travelled - setting mapUpdateNeeded to true')
                 dev.updateStateOnServer('mapUpdateNeeded', value=True)
 
-            self.godoMapping(str(follow['location']['latitude']), str(follow['location']['longitude']), dev)
+            self.godoMapping(str(latitude), str(longitude), dev)
 
         except Exception as e:
             self.logger.debug(unicode('Exception in refreshDataformyDevice: ' + unicode(e)))
@@ -1619,9 +1668,12 @@ class Plugin(indigo.PluginBase):
                 return iArray
 
             following = iLogin[1].devices
+            #devicetargets = self.appleAPI.devices
+
             for fol in following:
-                self.logger.debug(unicode(fol.data['id'])+" and "+unicode(fol.data['name']))
-                iOption2 = fol.data['id'], fol.data['name']
+                self.logger.debug(unicode(fol['id'])+" and "+unicode(fol['name']))
+
+                iOption2 = fol['id'], fol['name']
                 # self.logger.info(unicode(iOption2))
                 iArray.append(iOption2)
             return iArray
@@ -2428,7 +2480,7 @@ class Plugin(indigo.PluginBase):
                         self.logger.debug("Not Run Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
 
         except:
-            self.logger.exception(u'Exception within Trigger Check')
+            self.logger.exception(u'Caught Exception within Trigger Check')
             return
 
 

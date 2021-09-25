@@ -70,17 +70,17 @@ class FindMyiPhoneServiceManager(object):
 
     def __getitem__(self, key):
         if isinstance(key, int):
-            if PY2:
-                key = self.keys()[key]
-            else:
-                key = list(self.keys())[key]
+            #if PY2:
+            key = self.keys()[key]
+            #else:
+            ##    key = list(self.keys())[key]
         return self._devices[key]
 
     def __getattr__(self, attr):
         return getattr(self._devices, attr)
 
     def __unicode__(self):
-        return text_type(self._devices)
+        return self._devices
 
     def __str__(self):
         as_unicode = self.__unicode__()
@@ -136,7 +136,7 @@ class AppleDevice(object):
             properties[field] = self.content.get(field)
         return properties
 
-    def play_sound(self, subject="Find My iPhone Alert"):
+    def play_sound(self, subject):
         """Send a request to the device to play a sound.
 
         It's possible to pass a custom message by changing the `subject`.
@@ -150,9 +150,7 @@ class AppleDevice(object):
         )
         self.session.post(self.sound_url, params=self.params, data=data)
 
-    def display_message(
-        self, subject="Find My iPhone Alert", message="This is a note", sounds=False
-    ):
+    def display_message( self, subject, message, sounds  ):
         """Send a request to the device to play a sound.
 
         It's possible to pass a custom message by changing the `subject`.

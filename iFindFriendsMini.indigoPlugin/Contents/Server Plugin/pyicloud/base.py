@@ -537,6 +537,9 @@ class PyiCloudService(object):
         return FindMyiPhoneServiceManager(
             service_root, self.session, self.params, self.with_family
         )
+        #return FindFriendsService(service_root, self.session, self.params)
+      #  return FindMyiPhoneServiceManager(
+     ##    )
 
     @property
     def iphone(self):

@@ -29,6 +29,7 @@
         </Field>
         </ConfigUI>
     </Action>
+
     <Action id="playSound" uiPath="DeviceActions">
         <Name>Play Sound on Device</Name>
         <CallbackMethod>playSound</CallbackMethod>
@@ -37,6 +38,43 @@
 				<Label>Device:</Label>
 				<List class="self" filter='' method = "myDevices" dynamicReload="true" />
 			</Field>
+            <Field id="subject"
+				   type="textfield"
+				   tooltip="Subject to send alert for"
+				   default="Indigo Alert">
+				<Label>Subject to send:</Label>
+			</Field>
+
         </ConfigUI>
     </Action>
+
+        <Action id="displayMessage" uiPath="DeviceActions">
+        <Name>Display Message on Device</Name>
+        <CallbackMethod>displayMessage</CallbackMethod>
+        <ConfigUI>
+    <Field id="targetDevice" type="menu">
+				<Label>Device:</Label>
+				<List class="self" filter='' method = "myDevices" dynamicReload="true" />
+			</Field>
+            <Field id="subject"
+				   type="textfield"
+				   tooltip="Subject to send alert for"
+				   default="Indigo Alert">
+				<Label>Subject to send:</Label>
+			</Field>
+                        <Field id="message"
+				   type="textfield"
+				   tooltip="Subject to send alert for"
+				   default="Indigo Alert">
+				<Label>Message to send:</Label>
+			</Field>
+            <Field id="sound" type="checkbox" tooltip="" default="False">
+        <Label/>
+        <Description>Sound Enabled</Description>
+        </Field>
+
+
+        </ConfigUI>
+    </Action>
+
 </Actions>
