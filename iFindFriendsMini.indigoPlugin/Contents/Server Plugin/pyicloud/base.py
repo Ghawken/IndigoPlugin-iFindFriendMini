@@ -116,7 +116,8 @@ class PyiCloudSession(Session):
 
         try:
             data = response.json()
-            LOGGER.debug("Data:" + unicode(data))
+            LOGGER.debug("Data:" + unicode(json.dumps(data)))
+          #  unicode(json.dumps(masterState))
 
         except:  # pylint: disable=bare-except
             request_logger.warning("Failed to parse response with JSON mimetype")
@@ -558,7 +559,7 @@ class PyiCloudService(object):
 
     @property
     def friends(self):
-        service_root = self._get_webservice_url("fmf")
+        service_root = self._get_webservice_url("findme")
         return FindFriendsService(service_root, self.session, self.params)
 
     @property

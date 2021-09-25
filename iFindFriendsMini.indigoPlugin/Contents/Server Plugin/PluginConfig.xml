@@ -42,7 +42,7 @@
 				<Label>Login iCloud Account</Label>
 				<Title>Login iCloud Account</Title>
 				<CallbackMethod>loginAccount</CallbackMethod>
-	</Field>
+	    </Field>
         <Field id="verficationcode"
 				   type="textfield"
 				   tooltip="Enter your Apple Account Verification Code"
@@ -269,5 +269,12 @@
             <Option value="50">Critical Errors Only</Option>
         </List>
     </Field>
-
+        <Field id="deleteSession"
+				   type="button"
+				   tooltip="Click this to delete all saved Session and Account Data"
+                    >
+				<Label>Delete all Account Data</Label>
+				<Title>Delete all Account Data</Title>
+				<CallbackMethod>deleteAccount</CallbackMethod>
+	    </Field>
 </PluginConfig>

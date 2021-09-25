@@ -163,7 +163,7 @@ import webbrowser
 import os
 import logging
 import datetime
-
+import glob
 #from ghpu import GitHubPluginUpdater
 
 global accountOK
@@ -1662,7 +1662,7 @@ class Plugin(indigo.PluginBase):
             if self.requires2FA:
                 self.logger.info(u"{0:=^130}".format(""))
                 self.logger.info(u"{0:=^130}".format(""))
-                self.logger.info( u"Account requires a two step authenication:  Please see Plugin Config box to complete")
+                self.logger.info( u"Account requires a two step authentication:  Please see Plugin Config box to complete")
                 self.logger.info(u"Enter updated verification code in box and press submit.")
                 self.logger.info(u"{0:=^130}".format(""))
                 self.logger.info(u"{0:=^130}".format(""))
@@ -1767,6 +1767,36 @@ class Plugin(indigo.PluginBase):
             self.logger.info(u"Issue connecting to icloud.  ?Internet issue, or temp icloud server down...")
             self.logger.debug(e)
             return 1, 'NI'
+
+    def deleteAccount(self,valuesDict):
+        self.logger.debug(u'deleteAccount Button pressed Called.')
+        self.appleAPI = None
+        self.pluginPrefs['appleAPIid'] = ""
+        valuesDict['appleAPIid'] =""
+        valuesDict['appleId'] = ""
+        valuesDict['applePwd'] = ""
+        valuesDict['verficationcode'] = ""
+
+        indigoPreferencesPluginDir = indigo.server.getInstallFolderPath()+"/Preferences/Plugins/" + self.pluginId + "/"
+
+        self.logger.info("Deleting Session data from:"+unicode(indigoPreferencesPluginDir))
+
+        files = glob.glob(indigoPreferencesPluginDir+"/session/*")
+        for f in files:
+            self.logger.info("Deleting file:"+(unicode(f)))
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+        files2 = glob.glob(indigoPreferencesPluginDir+"/*")
+        for fi in files2:
+            self.logger.info("Deleting file:"+(unicode(fi)))
+            try:
+                os.remove(fi)
+            except OSError:
+                pass
+
+        return valuesDict
 
 
     def loginAccount(self, valuesDict):
