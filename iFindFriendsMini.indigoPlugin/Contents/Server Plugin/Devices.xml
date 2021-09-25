@@ -283,7 +283,7 @@
         <UiDisplayStateId>deviceIsOnline</UiDisplayStateId>
 
     </Device>
-
+<!--
  <Device type="custom" id="myDevice" >
         <Name>FindFriends My Own Device</Name>
 
@@ -486,4 +486,5 @@
         <UiDisplayStateId>devSummary</UiDisplayStateId>
 
     </Device>
+    -->
 </Devices>
