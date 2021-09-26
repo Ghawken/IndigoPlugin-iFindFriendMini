@@ -103,11 +103,25 @@ class PyiCloudSession(Session):
 
         if not response.ok and (content_type not in json_mimetypes
                                 or response.status_code in [421, 450, 500]):
+            try:
+                if has_retried is None and response.status_code == 450:
+                    # Handle re-authentication for Find My iPhone
+                    LOGGER.debug("Re-authenticating Find My iPhone service")
+                    try:
+                        self.service.authenticate(True)
+                    except PyiCloudAPIResponseException:
+                        LOGGER.debug("Re-authentication failed")
+                    kwargs["retried"] = True
+                    return self.request(method, url, **kwargs)
+            except Exception:
+                pass
+
             if has_retried is None and response.status_code in [421, 450, 500]:
                 api_error = PyiCloudAPIResponseException( response.reason, response.status_code, retry=True   )
                 request_logger.debug(api_error)
                 kwargs["retried"] = True
                 return self.request(method, url, **kwargs)
+
             self._raise_error(response.status_code, response.reason)
 
         if content_type not in json_mimetypes:
