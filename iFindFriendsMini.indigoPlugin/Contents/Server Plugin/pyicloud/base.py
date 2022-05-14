@@ -8,7 +8,7 @@ from requests import Session
 from tempfile import gettempdir
 from os import path, mkdir
 from re import match
-import cookielib
+import http.cookiejar as cookielib
 
 #import http.cookiejar as cookielib
 
@@ -80,7 +80,7 @@ class PyiCloudSession(Session):
 
         response = super(PyiCloudSession, self).request(method, url, timeout=15, **kwargs )
 
-        #LOGGER.debug(u"Response Headers:"+unicode(response.headers))
+        #LOGGER.debug(u"Response Headers:"+str(response.headers))
 
         content_type = response.headers.get("Content-Type", "").split(";")[0]
         json_mimetypes = ["application/json", "text/json"]
@@ -125,13 +125,13 @@ class PyiCloudSession(Session):
             self._raise_error(response.status_code, response.reason)
 
         if content_type not in json_mimetypes:
-            LOGGER.debug("Response:"+unicode(response))
+            LOGGER.debug("Response:"+str(response))
             return response
 
         try:
             data = response.json()
-            LOGGER.debug("Data:" + unicode(json.dumps(data)))
-          #  unicode(json.dumps(masterState))
+            LOGGER.debug("Data:" + str(json.dumps(data)))
+          #  str(json.dumps(masterState))
 
         except:  # pylint: disable=bare-except
             request_logger.warning("Failed to parse response with JSON mimetype")
@@ -155,7 +155,7 @@ class PyiCloudSession(Session):
             if reason:
                 self._raise_error(code, reason)
 
-        LOGGER.debug("Response:" + unicode(response))
+        LOGGER.debug("Response:" + str(response))
         return response
 
     def _raise_error(self, code, reason):
@@ -276,7 +276,7 @@ class PyiCloudService(object):
                 LOGGER.warning("Failed to read cookiejar %s" % cookiejar_path)
 
         LOGGER.debug("************ Headers for PyiCloud Service ***************")
-        LOGGER.debug(unicode(self.session.headers))
+        LOGGER.debug(str(self.session.headers))
         self.authenticate()
 
         self._drive = None
@@ -289,7 +289,7 @@ class PyiCloudService(object):
         subsequent logins will not cause additional e-mails from Apple.
         """
         LOGGER.debug(u"{0:=^130}".format(""))
-        LOGGER.debug("Self.Params:="+unicode(self.params))
+        LOGGER.debug("Self.Params:="+str(self.params))
         LOGGER.debug(u"{0:=^130}".format(""))
         login_successful = False
         if self.session_data.get("session_token") and not force_refresh and 'dsid' in self.params:
@@ -298,7 +298,7 @@ class PyiCloudService(object):
                 req = self.session.post("%s/validate" % self.SETUP_ENDPOINT, params=self.params, data="null")
                 LOGGER.debug("Session token is still valid")
                 self.data = req.json()
-                LOGGER.debug("Session Data Returned:" + unicode(self.data))
+                LOGGER.debug("Session Data Returned:" + str(self.data))
                 login_successful = True
                 ## check for correct valid using dsid
                 if 'dsInfo' in self.data:
@@ -307,10 +307,10 @@ class PyiCloudService(object):
                             self.params.update({"dsid": self.data["dsInfo"]["dsid"]}) ## should already be set, but no harm...
                     else:
                         login_successful = False
-                        self.logger.error(u"No DSID in return data:"+unicode(self.data))
+                        self.logger.error(u"No DSID in return data:"+str(self.data))
                 else:
                     login_successful = False
-                    self.logger.error(u"No DSID in return data:" + unicode(self.data))
+                    self.logger.error(u"No DSID in return data:" + str(self.data))
 
 
             except PyiCloudAPIResponseException:
@@ -335,7 +335,7 @@ class PyiCloudService(object):
                 headers["X-Apple-ID-Session-Id"] = self.session_data.get("session_id")
 
             #LOGGER.error("************ Headers for /validate with Token Session ***************")
-           # LOGGER.error(unicode(headers))
+           # LOGGER.error(str(headers))
             try:
                 req = self.session.post(
                     "%s/signin" % self.AUTH_ENDPOINT,
@@ -364,7 +364,7 @@ class PyiCloudService(object):
             "trustToken": self.session_data.get("trust_token", ""),
         }
         LOGGER.debug("************ Headers for _authenicate with Token /accountLogin Session ***************")
-        LOGGER.debug(unicode(self.session.headers))
+        LOGGER.debug(str(self.session.headers))
         try:
             req = self.session.post(
                 "%s/accountLogin?clientBuildNumber=2021Project52&clientMasteringNumber=2021B29&clientId=%s" % (self.SETUP_ENDPOINT, self.client_id[5:]), data=json.dumps(data)
@@ -522,7 +522,7 @@ class PyiCloudService(object):
             headers["X-Apple-ID-Session-Id"] = self.session_data.get("session_id")
 
         #LOGGER.info("************ Headers for Trust Session ***************")
-       # LOGGER.info(unicode(headers))
+       # LOGGER.info(str(headers))
 
 
         try:
@@ -617,14 +617,14 @@ class PyiCloudService(object):
             )
         return self._drive
 
-    def __unicode__(self):
+    def __str__(self):
         return "iCloud API: %s" % self.user.get("accountName")
 
     def __str__(self):
-        as_unicode = self.__unicode__()
+        as_str = self.__str__()
         if PY2:
-            return as_unicode.encode("utf-8", "ignore")
-        return as_unicode
+            return as_str.encode("utf-8", "ignore")
+        return as_str
 
     def __repr__(self):
         return "<%s>" % str(self)

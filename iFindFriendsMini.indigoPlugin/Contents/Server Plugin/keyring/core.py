@@ -2,18 +2,14 @@
 Core API functions and initialization routines.
 """
 
+import configparser
 import os
 import sys
 import logging
-import operator
+import typing
 
-from .py27compat import configparser, filter
-from .py33compat import max
-
-from . import logger
-from . import backend
+from . import backend, credentials
 from .util import platform_ as platform
-from .util import once
 from .backends import fail
 
 
@@ -21,52 +17,91 @@ log = logging.getLogger(__name__)
 
 _keyring_backend = None
 
+
 def set_keyring(keyring):
-    """Set current keyring backend.
-    """
+    """Set current keyring backend."""
     global _keyring_backend
     if not isinstance(keyring, backend.KeyringBackend):
-        raise TypeError("The keyring must be a subclass of KeyringBackend")
+        raise TypeError("The keyring must be an instance of KeyringBackend")
     _keyring_backend = keyring
 
 
-def get_keyring():
-    """Get current keyring backend.
+def get_keyring() -> backend.KeyringBackend:
+    """Get current keyring backend."""
+    if _keyring_backend is None:
+        init_backend()
+    return typing.cast(backend.KeyringBackend, _keyring_backend)
+
+
+def disable():
     """
-    return _keyring_backend
-
-
-def get_password(service_name, username):
-    """Get password from the specified service.
+    Configure the null keyring as the default.
     """
-    return _keyring_backend.get_password(service_name, username)
+    root = platform.config_root()
+    try:
+        os.makedirs(root)
+    except OSError:
+        pass
+    filename = os.path.join(root, 'keyringrc.cfg')
+    if os.path.exists(filename):
+        msg = f"Refusing to overwrite {filename}"
+        raise RuntimeError(msg)
+    with open(filename, 'w') as file:
+        file.write('[backend]\ndefault-keyring=keyring.backends.null.Keyring')
 
 
-def set_password(service_name, username, password):
-    """Set password for the user in the specified service.
-    """
-    _keyring_backend.set_password(service_name, username, password)
+def get_password(service_name: str, username: str) -> typing.Optional[str]:
+    """Get password from the specified service."""
+    return get_keyring().get_password(service_name, username)
 
 
-def delete_password(service_name, username):
-    """Delete the password for the user in the specified service.
-    """
-    _keyring_backend.delete_password(service_name, username)
+def set_password(service_name: str, username: str, password: str) -> None:
+    """Set password for the user in the specified service."""
+    get_keyring().set_password(service_name, username, password)
 
 
-recommended = lambda backend: backend.priority >= 1
-by_priority = operator.attrgetter('priority')
+def delete_password(service_name: str, username: str) -> None:
+    """Delete the password for the user in the specified service."""
+    get_keyring().delete_password(service_name, username)
+
+
+def get_credential(
+    service_name: str, username: typing.Optional[str]
+) -> typing.Optional[credentials.Credential]:
+    """Get a Credential for the specified service."""
+    return get_keyring().get_credential(service_name, username)
+
+
+def recommended(backend):
+    return backend.priority >= 1
 
 
 def init_backend(limit=None):
     """
-    Load a keyring specified in the config file or infer the best available.
+    Load a detected backend.
     """
-    keyrings = filter(limit, backend.get_all_keyring())
+    set_keyring(_detect_backend(limit))
 
-    set_keyring(
-        load_config()
-        or max(keyrings, default=fail.Keyring, key=by_priority)
+
+def _detect_backend(limit=None):
+    """
+    Return a keyring specified in the config file or infer the best available.
+
+    Limit, if supplied, should be a callable taking a backend and returning
+    True if that backend should be included for consideration.
+    """
+
+    # save the limit for the chainer to honor
+    backend._limit = limit
+    return (
+        load_env()
+        or load_config()
+        or max(
+            # all keyrings passing the limit filter
+            filter(limit, backend.get_all_keyring()),
+            default=fail.Keyring(),
+            key=backend.by_priority,
+        )
     )
 
 
@@ -78,18 +113,11 @@ def _load_keyring_class(keyring_name):
 
     >>> popular_names = [
     ...      'keyring.backends.Windows.WinVaultKeyring',
-    ...      'keyring.backends.OS_X.Keyring',
+    ...      'keyring.backends.macOS.Keyring',
     ...      'keyring.backends.kwallet.DBusKeyring',
     ...      'keyring.backends.SecretService.Keyring',
     ...  ]
     >>> list(map(_load_keyring_class, popular_names))
-    [...]
-
-    These legacy names are retained for compatibility.
-
-    >>> legacy_names = [
-    ...  ]
-    >>> list(map(_load_keyring_class, legacy_names))
     [...]
     """
     module_name, sep, class_name = keyring_name.rpartition('.')
@@ -107,6 +135,14 @@ def load_keyring(keyring_name):
     # invoke the priority to ensure it is viable, or raise a RuntimeError
     class_.priority
     return class_()
+
+
+def load_env():
+    """Load a keyring configured in the environment variable."""
+    try:
+        return load_keyring(os.environ['PYTHON_KEYRING_BACKEND'])
+    except KeyError:
+        pass
 
 
 def load_config():
@@ -131,11 +167,15 @@ def load_config():
             raise configparser.NoOptionError('backend', 'default-keyring')
 
     except (configparser.NoOptionError, ImportError):
-        logger.warning("Keyring config file contains incorrect values.\n" +
-                       "Config file: %s" % keyring_cfg)
+        logger = logging.getLogger('keyring')
+        logger.warning(
+            "Keyring config file contains incorrect values.\n"
+            + "Config file: %s" % keyring_cfg
+        )
         return
 
     return load_keyring(keyring_name)
+
 
 def _load_keyring_path(config):
     "load the keyring-path option (if present)"
@@ -144,6 +184,3 @@ def _load_keyring_path(config):
         sys.path.insert(0, path)
     except (configparser.NoOptionError, configparser.NoSectionError):
         pass
-
-# init the _keyring_backend
-init_backend()

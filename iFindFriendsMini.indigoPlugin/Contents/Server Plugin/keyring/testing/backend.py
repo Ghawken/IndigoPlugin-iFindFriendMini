@@ -1,43 +1,47 @@
-# -*- coding: utf-8 -*-
+# coding: utf-8
+
 """
-test_backend.py
-
-Test case for keyring basic function
-
-created by Kang Zhang 2009-07-14
+Common test functionality for backends.
 """
-from __future__ import with_statement
 
+import os
 import string
 
-from keyring.util import escape
+import pytest
+
 from .util import random_string
 from keyring import errors
 
 # unicode only characters
 # Sourced from The Quick Brown Fox... Pangrams
 # http://www.columbia.edu/~fdc/utf8/
-UNICODE_CHARS = escape.u(
-    """זהכיףסתםלשמועאיךתנצחקרפדעץטובבגן"""
-    """ξεσκεπάζωτηνψυχοφθόραβδελυγμία"""
-    """Съешьжеещёэтихмягкихфранцузскихбулокдавыпейчаю"""
-    """Жълтатадюлябешещастливачепухъткойтоцъфназамръзнакатогьон"""
+UNICODE_CHARS = (
+    "זהכיףסתםלשמועאיךתנצחקרפדעץטובבגן"
+    "ξεσκεπάζωτηνψυχοφθόραβδελυγμία"
+    "Съешьжеещёэтихмягкихфранцузскихбулокдавыпейчаю"
+    "Жълтатадюлябешещастливачепухъткойтоцъфназамръзнакатогьон"
 )
 
 # ensure no-ascii chars slip by - watch your editor!
 assert min(ord(char) for char in UNICODE_CHARS) > 127
 
-class BackendBasicTests(object):
-    """Test for the keyring's basic functions. password_set and password_get
-    """
+
+def is_ascii_printable(s):
+    return all(32 <= ord(c) < 127 for c in s)
+
+
+class BackendBasicTests:
+    """Test for the keyring's basic functions. password_set and password_get"""
 
     DIFFICULT_CHARS = string.whitespace + string.punctuation
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def _init_properties(self, request):
         self.keyring = self.init_keyring()
         self.credentials_created = set()
+        request.addfinalizer(self.cleanup)
 
-    def tearDown(self):
+    def cleanup(self):
         for item in self.credentials_created:
             self.keyring.delete_password(*item)
 
@@ -51,15 +55,15 @@ class BackendBasicTests(object):
         keyring = self.keyring
 
         # for the non-existent password
-        self.assertEqual(keyring.get_password(service, username), None)
+        assert keyring.get_password(service, username) is None
 
         # common usage
         self.set_password(service, username, password)
-        self.assertEqual(keyring.get_password(service, username), password)
+        assert keyring.get_password(service, username) == password
 
         # for the empty password
         self.set_password(service, username, "")
-        self.assertEqual(keyring.get_password(service, username), "")
+        assert keyring.get_password(service, username) == ""
 
     def test_password_set_get(self):
         password = random_string(20)
@@ -79,24 +83,26 @@ class BackendBasicTests(object):
         service = random_string(20, self.DIFFICULT_CHARS)
         self.keyring.set_password(service, username, password)
         self.keyring.delete_password(service, username)
-        self.assertIsNone(self.keyring.get_password(service, username))
+        assert self.keyring.get_password(service, username) is None
 
     def test_delete_not_present(self):
         username = random_string(20, self.DIFFICULT_CHARS)
         service = random_string(20, self.DIFFICULT_CHARS)
-        self.assertRaises(errors.PasswordDeleteError,
-            self.keyring.delete_password, service, username)
+        with pytest.raises(errors.PasswordDeleteError):
+            self.keyring.delete_password(service, username)
 
     def test_delete_one_in_group(self):
         username1 = random_string(20, self.DIFFICULT_CHARS)
         username2 = random_string(20, self.DIFFICULT_CHARS)
-        password  = random_string(20, self.DIFFICULT_CHARS)
-        service   = random_string(20, self.DIFFICULT_CHARS)
+        password = random_string(20, self.DIFFICULT_CHARS)
+        service = random_string(20, self.DIFFICULT_CHARS)
         self.keyring.set_password(service, username1, password)
         self.set_password(service, username2, password)
         self.keyring.delete_password(service, username1)
-        self.assertEqual(self.keyring.get_password(
-           service, username2), password)
+        assert self.keyring.get_password(service, username2) == password
+
+    def test_name_property(self):
+        assert is_ascii_printable(self.keyring.name)
 
     def test_unicode_chars(self):
         password = random_string(20, UNICODE_CHARS)
@@ -105,8 +111,11 @@ class BackendBasicTests(object):
         self.check_set_get(service, username, password)
 
     def test_unicode_and_ascii_chars(self):
-        source = (random_string(10, UNICODE_CHARS) + random_string(10) +
-                 random_string(10, self.DIFFICULT_CHARS))
+        source = (
+            random_string(10, UNICODE_CHARS)
+            + random_string(10)
+            + random_string(10, self.DIFFICULT_CHARS)
+        )
         password = random_string(20, source)
         username = random_string(20, source)
         service = random_string(20, source)
@@ -122,10 +131,35 @@ class BackendBasicTests(object):
         keyring = self.keyring
         self.set_password('service1', 'user1', 'password1')
         self.set_password('service1', 'user2', 'password2')
-        self.assertEqual(keyring.get_password('service1', 'user1'),
-            'password1')
-        self.assertEqual(keyring.get_password('service1', 'user2'),
-            'password2')
+        assert keyring.get_password('service1', 'user1') == 'password1'
+        assert keyring.get_password('service1', 'user2') == 'password2'
         self.set_password('service2', 'user3', 'password3')
-        self.assertEqual(keyring.get_password('service1', 'user1'),
-            'password1')
+        assert keyring.get_password('service1', 'user1') == 'password1'
+
+    def test_credential(self):
+        keyring = self.keyring
+
+        cred = keyring.get_credential('service', None)
+        assert cred is None
+
+        self.set_password('service1', 'user1', 'password1')
+        self.set_password('service1', 'user2', 'password2')
+
+        cred = keyring.get_credential('service1', None)
+        assert cred is None or (cred.username, cred.password) in (
+            ('user1', 'password1'),
+            ('user2', 'password2'),
+        )
+
+        cred = keyring.get_credential('service1', 'user2')
+        assert cred is not None
+        assert (cred.username, cred.password) in (
+            ('user1', 'password1'),
+            ('user2', 'password2'),
+        )
+
+    def test_set_properties(self, monkeypatch):
+        env = dict(KEYRING_PROPERTY_FOO_BAR='fizz buzz', OTHER_SETTING='ignore me')
+        monkeypatch.setattr(os, 'environ', env)
+        self.keyring.set_properties_from_env()
+        assert self.keyring.foo_bar == 'fizz buzz'

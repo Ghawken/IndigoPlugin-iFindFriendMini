@@ -27,7 +27,7 @@ except Exception as e:
 
 import sys
 import math
-
+import logging
 #import OpenSSL
 import WazeRouteCalculator
 
@@ -68,9 +68,10 @@ except Exception as e:
     MajorProblem =2
     errortext = str(e)
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
-    indigo.server.log(u'Returned Error:'+unicode(e), isError=True)
+    indigo.server.log(u'Returned Error:'+str(e), isError=True)
     indigo.server.log(u"{0:=^130}".format(""), isError=True)
     indigo.server.log("-- FATAL ERROR - Cannot find pyicloud or cannot load pyicloud or dependency.", isError=True)
+
 
     if 'pytz' in errortext:
         indigo.server.log('Missing pytz package.  Please Follow Below instructions. (Once only needed)', isError=True)
@@ -93,7 +94,7 @@ except Exception as e:
             MajorProblem = 1
 
         except Exception as b:
-            indigo.server.log(u'Major Problem. Please contact developer.  Error:'+unicode(b), isError=True)
+            indigo.server.log(u'Major Problem. Please contact developer.  Error:'+str(b), isError=True)
             MajorProblem = 2
             pass
 
@@ -118,12 +119,12 @@ except Exception as e:
             MajorProblem = 1
 
         except Exception as b:
-            indigo.server.log(u'Major Problem. Please contact developer.  Error:'+unicode(b), isError=True)
+            indigo.server.log(u'Major Problem. Please contact developer.  Error:'+str(b), isError=True)
             MajorProblem = 2
             pass
     else:
         indigo.server.log(u"{0:=^130}".format(""), isError=True)
-        indigo.server.log(u'Major Problem. Please contact developer.  Error:' + unicode(e), isError=True)
+        indigo.server.log(u'Major Problem. Please contact developer.  Error:' + str(e), isError=True)
         MajorProblem = 2
         pass
 # Now the HTTP and Compatibility libraries
@@ -156,7 +157,7 @@ except ImportError:
 #     # )
 # except Exception as e:
 #     indigo.server.log(u"{0:=^130}".format(""), isError=True)
-#     indigo.server.log(u'Error Importing Googlemaps.  Error:'+unicode(e), isError=True)
+#     indigo.server.log(u'Error Importing Googlemaps.  Error:'+str(e), isError=True)
 #     indigo.server.log(u"{0:=^130}".format(""), isError=True)
 
 import webbrowser
@@ -377,7 +378,7 @@ class Plugin(indigo.PluginBase):
     def deviceStartComm(self, dev):
         """ docstring placeholder """
         self.logger.debug(u"deviceStartComm() method called.")
-        self.logger.debug(u'Starting FindFriendsMini device: '+unicode(dev.name)+' and dev.id:'+unicode(dev.id)+ ' and dev.type:'+unicode(dev.deviceTypeId))
+        self.logger.debug(u'Starting FindFriendsMini device: '+str(dev.name)+' and dev.id:'+str(dev.id)+ ' and dev.type:'+str(dev.deviceTypeId))
         # Update statelist in case any updates/changes
         dev.stateListOrDisplayStateIdChanged()
 
@@ -393,7 +394,7 @@ class Plugin(indigo.PluginBase):
                 #{'key': 'listFriends', 'value': ''},
                 {'key': 'deviceIsOnline', 'value': False, 'uiValue':'Waiting'}]
 
-            #self.logger.debug(unicode(stateList))
+            #self.logger.debug(str(stateList))
             dev.updateStatesOnServer(stateList)
 
         if dev.deviceTypeId == 'FindFriendsFriend':
@@ -422,7 +423,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'mapUpdateNeeded', 'value': True}
                 ]
 
-            #self.logger.debug(unicode(stateList))
+            #self.logger.debug(str(stateList))
             dev.updateStatesOnServer(stateList)
         elif dev.deviceTypeId=="myDevice":
             stateList = [
@@ -450,7 +451,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'mapUpdateNeeded', 'value': True},
 
             ]
-            #self.logger.debug(unicode(stateList))
+            #self.logger.debug(str(stateList))
             dev.updateStatesOnServer(stateList)
 
         self.prefsUpdated = True
@@ -531,14 +532,14 @@ class Plugin(indigo.PluginBase):
             # If plugin config menu closed update the time for check.  Will apply after first change.
             targetDevice = action.props.get('targetDevice', "")
             targetSubject = action.props.get('subject',"Indigo Alert")
-            self.logger.debug("targetDevice: "+unicode(targetDevice))
+            self.logger.debug("targetDevice: "+str(targetDevice))
             if targetDevice =="":
                 self.logger.info("Please Enter a Device.")
                 return
 
             devicetargets = self.appleAPI.devices
             for devices in devicetargets:
-                # self.logger.error(unicode(devices))
+                # self.logger.error(str(devices))
                 # self.logger.error(devices['id'])
                 # self.logger.error(devices.status())
                 # self.logger.error(devices.location())
@@ -557,14 +558,14 @@ class Plugin(indigo.PluginBase):
             targetSubject = action.props.get('subject',"Indigo Alert")
             soundenabled = action.props.get('sound',False)
             targetMessage = action.props.get('message',"")
-            self.logger.debug("targetDevice: "+unicode(targetDevice))
+            self.logger.debug("targetDevice: "+str(targetDevice))
             if targetDevice =="":
                 self.logger.info("Please Enter a Device.")
                 return
 
             devicetargets = self.appleAPI.devices
             for devices in devicetargets:
-                # self.logger.error(unicode(devices))
+                # self.logger.error(str(devices))
                 # self.logger.error(devices['id'])
                 # self.logger.error(devices.status())
                 # self.logger.error(devices.location())
@@ -579,7 +580,7 @@ class Plugin(indigo.PluginBase):
         """ docstring placeholder """
         self.logger.debug(u"ronConCurrentThread() method called.")
         #secondsbetweencheck = 60*self.configMenuTimeCheck
-        self.logger.debug(u"secondsbetween Check Equal:"+unicode(60*self.configMenuTimeCheck))
+        self.logger.debug(u"secondsbetween Check Equal:"+str(60*self.configMenuTimeCheck))
         # Change to time based looping with second checking.  Allowing to update Geofences minutely and any config changes to be immediately registered
         while self.pluginIsShuttingDown == False:
         # Shutdown nicely
@@ -592,7 +593,7 @@ class Plugin(indigo.PluginBase):
 
             while self.prefsUpdated == False:
                 if int(updateGeofencedue-time.time()) == 0:
-                    self.logger.debug(u'ronConcurrrent internal loop: self.prefsUpdated False: Next Update:'+unicode(int(time.time()-nextloopdue))+' and updateGeofenceDue:'+unicode(int(updateGeofencedue-time.time())))
+                    self.logger.debug(u'ronConcurrrent internal loop: self.prefsUpdated False: Next Update:'+str(int(time.time()-nextloopdue))+' and updateGeofenceDue:'+str(int(updateGeofencedue-time.time())))
                 # Update Plugin Frequency Loop
 
                 # Update Loop Check.  Checks Devices and GeoFences.
@@ -609,7 +610,7 @@ class Plugin(indigo.PluginBase):
                             nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
                             #reset Geofence time update as done above
                             updateGeofencedue = time.time() + 60
-                            self.logger.debug(u'ronConcurrrent loop: Next Update due (seconds):'+unicode(int(time.time()-nextloopdue)))
+                            self.logger.debug(u'ronConcurrrent loop: Next Update due (seconds):'+str(int(time.time()-nextloopdue)))
                         else:
                             self.logger.info(u"Account requires verification within Plugin Config.")
                             nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
@@ -728,7 +729,7 @@ class Plugin(indigo.PluginBase):
                 # Get account details
                 self.appleAPI = iLogin[1]
                     #self.logger.info(u'Login Details**********:')
-                    #self.logger.info(unicode(api.friends.locations))
+                    #self.logger.info(str(api.friends.locations))
                 # dev = indigo.devices[devId]
                 accountOK = True
                 valuesDict['appleAPIid'] = valuesDict['appleId']
@@ -801,16 +802,16 @@ class Plugin(indigo.PluginBase):
             friendsdata = iLogin[1].friends.data
 
             if self.debugicloud:
-                self.logger.debug(unicode('Follower is Type: '+ unicode(type(follower))))
+                self.logger.debug(str('Follower is Type: '+ str(type(follower))))
             if self.debugicloud:
-                self.logger.debug(unicode('More debugging: Follower: '+unicode(follower)))
+                self.logger.debug(str('More debugging: Follower: '+str(follower)))
             if len(follower) == 0:
                 self.logger.info(u'No Followers Found for this Account.  Have you any friends?')
                 if self.debugicloud:
                     self.logger.debug(u'Full Dump of self.appleAPI data follows:')
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(unicode(friendsdata))
+                    self.logger.debug(str(friendsdata))
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u'Please PM developer this log.')
@@ -823,7 +824,7 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(u'Full Dump of self.appleAPI data follows:')
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(unicode(iLogin[1].friends.data))
+                    self.logger.debug(str(iLogin[1].friends.data))
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u'Please PM developer this log.')
@@ -835,14 +836,14 @@ class Plugin(indigo.PluginBase):
                 if dev.enabled:
                     targetFriend = dev.pluginProps['targetFriend']
                     if self.debugicloud:
-                        self.logger.debug(u'targetFriend of Device equals:' + unicode(targetFriend))
+                        self.logger.debug(u'targetFriend of Device equals:' + str(targetFriend))
                     for follow in follower:
                         if self.debugicloud:
-                            self.logger.debug (unicode(follow['id']))
+                            self.logger.debug (str(follow['id']))
                         if follow['id'] == targetFriend:
                             if self.debugicloud:
-                                self.logger.debug(u'Found Target Friend in Data:  Updating Device:' + unicode(dev.name))
-                                self.logger.debug(unicode(follow))
+                                self.logger.debug(u'Found Target Friend in Data:  Updating Device:' + str(dev.name))
+                                self.logger.debug(str(follow))
                             # Update device with data from iFindFriends service
                             self.refreshDataForDev(dev, follow)
 
@@ -851,28 +852,28 @@ class Plugin(indigo.PluginBase):
                 if dev.enabled:
                     targetFriend = dev.pluginProps['targetFriend']
                     if self.debugicloud:
-                        self.logger.debug(u'targetDevice of Device equals:' + unicode(targetFriend))
+                        self.logger.debug(u'targetDevice of Device equals:' + str(targetFriend))
                     devicetargets = self.appleAPI.devices
                     for devices in devicetargets:
-                        #self.logger.error(unicode(devices))
+                        #self.logger.error(str(devices))
                         #self.logger.error(devices['id'])
                         #self.logger.error(devices.status())
                         #self.logger.error(devices.location())
                         if str(targetFriend) == str(devices['id']):
                             self.refreshDataforMyDevice( dev, devices)
 
-                    #elf.logger.error("**:"+unicode(targetdevice))
+                    #elf.logger.error("**:"+str(targetdevice))
 
             return
 
         except PyiCloudAPIResponseException as e:
-            self.logger.debug(u'Login Failed API Response Error.   ' + unicode(e.message) + unicode(e.__dict__))
+            self.logger.debug(u'Login Failed API Response Error.   ' + str(e.message) + str(e.__dict__))
             if e.code in [450,421,500]:
                 self.logger.info("Error Code 450/421/500 Given: Re-authentication seems to be required.  Reauthenicating now.")
                 self.appleAPI.authenticate(True)
                 try:
                     self.logger.debug(u"Testing ********************************************")
-                    self.logger.debug( unicode(self.appleAPI.devices[0] ))
+                    self.logger.debug( str(self.appleAPI.devices[0] ))
                     self.logger.debug(u"********************************************")
                     self.sleep(5)
                     self.refreshData()
@@ -900,7 +901,7 @@ class Plugin(indigo.PluginBase):
 
         except Exception as e:
             self.logger.info(u"{0:=^130}".format(""))
-            self.logger.info(u'Error within get Data.  ?Network connection or issue:  Error Given: '+unicode(e))
+            self.logger.info(u'Error within get Data.  ?Network connection or issue:  Error Given: '+str(e))
             self.logger.info(u"{0:=^130}".format(""))
             self.logger.exception(u"Caught Exception")
           #  self.logger.info(u'Have you also logged on and setup new account on an Ios/iphone/ipad device?')
@@ -921,16 +922,16 @@ class Plugin(indigo.PluginBase):
                     lastArrivaltimestamp = float(geoDevices.states['lastArrivaltimestamp'])
                     lastDeptimestamp = float(geoDevices.states['lastDeptimestamp'])
                     if lastArrivaltimestamp > 0:
-                        #self.logger.info(unicode(lastArrivaltimestamp))
+                        #self.logger.info(str(lastArrivaltimestamp))
                         timesincearrival = int(t.time() - float(lastArrivaltimestamp)) / 60  # time in seconds /60
-                        #self.logger.info(unicode(timesincearrival))
+                        #self.logger.info(str(timesincearrival))
                         geoDevices.updateStateOnServer('minutessincelastArrival', value=timesincearrival)
                     if lastDeptimestamp > 0:
                         timesincedep = int(t.time() - float(lastDeptimestamp)) / 60
                         geoDevices.updateStateOnServer('minutessincelastDep', value=timesincedep)
 
         except Exception as e:
-            self.logger.info(u'Error with updateGeoFence Time:' + unicode(e))
+            self.logger.info(u'Error with updateGeoFence Time:' + str(e))
             pass
 
     def checkGeofence(self):
@@ -959,19 +960,19 @@ class Plugin(indigo.PluginBase):
                     if geoDevices.states['listFriends'] != '':
                         iGeolistFriends = geoDevices.states['listFriends'].split(',')
                     self.logger.debug(u'Old GeoDevice Friends Equals:')
-                    self.logger.debug(unicode(iGeolistFriends))
+                    self.logger.debug(str(iGeolistFriends))
 
                     for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
                         #add online check here
                         if dev.enabled and dev.states['deviceIsOnline'] == True:
-                            self.logger.debug('Geo Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
+                            self.logger.debug('Geo Details on check:' + str(igeoName) + ' For Friend:' + str(dev.name))
                             iDevLatitude = float(dev.states['latitude'])
                             iDevLongitude = float(dev.states['longitude'])
                             iDevUniqueName = dev.pluginProps['friendName']
                             iDevAccuracy = float(dev.states['horizontalAccuracy'])
 
 
-                            #self.logger.error(unicode(iDevUniqueName))
+                            #self.logger.error(str(iDevUniqueName))
                             # Now check the distance for each device
                             # Calculate the distance
 
@@ -985,17 +986,17 @@ class Plugin(indigo.PluginBase):
 
                           #  self.newlogger.debug('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(
                           #      iDevLatitude) + ',' + str(iDevLongitude))
-                          #  self.newlogger.debug(u'Calculated Separation: ='+unicode(iSeparation[1]))
+                          #  self.newlogger.debug(u'Calculated Separation: ='+str(iSeparation[1]))
                           # Compare with Google Call - Google uses driving distance
                           #  origin = igeoLat, igeoLong
                           #  destination = iDevLatitude, iDevLongitude
                           #  GoogleDistanceHome = self.distanceCalculation(origin, destination, self.googleAPI, 'driving', "metric")
                           #  RealDistanceHome = int(float(GoogleDistanceHome[3]))
-                          #  self.newlogger.debug(u'Google Distance Apart:='+unicode(RealDistanceHome))
-                          #  self.logger.debug(u'Google Distance:'+unicode(RealDistanceHome))
+                          #  self.newlogger.debug(u'Google Distance Apart:='+str(RealDistanceHome))
+                          #  self.logger.debug(u'Google Distance:'+str(RealDistanceHome))
 ########################################################################################################################################
 
-                            self.logger.debug(u'Calculated Distance:'+unicode(iSeparation[1]))
+                            self.logger.debug(u'Calculated Distance:'+str(iSeparation[1]))
                             if not iSeparation[0]:
                                 self.logger.debug(u'Problem with iSeparation.  Continue.')
                         # Problem with the distance so ignore and move on
@@ -1008,8 +1009,8 @@ class Plugin(indigo.PluginBase):
                     ##
                     ## log it all
                             ##
-                            self.logger.debug(u'---------------- Horizontal Accuracy :'+unicode(iDevUniqueName)+' & Geo:'+unicode(igeoName))
-                            self.logger.debug(u'---------------- Distance apart:'+unicode(iSeparationABS)+'    Accuracy:'+unicode(iDevAccuracy)+'  Geo Range:'+unicode(igeoRangeDistance)+'-----')
+                            self.logger.debug(u'---------------- Horizontal Accuracy :'+str(iDevUniqueName)+' & Geo:'+str(igeoName))
+                            self.logger.debug(u'---------------- Distance apart:'+str(iSeparationABS)+'    Accuracy:'+str(iDevAccuracy)+'  Geo Range:'+str(igeoRangeDistance)+'-----')
 
 # below is not correct and could be plus or minus this distance
 
@@ -1020,68 +1021,68 @@ class Plugin(indigo.PluginBase):
                             if DistanceAccurate <=0:
                                 DistanceAccurate =0
                             if self.debuggeofence:
-                                self.newlogger.debug(u'Geofence:'+unicode(igeoName)+ ' '*(30-len(igeoName))+u'| Device:'+unicode(iDevUniqueName)+ ' '*(23-len(iDevUniqueName))+u'| iSeparationABS:'+unicode(iSeparationABS)+ ' '*(18-len(str(iSeparationABS)))+u'| iDevAccuracy:'+unicode(iDevAccuracy) + ' '*(15-len(str(iDevAccuracy)))+ u'| DistanceAccurate Result equals:'+unicode(DistanceAccurate))
+                                self.newlogger.debug(u'Geofence:'+str(igeoName)+ ' '*(30-len(igeoName))+u'| Device:'+str(iDevUniqueName)+ ' '*(23-len(iDevUniqueName))+u'| iSeparationABS:'+str(iSeparationABS)+ ' '*(18-len(str(iSeparationABS)))+u'| iDevAccuracy:'+str(iDevAccuracy) + ' '*(15-len(str(iDevAccuracy)))+ u'| DistanceAccurate Result equals:'+str(DistanceAccurate))
 
 # need to not update if % of GeoFence versus Accuracy e.g if 100 m Geofence and accuracy 1000m don't add
 # but if 1000m Geofence and accuracy +/- 1000m add.  Trial ratio of 2 as cut-off.
 # Accuracy/GeoFence Range
 
-                    #       self.logger.debug(u'---------------  Distance Apart Calculation:'+unicode(DistanceApartAccuracy))
+                    #       self.logger.debug(u'---------------  Distance Apart Calculation:'+str(DistanceApartAccuracy))
                     ## only add or remove if accurate - need to check if there already first to enable this
                     ##
 
-                            self.logger.debug(u'---------------- Checking :' + unicode(iDevUniqueName) + ' whether appears to be within Lists of Friends (:' + geoDevices.states['listFriends'])
-                            self.logger.debug(u'---------------- Accuracy versus Geofence Range equals:'+unicode(iDevAccuracy/igeoRangeDistance))
+                            self.logger.debug(u'---------------- Checking :' + str(iDevUniqueName) + ' whether appears to be within Lists of Friends (:' + geoDevices.states['listFriends'])
+                            self.logger.debug(u'---------------- Accuracy versus Geofence Range equals:'+str(iDevAccuracy/igeoRangeDistance))
 
                             if float(iDevAccuracy/igeoRangeDistance) <= 2:
                                 # if friend in geofence and distance still within.  Does not alter with accuracy ?-
-                                #self.logger.debug(u'------------------ iDevAccuracy versus GeoRange Less than 2:  Current='+unicode(RatioAccuracyGeofencerange))
-                                #self.newlogger.debug(u'------------------ iDevAccuracy versus GeoRange Less than 2:  Current=' + unicode(  RatioAccuracyGeofencerange))
+                                #self.logger.debug(u'------------------ iDevAccuracy versus GeoRange Less than 2:  Current='+str(RatioAccuracyGeofencerange))
+                                #self.newlogger.debug(u'------------------ iDevAccuracy versus GeoRange Less than 2:  Current=' + str(  RatioAccuracyGeofencerange))
                                 if iDevUniqueName in geoDevices.states['listFriends'] and DistanceAccurate <= igeoRangeDistance:  #if already present ignore accuracy data
-                                    self.logger.debug(u'---------------- Located via accurate WITHIN Geofence:' + unicode(iDevUniqueName) + ' appears to be within Friends.')
+                                    self.logger.debug(u'---------------- Located via accurate WITHIN Geofence:' + str(iDevUniqueName) + ' appears to be within Friends.')
                                     iDevGeoInRange = 'true'
                                     igeoFriendsRange = igeoFriendsRange + 1
                                     listFriends.append(iDevUniqueName)
                                 # if not in friend list and accurate location - yes add to geofence
                                 elif iDevUniqueName not in geoDevices.states['listFriends'] and DistanceAccurate <= igeoRangeDistance:
-                                    self.logger.debug(u'---------------- Located within Accurate Geofence:' + unicode(iDevUniqueName) + '& appears to be NOT within Friends List: Add to Geofence')
+                                    self.logger.debug(u'---------------- Located within Accurate Geofence:' + str(iDevUniqueName) + '& appears to be NOT within Friends List: Add to Geofence')
                                     iDevGeoInRange = 'true'
-                                    self.logger.debug(u'*****************'+unicode(iDevUniqueName)+u' Added to GeoFence:'+unicode(igeoName)+' Ratio :'+unicode(RatioAccuracyGeofencerange)+u'  Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy)+ u'     DistanceAccurate Result equals:'+unicode(DistanceAccurate))
+                                    self.logger.debug(u'*****************'+str(iDevUniqueName)+u' Added to GeoFence:'+str(igeoName)+' Ratio :'+str(RatioAccuracyGeofencerange)+u'  Distance:'+str(iSeparationABS)+' HorizontalAccuracy:'+str(iDevAccuracy)+ u'     DistanceAccurate Result equals:'+str(DistanceAccurate))
                                     if self.debuggeofence:
                                         self.newlogger.info(u"{0:=^150}".format(""))
-                                        self.newlogger.debug(unicode(iDevUniqueName)+u' - ADDED - GeoFence:'+unicode(igeoName)+ ' '*(25-len(igeoName))+' Ratio :'+unicode(RatioAccuracyGeofencerange)+ ' '*(18-len(str(RatioAccuracyGeofencerange)))+u'  Distance:'+unicode(iSeparationABS)+ ' '*(18-len(str(iSeparationABS)))+' HorizontalAccuracy:'+unicode(iDevAccuracy)+ ' '*(6-len(str(iDevAccuracy)))+ u' DistanceAccurate Result equals:'+unicode(DistanceAccurate))
+                                        self.newlogger.debug(str(iDevUniqueName)+u' - ADDED - GeoFence:'+str(igeoName)+ ' '*(25-len(igeoName))+' Ratio :'+str(RatioAccuracyGeofencerange)+ ' '*(18-len(str(RatioAccuracyGeofencerange)))+u'  Distance:'+str(iSeparationABS)+ ' '*(18-len(str(iSeparationABS)))+' HorizontalAccuracy:'+str(iDevAccuracy)+ ' '*(6-len(str(iDevAccuracy)))+ u' DistanceAccurate Result equals:'+str(DistanceAccurate))
                                         self.newlogger.info(u"{0:=^150}".format(""))
                                     igeoFriendsRange = igeoFriendsRange + 1
                                     listFriends.append(iDevUniqueName)
                                 #if in geofence use accurate. Don't remove unless acurrate.
                                 elif iDevUniqueName in geoDevices.states['listFriends'] and DistanceAccurate > igeoRangeDistance:
                                     # if in geofence friends list and clearly, accurately left - make as gone.
-                                    self.logger.debug(u'---------------- Outside Accurate Range :' + unicode(iDevUniqueName) + ' in Friends List. Dont add to Geofence')
+                                    self.logger.debug(u'---------------- Outside Accurate Range :' + str(iDevUniqueName) + ' in Friends List. Dont add to Geofence')
                                     self.logger.debug(
-                                        unicode(iDevUniqueName) + u' - REMOVED - GeoFence:' + unicode(igeoName) + ' ' * (
-                                                    25 - len(igeoName)) + ' Ratio :' + unicode(
+                                        str(iDevUniqueName) + u' - REMOVED - GeoFence:' + str(igeoName) + ' ' * (
+                                                    25 - len(igeoName)) + ' Ratio :' + str(
                                             RatioAccuracyGeofencerange) + ' ' * (18 - len(
-                                            str(RatioAccuracyGeofencerange))) + u'  Distance:' + unicode(
+                                            str(RatioAccuracyGeofencerange))) + u'  Distance:' + str(
                                             iSeparationABS) + ' ' * (
-                                                    18 - len(str(iSeparationABS))) + ' HorizontalAccuracy:' + unicode(
+                                                    18 - len(str(iSeparationABS))) + ' HorizontalAccuracy:' + str(
                                             iDevAccuracy) + ' ' * (6 - len(
-                                            str(iDevAccuracy))) + u' DistanceAccurate Result equals:' + unicode(
+                                            str(iDevAccuracy))) + u' DistanceAccurate Result equals:' + str(
                                             DistanceAccurate))
 
-                                    self.logger.debug(u'*****************'+unicode(iDevUniqueName)+u' Removed GeoFence:'+unicode(igeoName)+'  Ratio:'+unicode(RatioAccuracyGeofencerange)+u'  Distance:'+unicode(iSeparationABS)+' HorizontalAccuracy:'+unicode(iDevAccuracy)+ u'     DistanceAccurate Result equals:'+unicode(DistanceAccurate))
+                                    self.logger.debug(u'*****************'+str(iDevUniqueName)+u' Removed GeoFence:'+str(igeoName)+'  Ratio:'+str(RatioAccuracyGeofencerange)+u'  Distance:'+str(iSeparationABS)+' HorizontalAccuracy:'+str(iDevAccuracy)+ u'     DistanceAccurate Result equals:'+str(DistanceAccurate))
                                     if self.debuggeofence:
                                         self.newlogger.info(u"{0:=^160}".format(""))
-                                        self.newlogger.debug(unicode(iDevUniqueName)+u' REMOVED: GeoFence:'+unicode(igeoName)+ ' '*(25-len(igeoName))+' Ratio :'+unicode(RatioAccuracyGeofencerange)+ ' '*(18-len(str(RatioAccuracyGeofencerange)))+u'  Distance:'+unicode(iSeparationABS)+ ' '*(18-len(str(iSeparationABS)))+' HorizontalAccuracy:'+unicode(iDevAccuracy)+ ' '*(6-len(str(iDevAccuracy)))+ u' DistanceAccurate Result equals:'+unicode(DistanceAccurate))
+                                        self.newlogger.debug(str(iDevUniqueName)+u' REMOVED: GeoFence:'+str(igeoName)+ ' '*(25-len(igeoName))+' Ratio :'+str(RatioAccuracyGeofencerange)+ ' '*(18-len(str(RatioAccuracyGeofencerange)))+u'  Distance:'+str(iSeparationABS)+ ' '*(18-len(str(iSeparationABS)))+' HorizontalAccuracy:'+str(iDevAccuracy)+ ' '*(6-len(str(iDevAccuracy)))+ u' DistanceAccurate Result equals:'+str(DistanceAccurate))
                                         self.newlogger.info(u"{0:=^160}".format(""))
                                     iDevGeoInRange = 'false'
                                 #if not in geofence don't make as absence without accurate data
                                 elif iDevUniqueName not in geoDevices.states['listFriends'] and DistanceAccurate > igeoRangeDistance:
                                     # if not in friends list - can be gone, make sure not added
-                                    self.logger.debug(u'---------------- Outside Accurate Range :' + unicode(iDevUniqueName) + ' and not in Friends List. Dont add to Geofence.')
+                                    self.logger.debug(u'---------------- Outside Accurate Range :' + str(iDevUniqueName) + ' and not in Friends List. Dont add to Geofence.')
                                     iDevGeoInRange = 'false'
                             elif float(iDevAccuracy / igeoRangeDistance) > 2:
-                                self.logger.debug(u'------------------ Accuracy Poor:  Checking whether already within Geofence & Distance.  Distance calculated:'+unicode(iSeparationABS)+u' GeoRangDistance:'+unicode(igeoRangeDistance)+ u'     DistanceAccurate Result equals:'+unicode(DistanceAccurate))
-                                #self.newlogger.debug(u'------------------ Accuracy Poor:  Checking whether already within Geofence & Distance.  Distance calculated:'+unicode(iSeparationABS)+u' GeoRangDistance:'+unicode(igeoRangeDistance)+ u'     DistanceAccurate Result equals:'+unicode(DistanceAccurate))
+                                self.logger.debug(u'------------------ Accuracy Poor:  Checking whether already within Geofence & Distance.  Distance calculated:'+str(iSeparationABS)+u' GeoRangDistance:'+str(igeoRangeDistance)+ u'     DistanceAccurate Result equals:'+str(DistanceAccurate))
+                                #self.newlogger.debug(u'------------------ Accuracy Poor:  Checking whether already within Geofence & Distance.  Distance calculated:'+str(iSeparationABS)+u' GeoRangDistance:'+str(igeoRangeDistance)+ u'     DistanceAccurate Result equals:'+str(DistanceAccurate))
 
                                 # may be better to remove distance check here altogether and only remove if good accuracy
                                 # but depends how far away the device is
@@ -1089,10 +1090,10 @@ class Plugin(indigo.PluginBase):
                                 # will run and gather more data first
                                 # change here - not accurate do not remove rom Geofence
                                 if iDevUniqueName in geoDevices.states['listFriends']: #//remoce this check and DistanceAccurate <= igeoRangeDistance:  #if already present ignore accuracy data
-                                    self.logger.debug(u'---------------- Accuracy Poor: ' + unicode(iDevUniqueName) + ' & Is WITHIN Geofence:' + unicode(igeoName) + ', poor accuracy so do not remove.  Distance:'+unicode(iSeparationABS)+ u'    DistanceAccurate --Used-- Result equals:'+unicode(DistanceAccurate))
+                                    self.logger.debug(u'---------------- Accuracy Poor: ' + str(iDevUniqueName) + ' & Is WITHIN Geofence:' + str(igeoName) + ', poor accuracy so do not remove.  Distance:'+str(iSeparationABS)+ u'    DistanceAccurate --Used-- Result equals:'+str(DistanceAccurate))
                                     if self.debuggeofence:
                                         self.newlogger.info(u"{0:=^160}".format(""))
-                                        self.newlogger.debug(unicode(iDevUniqueName)+u' POOR ACCURACY In Geofence: GeoFence:'+unicode(igeoName)+ ' '*(25-len(igeoName))+' Ratio :'+unicode(RatioAccuracyGeofencerange)+ ' '*(18-len(str(RatioAccuracyGeofencerange)))+u'  Distance:'+unicode(iSeparationABS)+ ' '*(18-len(str(iSeparationABS)))+' HorizontalAccuracy:'+unicode(iDevAccuracy)+ ' '*(6-len(str(iDevAccuracy)))+ u' DistanceAccurate Result equals:'+unicode(DistanceAccurate))
+                                        self.newlogger.debug(str(iDevUniqueName)+u' POOR ACCURACY In Geofence: GeoFence:'+str(igeoName)+ ' '*(25-len(igeoName))+' Ratio :'+str(RatioAccuracyGeofencerange)+ ' '*(18-len(str(RatioAccuracyGeofencerange)))+u'  Distance:'+str(iSeparationABS)+ ' '*(18-len(str(iSeparationABS)))+' HorizontalAccuracy:'+str(iDevAccuracy)+ ' '*(6-len(str(iDevAccuracy)))+ u' DistanceAccurate Result equals:'+str(DistanceAccurate))
                                         self.newlogger.info(u"{0:=^160}".format(""))
                                     iDevGeoInRange = 'true'
                                     igeoFriendsRange = igeoFriendsRange + 1
@@ -1102,10 +1103,10 @@ class Plugin(indigo.PluginBase):
                             # if server down for 1/2 hour for example don't remove from geofence or add to geofence why down.
                             iDevUniqueName = dev.pluginProps['friendName']
                             if iDevUniqueName in geoDevices.states['listFriends']:
-                                self.logger.debug(u'-*-*-*-*-*-*-*-*-*-*-*-* Offline Device:'+unicode(iDevUniqueName)+u' is OFFLINE and within Geofence:'+unicode(igeoName) +u'  .Dont remove why offline')
+                                self.logger.debug(u'-*-*-*-*-*-*-*-*-*-*-*-* Offline Device:'+str(iDevUniqueName)+u' is OFFLINE and within Geofence:'+str(igeoName) +u'  .Dont remove why offline')
                                 if self.debuggeofence:
                                     self.newlogger.info(u"{0:=^160}".format(""))
-                                    self.newlogger.debug(u'Offline Device:' + unicode(iDevUniqueName) + u' is OFFLINE and within Geofence:' + unicode(igeoName) + u'  .Dont remove why offline')
+                                    self.newlogger.debug(u'Offline Device:' + str(iDevUniqueName) + u' is OFFLINE and within Geofence:' + str(igeoName) + u'  .Dont remove why offline')
                                     self.newlogger.info(u"{0:=^160}".format(""))
                                 iDevGeoInRange = 'true'
                                 igeoFriendsRange = igeoFriendsRange + 1
@@ -1138,26 +1139,26 @@ class Plugin(indigo.PluginBase):
                     geoDevices.updateStateOnServer('listFriends', value=str(",".join(listFriends )))
                     # go through old list of friends and compare to new list
                     try:
-                        self.logger.debug(u'Old Friends: iGeolistFriends: '+unicode(iGeolistFriends))
-                        self.logger.debug(u'len of iGeoListFriends:'+unicode(len(iGeolistFriends)))
+                        self.logger.debug(u'Old Friends: iGeolistFriends: '+str(iGeolistFriends))
+                        self.logger.debug(u'len of iGeoListFriends:'+str(len(iGeolistFriends)))
                         if len(iGeolistFriends)>0:
                             for oldfriend in iGeolistFriends:
-                                self.logger.debug(u'OldFriend List iteration: OldFriend:'+unicode(oldfriend))
+                                self.logger.debug(u'OldFriend List iteration: OldFriend:'+str(oldfriend))
                                 if listFriends.count(oldfriend)==0:
                                     self.logger.debug(u'OldFriend no longer present; count=0; must have left')
-                                    self.logger.debug(unicode(oldfriend)+unicode(' Has Left GeoFence:'+igeoName))
+                                    self.logger.debug(str(oldfriend)+str(' Has Left GeoFence:'+igeoName))
                                     self.triggerCheck(geoDevices, oldfriend, 'EXIT')
                                 #elif listFriends.count(oldfriend) >0:  #probably not needed below
                                 #    self.logger.debug(u'Oldfriend and current friend still present.  Do Nothing.')
-                                #    self.logger.debug(unicode(oldfriend) + unicode(' Still within GeoFence:' + igeoName))
-                        self.logger.debug(u'New Friends: listFriends: ' + unicode(listFriends))
-                        self.logger.debug(u'len of listFriends:' + unicode(len(listFriends)))
+                                #    self.logger.debug(str(oldfriend) + str(' Still within GeoFence:' + igeoName))
+                        self.logger.debug(u'New Friends: listFriends: ' + str(listFriends))
+                        self.logger.debug(u'len of listFriends:' + str(len(listFriends)))
                         if len(listFriends)>0:
                             for newfriend in listFriends:
-                                self.logger.debug(u'newFriend List iteration:  NewFriend:'+unicode(newfriend))
+                                self.logger.debug(u'newFriend List iteration:  NewFriend:'+str(newfriend))
                                 if iGeolistFriends.count(newfriend)==0:
                                     self.logger.debug(u'newfriend count =0, means not current friend not present in old list.  Must have arrived.')
-                                    self.logger.debug(unicode(newfriend) + unicode(' Has Arrived with GeoFence:' + igeoName))
+                                    self.logger.debug(str(newfriend) + str(' Has Arrived with GeoFence:' + igeoName))
                                     self.triggerCheck( geoDevices, newfriend, 'ENTER')
                     except:
                         self.logger.exception(u'Error Comparing old and new friends within GeoFence')
@@ -1167,22 +1168,22 @@ class Plugin(indigo.PluginBase):
                         lastArrivaltimestamp = float(geoDevices.states['lastArrivaltimestamp'])
                         lastDeptimestamp = float(geoDevices.states['lastDeptimestamp'])
                         if lastArrivaltimestamp > 0:
-                            #self.logger.info(unicode(lastArrivaltimestamp))
+                            #self.logger.info(str(lastArrivaltimestamp))
                             timesincearrival = int(t.time()-float(lastArrivaltimestamp))/60  #time in seconds /60
-                            #self.logger.info(unicode(timesincearrival))
+                            #self.logger.info(str(timesincearrival))
                             geoDevices.updateStateOnServer('minutessincelastArrival', value=timesincearrival)
                         if lastDeptimestamp >0:
                             timesincedep = int(t.time()-float(lastDeptimestamp))/60
                             geoDevices.updateStateOnServer('minutessincelastDep', value=timesincedep)
                     except Exception as e:
-                        self.logger.info(u'Error with Departure/Arrival Time Calculation:'+unicode(e))
+                        self.logger.info(u'Error with Departure/Arrival Time Calculation:'+str(e))
                         pass
 
                     geoDevices.updateStateOnServer('deviceIsOnline', value=True, uiValue='Online')
 
 
         except Exception as e:
-            self.logger.info(u'Error within Check GeoFences: '+unicode(e))
+            self.logger.info(u'Error within Check GeoFences: '+str(e))
             geoDevices.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
             return
 
@@ -1202,9 +1203,9 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"refreshDataforMyDevice() method called.")
         try:
             if self.debugicloud:
-                self.logger.debug(unicode('Now updating Data for : ' + unicode(dev.name) + ' with data received: ' + unicode(follow)))
+                self.logger.debug(str('Now updating Data for : ' + str(dev.name) + ' with data received: ' + str(follow)))
 
-            # self.logger.error(unicode(devices))
+            # self.logger.error(str(devices))
             # self.logger.error(devices['id'])
             # self.logger.error(devices.status())
             # self.logger.error(devices.location())
@@ -1214,30 +1215,30 @@ class Plugin(indigo.PluginBase):
             deviceid = appleDevice['id']
 
             if appleDevice is None:
-                self.logger.debug(u'No data received for device:' + unicode(
+                self.logger.debug(u'No data received for device:' + str(
                     dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
                 if dev.states['deviceIsOnline']:
-                    self.logger.info(u'myOwnDevice Device:' + unicode(
+                    self.logger.info(u'myOwnDevice Device:' + str(
                         dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
                     dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
                     dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                 return
 
             if locationdata is None:
-                self.logger.debug(u'No data received for device:' + unicode(
+                self.logger.debug(u'No data received for device:' + str(
                     dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
                 if dev.states['deviceIsOnline']:
-                    self.logger.info(u'Friend Device:' + unicode(
+                    self.logger.info(u'Friend Device:' + str(
                         dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
                     dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
                     dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                 return
 
             if locationdata == 'None':
-                self.logger.debug(u'No data received for device:' + unicode(
+                self.logger.debug(u'No data received for device:' + str(
                     dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
                 if dev.states['deviceIsOnline']:
-                    self.logger.info(u'Friend Device:' + unicode( dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
+                    self.logger.info(u'Friend Device:' + str( dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
                     dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
                     dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                 return
@@ -1257,7 +1258,7 @@ class Plugin(indigo.PluginBase):
             batteryLevel = 0
             try:
                 batteryLevel =  round(float(devicestatus['batteryLevel'])*100,3)
-                self.logger.debug(u"Converted Battery to:"+unicode(batteryLevel))
+                self.logger.debug(u"Converted Battery to:"+str(batteryLevel))
             except:
                 self.logger.debug("Error in Battery Level conversion")
             devSummary = "Offline"
@@ -1285,7 +1286,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'distanceSinceCheck', 'value': str(Distancetravelled[1])},
             ]
 
-            self.logger.debug(unicode(stateList))
+            self.logger.debug(str(stateList))
 
             dev.updateStatesOnServer(stateList)
             # Change to strftime user selectable date for DeviceLastUpdate field
@@ -1304,9 +1305,9 @@ class Plugin(indigo.PluginBase):
             self.godoMapping(str(latitude), str(longitude), dev)
 
         except Exception as e:
-            self.logger.debug(unicode('Exception in refreshDataformyDevice: ' + unicode(e)))
+            self.logger.debug(str('Exception in refreshDataformyDevice: ' + str(e)))
             self.logger.debug('Exception:')
-            self.logger.exception(unicode('Possibility missing some data from icloud:  Is your account setup with FindFriends enabled on iOS/Mobile device?'))
+            self.logger.exception(str('Possibility missing some data from icloud:  Is your account setup with FindFriends enabled on iOS/Mobile device?'))
             dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             return
@@ -1318,7 +1319,7 @@ class Plugin(indigo.PluginBase):
         try:
             if self.debugicloud:
                 self.logger.debug(
-                unicode('Now updating Data for : ' + unicode(dev.name) + ' with data received: ' + unicode(follow)))
+                str('Now updating Data for : ' + str(dev.name) + ' with data received: ' + str(follow)))
 #
 #
 # Manage Labels provided by icloud data set
@@ -1328,25 +1329,25 @@ class Plugin(indigo.PluginBase):
             #unless starting up (60 seconds only)
             #if self.startingUp==False or self.startingUp==True:
             if follow is None:
-                self.logger.debug(u'No data received for device:' + unicode( dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
+                self.logger.debug(u'No data received for device:' + str( dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
                 if dev.states['deviceIsOnline']:
-                    self.logger.info(u'Friend Device:' + unicode(dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
+                    self.logger.info(u'Friend Device:' + str(dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
                     dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
                     dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                 return
             if 'location' not in follow:
-                self.logger.debug(u'No data received for device:' + unicode(
+                self.logger.debug(u'No data received for device:' + str(
                     dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
                 if dev.states['deviceIsOnline']:
-                    self.logger.info(u'Friend Device:' + unicode(
+                    self.logger.info(u'Friend Device:' + str(
                         dev.name) + ' has become Offline.  Most likely offline/airplane mode or disabled sharing')
                     dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
                     dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                 return
             if follow['location'] is None or follow['location'] == 'None':
-                self.logger.debug(u'No data received for device:'+unicode(dev.name)+' . Most likely device is offline/airplane mode or has disabled sharing location')
+                self.logger.debug(u'No data received for device:'+str(dev.name)+' . Most likely device is offline/airplane mode or has disabled sharing location')
                 if dev.states['deviceIsOnline']:
-                    self.logger.info(u'Friend Device:'+unicode(dev.name)+' has become Offline.  Most likely offline/airplane mode or disabled sharing')
+                    self.logger.info(u'Friend Device:'+str(dev.name)+' has become Offline.  Most likely offline/airplane mode or disabled sharing')
                     dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
                     dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                 return
@@ -1368,7 +1369,7 @@ class Plugin(indigo.PluginBase):
                 label = labels
 
             if self.debugicloud:
-                self.logger.debug(unicode('Label:' + unicode(label) + ' and type is ' + unicode(type(label))))
+                self.logger.debug(str('Label:' + str(label) + ' and type is ' + str(type(label))))
 
             labeltouse = 'nil'
             if isinstance(label, dict):
@@ -1420,7 +1421,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'distanceSinceCheck', 'value': str(Distancetravelled[1])},
             ]
 
-            self.logger.debug(unicode(stateList))
+            self.logger.debug(str(stateList))
 
             dev.updateStatesOnServer(stateList)
 # Change to strftime user selectable date for DeviceLastUpdate field
@@ -1444,9 +1445,9 @@ class Plugin(indigo.PluginBase):
             return
 
         except Exception as e:
-            self.logger.debug(unicode('Exception in refreshDataforDev: ' + unicode(e)))
+            self.logger.debug(str('Exception in refreshDataforDev: ' + str(e)))
             self.logger.debug('Exception:')
-            self.logger.exception(unicode('Possibility missing some data from icloud:  Is your account setup with FindFriends enabled on iOS/Mobile device?'))
+            self.logger.exception(str('Possibility missing some data from icloud:  Is your account setup with FindFriends enabled on iOS/Mobile device?'))
             dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             return
@@ -1486,7 +1487,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u'update Map Happening as device moved..')
                 drawUrl = self.urlGenerate(latitude ,longitude ,self.googleAPI, int(self.configHorizontalMap), int(self.configVerticalMap), int(self.configZoomMap), dev)
                 if self.debugmaps:
-                    self.logger.debug(u'drawURL 0=:'+unicode(drawUrl[0]))
+                    self.logger.debug(u'drawURL 0=:'+str(drawUrl[0]))
 
                 if self.debugmaps:
                     webbrowser.open_new(drawUrl[0])
@@ -1514,7 +1515,7 @@ class Plugin(indigo.PluginBase):
                 dev.updateStateOnServer('mapUpdateNeeded',value=False)
 
                 dev.updateStateOnServer('googleMapUrl', value=str(drawUrl[1]) )
-                self.logger.debug(u'Updating Variable:'+unicode(dev.name))
+                self.logger.debug(u'Updating Variable:'+str(dev.name))
 
                 variablename =''.join(dev.name.split())
                 self.updateVar(variablename, str(drawUrl[1]))
@@ -1524,7 +1525,7 @@ class Plugin(indigo.PluginBase):
                 if self.debugmaps and self.mapType=='google':
                     webbrowser.open_new(drawUrlall)
                     self.logger.debug(u'Mapping URL:')
-                    self.logger.debug(unicode(drawUrlall))
+                    self.logger.debug(str(drawUrlall))
                 return
             else:
                 self.logger.debug(u'No Mapping Needed.')
@@ -1532,7 +1533,7 @@ class Plugin(indigo.PluginBase):
 
 
         except Exception as e:
-            self.logger.exception(u'Exception within godoMapping: '+unicode(e))
+            self.logger.exception(u'Exception within godoMapping: '+str(e))
 
 
     def refreshDataForDevAction(self, valuesDict):
@@ -1594,13 +1595,13 @@ class Plugin(indigo.PluginBase):
         # Internal - Lists the Friends linked to an account
         try:
 
-            self.logger.debug(unicode(u'myFriendDevices Called...'))
+            self.logger.debug(str(u'myFriendDevices Called...'))
             # try:
             # Create an array where each entry is a list - the first item is
             # the value attribute and last is the display string that will be shown
             # Devices filtered on the chosen account
 
-            #self.logger.info(unicode(valuesDict))
+            #self.logger.info(str(valuesDict))
             iFriendArray = []
             username = self.pluginPrefs.get('appleId', '')
             password = self.pluginPrefs.get('applePwd', '')
@@ -1623,10 +1624,10 @@ class Plugin(indigo.PluginBase):
 
             following = iLogin[1].friends.data['following']
             for fol in following:
-                # self.logger.info(unicode(fol['id']))
-                # self.logger.info(unicode(fol['invitationFromEmail']))
+                # self.logger.info(str(fol['id']))
+                # self.logger.info(str(fol['invitationFromEmail']))
                 iOption2 = fol['id'], fol['invitationAcceptedByEmail']
-                #self.logger.info(unicode(iOption2))
+                #self.logger.info(str(iOption2))
                 iFriendArray.append(iOption2)
             return iFriendArray
 
@@ -1641,13 +1642,13 @@ class Plugin(indigo.PluginBase):
         # Internal - Lists the Friends linked to an account
         try:
 
-            self.logger.debug(unicode(u'myDevices Called...'))
+            self.logger.debug(str(u'myDevices Called...'))
             # try:
             # Create an array where each entry is a list - the first item is
             # the value attribute and last is the display string that will be shown
             # Devices filtered on the chosen account
 
-            # self.logger.info(unicode(valuesDict))
+            # self.logger.info(str(valuesDict))
             iArray = []
             username = self.pluginPrefs.get('appleId', '')
             password = self.pluginPrefs.get('applePwd', '')
@@ -1671,10 +1672,10 @@ class Plugin(indigo.PluginBase):
             #devicetargets = self.appleAPI.devices
 
             for fol in following:
-                self.logger.debug(unicode(fol['id'])+" and "+unicode(fol['name']))
+                self.logger.debug(str(fol['id'])+" and "+str(fol['name']))
 
                 iOption2 = fol['id'], fol['name']
-                # self.logger.info(unicode(iOption2))
+                # self.logger.info(str(iOption2))
                 iArray.append(iOption2)
             return iArray
 
@@ -1704,7 +1705,7 @@ class Plugin(indigo.PluginBase):
                 self.appleAPI = PyiCloudService(iUsername, iPassword, cookie_directory=self.iprefDirectory, session_directory=self.iprefDirectory+"/session", verify=True)
                 self.logger.debug(u"PyiCloudService start or redo FULL self.appleAPI full login...")
                 self.logger.debug(u'Login to account successful...')
-                self.logger.debug(u"Account Requires 2FA:" + unicode(self.appleAPI.requires_2fa))
+                self.logger.debug(u"Account Requires 2FA:" + str(self.appleAPI.requires_2fa))
 
             if self.appleAPI:
                 self.appleAPI.authenticate(force_refresh=False)
@@ -1726,33 +1727,33 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'type self.appleAPI result equals:')
-                self.logger.debug(unicode(type(self.appleAPI)))
+                self.logger.debug(str(type(self.appleAPI)))
                 #self.logger.debug(u'self.appleAPI.devices equals:')
-                #self.logger.debug(unicode(self.appleAPI.devices))
+                #self.logger.debug(str(self.appleAPI.devices))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'self.appleAPI.friends.details equals:')
-                self.logger.debug(unicode(self.appleAPI.friends.details))
+                self.logger.debug(str(self.appleAPI.friends.details))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'self.appleAPI.friends.locations equals:')
-                self.logger.debug(unicode(self.appleAPI.friends.locations))
+                self.logger.debug(str(self.appleAPI.friends.locations))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'Type of self.appleAPI.friends.locations equals:')
-                self.logger.debug(unicode(type(self.appleAPI.friends.locations)))
+                self.logger.debug(str(type(self.appleAPI.friends.locations)))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'Type of self.appleAPI.friends.data')
-                self.logger.debug(unicode(type(self.appleAPI.friends.data)))
+                self.logger.debug(str(type(self.appleAPI.friends.data)))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'self.appleAPI.friends.data equals')
-                self.logger.debug(unicode(self.appleAPI.friends.data))
+                self.logger.debug(str(self.appleAPI.friends.data))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'self.appleAPI.friends.data[followers] equals:')
-                self.logger.debug(unicode(self.appleAPI.friends.data['followers']))
+                self.logger.debug(str(self.appleAPI.friends.data['followers']))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
 
@@ -1762,14 +1763,14 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u"{0:=^130}".format(""))
                     self.logger.debug(u'Follower in follower: ID equals')
-                    self.logger.debug(unicode(fol['id']))
+                    self.logger.debug(str(fol['id']))
                     self.logger.debug(u'email address from Id equals:')
-                    self.logger.debug(unicode(fol['invitationFromEmail']))
+                    self.logger.debug(str(fol['invitationFromEmail']))
 
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'self.appleAPI.friends.details equals:')
-                self.logger.debug(unicode(self.appleAPI.friends.details))
+                self.logger.debug(str(self.appleAPI.friends.details))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
             return 0, self.appleAPI
@@ -1791,13 +1792,13 @@ class Plugin(indigo.PluginBase):
         except ValueError as e:
             self.logger.error(u"{0:=^130}".format(""))
             self.logger.error(u'Login failed - 2FA Authenication is supported. ')
-            self.logger.debug(u'Error Given is:'+unicode(e.message)+unicode(e.__dict__))
+            self.logger.debug(u'Error Given is:'+str(e.message)+str(e.__dict__))
             self.logger.error(u"{0:=^130}".format(""))
             self.allDevicesOffline()
             return 1, 'NL'
 
         except PyiCloudAPIResponseException as e:
-            self.logger.debug(u'Login Failed API Response Error.   ' + unicode(e.message) + unicode(e.__dict__))
+            self.logger.debug(u'Login Failed API Response Error.   ' + str(e.message) + str(e.__dict__))
             self.logger.debug(e)
             if e.code in [450,421,500]:
                 self.logger.info("Error Code 450/421/500 Given: Re-authentication seems to be required.  Reauthenicating now.")
@@ -1815,7 +1816,7 @@ class Plugin(indigo.PluginBase):
             return 1, 'NI'
 
         except Exception as e:
-            self.logger.debug(u'Login Failed General Error.   ' + unicode(e.message) + unicode(e.__dict__))
+            self.logger.debug(u'Login Failed General Error.   ' + str(e.message) + str(e.__dict__))
             self.logger.info(u"Issue connecting to icloud.  ?Internet issue, or temp icloud server down...")
             self.logger.debug(e)
             return 1, 'NI'
@@ -1831,18 +1832,18 @@ class Plugin(indigo.PluginBase):
 
         indigoPreferencesPluginDir = indigo.server.getInstallFolderPath()+"/Preferences/Plugins/" + self.pluginId + "/"
 
-        self.logger.info("Deleting Session data from:"+unicode(indigoPreferencesPluginDir))
+        self.logger.info("Deleting Session data from:"+str(indigoPreferencesPluginDir))
 
         files = glob.glob(indigoPreferencesPluginDir+"/session/*")
         for f in files:
-            self.logger.info("Deleting file:"+(unicode(f)))
+            self.logger.info("Deleting file:"+(str(f)))
             try:
                 os.remove(f)
             except OSError:
                 pass
         files2 = glob.glob(indigoPreferencesPluginDir+"/*")
         for fi in files2:
-            self.logger.info("Deleting file:"+(unicode(fi)))
+            self.logger.info("Deleting file:"+(str(fi)))
             try:
                 os.remove(fi)
             except OSError:
@@ -1854,11 +1855,11 @@ class Plugin(indigo.PluginBase):
     def loginAccount(self, valuesDict):
         self.logger.debug(u'loginAccount Button pressed Called.')
         self.validatePrefsConfigUi(valuesDict)
-        self.logger.debug(u"Using Details: Username:"+unicode(valuesDict['appleId'])+u" and password:"+unicode(valuesDict['applePwd']))
+        self.logger.debug(u"Using Details: Username:"+str(valuesDict['appleId'])+u" and password:"+str(valuesDict['applePwd']))
         self.appleAPI = None
         self.pluginPrefs['appleAPIid']= ""
         self.logger.info(u"{0:=^130}".format(""))
-        self.logger.info(u'Attempting Login to Apple Account:'+unicode(valuesDict['appleId']))
+        self.logger.info(u'Attempting Login to Apple Account:'+str(valuesDict['appleId']))
 
 
         valuesDict['appleAPIid']=''
@@ -1877,7 +1878,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.info(u"Another device from this account is required to verify the account")
                 self.logger.info(u"From this other device please approve and enter the code displayed")
                 self.logger.info(u"Once Code is enter press Submit Code button")
-            self.logger.debug(u"Account Requires 2FA to continue = "+unicode(self.appleAPI.requires_2fa))
+            self.logger.debug(u"Account Requires 2FA to continue = "+str(self.appleAPI.requires_2fa))
             self.logger.info(u"{0:=^130}".format(""))
             self.requires2FA = self.appleAPI.requires_2fa
         return valuesDict
@@ -1899,12 +1900,12 @@ class Plugin(indigo.PluginBase):
             self.requires2FA = False
             valuesDict['appleAPIid'] = valuesDict['appleId']
             self.pluginPrefs['appleAPIid'] = valuesDict['appleId']
-            self.logger.info(u"Trusted Session:"+unicode(self.appleAPI.is_trusted_session))
+            self.logger.info(u"Trusted Session:"+str(self.appleAPI.is_trusted_session))
 
         if not self.appleAPI.is_trusted_session:
             self.logger.info("Session is not Trusted. Requesting Trust...")
             result = self.appleAPI.trust_session()
-            self.logger.info("Session Trust Result:"+ unicode(result))
+            self.logger.info("Session Trust Result:"+ str(result))
 
 
         return valuesDict
@@ -1965,8 +1966,8 @@ class Plugin(indigo.PluginBase):
             urlmapGoogle = 'comgooglemaps://maps.google.com/maps?z='+str(iZoom)+'&t=h&q=' + str(latitude) + ',' + str(longitude)
             #Remove API usage altogether
             customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone + '&key=' + mapAPIKey
-            self.logger.debug(u'StaticMap URL equals:'+unicode(customURL))
-            self.logger.debug(u'Map URL equals:' + unicode(urlmapGoogle))
+            self.logger.debug(u'StaticMap URL equals:'+str(customURL))
+            self.logger.debug(u'Map URL equals:' + str(urlmapGoogle))
 
             mapOSM = 'http://staticmap.openstreetmap.de/staticmap.php?center='+str(latitude)+','+str(longitude)+'&'+str(mapZoom)+'&' + mapSize + '&markers='+str(latitude)+','+str(longitude)+','+str(mapLabel)
 
@@ -2035,7 +2036,7 @@ class Plugin(indigo.PluginBase):
 
 
         except Exception as e:
-            self.logger.info(u'Mapping Exception/Error:'+unicode(e))
+            self.logger.info(u'Mapping Exception/Error:'+str(e))
 
 
     def urlAllGenerate(self, mapAPIKey, iHorizontal, iVertical, iZoom):
@@ -2096,7 +2097,7 @@ class Plugin(indigo.PluginBase):
                 return customURL
 
         except Exception as e:
-            self.logger.info(u'urlAllGenerate'+unicode(e))
+            self.logger.info(u'urlAllGenerate'+str(e))
             return ''
 
     def useWaze(self, lat, long, endlat, endlong):
@@ -2122,7 +2123,7 @@ class Plugin(indigo.PluginBase):
             self.logger.debug("Waze Error: "+str(err))
             return "unknown","unknown",0,0
         except Exception as e:
-            self.logger.debug("Caught Exception in using Waze Route Calculator:"+unicode(e))
+            self.logger.debug("Caught Exception in using Waze Route Calculator:"+str(e))
 
             return "unknown","unknown",0,0
 
@@ -2160,7 +2161,7 @@ class Plugin(indigo.PluginBase):
                         for dev in indigo.devices.itervalues("self.myDevice"):
                             # add check here make sure dev is Online before checking details of GeoFences
                             if dev.enabled and dev.states['deviceIsOnline'] == True:
-                                self.logger.debug('Home Check Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
+                                self.logger.debug('Home Check Details on check:' + str(igeoName) + ' For Friend:' + str(dev.name))
                                 iDevLatitude = float(dev.states['latitude'])
                                 iDevLongitude = float(dev.states['longitude'])
                                 # Now check the distance for each device
@@ -2178,7 +2179,7 @@ class Plugin(indigo.PluginBase):
                         for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
                             # add check here make sure dev is Online before checking details of GeoFences
                             if dev.enabled and dev.states['deviceIsOnline'] == True:
-                                self.logger.debug('Home Check Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
+                                self.logger.debug('Home Check Details on check:' + str(igeoName) + ' For Friend:' + str(dev.name))
                                 iDevLatitude = float(dev.states['latitude'])
                                 iDevLongitude = float(dev.states['longitude'])
                                 # Now check the distance for each device
@@ -2203,7 +2204,7 @@ class Plugin(indigo.PluginBase):
                         for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
                             if dev.enabled and dev.states['deviceIsOnline'] == True:
                                 self.logger.debug(
-                                    'Other Geo Check Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
+                                    'Other Geo Check Details on check:' + str(igeoName) + ' For Friend:' + str(dev.name))
                                 iDevLatitude = float(dev.states['latitude'])
                                 iDevLongitude = float(dev.states['longitude'])
                                 # Now check the distance for each device
@@ -2222,7 +2223,7 @@ class Plugin(indigo.PluginBase):
                         for dev in indigo.devices.itervalues("self.myDevice"):
                             if dev.enabled and dev.states['deviceIsOnline'] == True:
                                 self.logger.debug(
-                                    'Other Geo Check Details on check:' + str(igeoName) + ' For Friend:' + unicode(dev.name))
+                                    'Other Geo Check Details on check:' + str(igeoName) + ' For Friend:' + str(dev.name))
                                 iDevLatitude = float(dev.states['latitude'])
                                 iDevLongitude = float(dev.states['longitude'])
                                 # Now check the distance for each device
@@ -2315,7 +2316,7 @@ class Plugin(indigo.PluginBase):
         try:
             arc = math.acos( cos )
         except Exception as e:
-            self.logger.debug('Expected Error within iDistance Calculation: Cos Equals:'+unicode(cos) +' Exception Caught:'+unicode(e))
+            self.logger.debug('Expected Error within iDistance Calculation: Cos Equals:'+str(cos) +' Exception Caught:'+str(e))
             arc = 1
             pass
         # Remember to multiply arc by the radius of the earth
@@ -2354,7 +2355,7 @@ class Plugin(indigo.PluginBase):
     #                                                 arrival_time=None, transit_mode=None, transit_routing_preference=None)
     #         if self.debugdistance:
     #             self.logger.debug(u'Distance Result from Google:')
-    #             self.logger.debug(unicode(distance_result))
+    #             self.logger.debug(str(distance_result))
     #
     #         iTimeTaken = distance_result['rows'][0]['elements'][0]['duration']['text']
     #         iTimeTakenseconds = distance_result['rows'][0]['elements'][0]['duration']['value']
@@ -2394,7 +2395,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug("Checking trigger as 2FA state called")
         for triggerId, trigger in sorted(self.triggers.iteritems()):
             self.logger.debug("Checking Trigger %s (%s), Type: %s, Friend: %s, and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
-            # self.logger.error(unicode(trigger))
+            # self.logger.error(str(trigger))
             if trigger.pluginTypeId == "account2FAneeded" :
                 # 2fa failed
                 # send trigger.
@@ -2403,7 +2404,7 @@ class Plugin(indigo.PluginBase):
 
     def triggerCheck(self, device, friend, triggertype):
 
-        self.logger.debug('triggerCheck run.  device.id:'+unicode(device.id)+' friend:'+unicode(friend)+' triggertype:'+unicode(triggertype))
+        self.logger.debug('triggerCheck run.  device.id:'+str(device.id)+' friend:'+str(friend)+' triggertype:'+str(triggertype))
         try:
 
             if self.startingUp:
@@ -2422,7 +2423,7 @@ class Plugin(indigo.PluginBase):
             for triggerId, trigger in sorted(self.triggers.iteritems()):
 
                 self.logger.debug("Checking Trigger %s (%s), Type: %s, Friend: %s, and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId, friend, triggertype))
-                #self.logger.error(unicode(trigger))
+                #self.logger.error(str(trigger))
 
                 if trigger.pluginTypeId == "account2FAneeded" and triggertype=='account2FAneeded':
                     # 2fa failed
@@ -2433,7 +2434,7 @@ class Plugin(indigo.PluginBase):
 
                 if trigger.pluginProps["geofenceId"] != str(device.id) or (trigger.pluginTypeId == "geoFenceExit" and triggertype !='EXIT') or (trigger.pluginTypeId == "geoFenceEnter" and triggertype !='ENTER'):
                     self.logger.debug("Skipping Trigger %s (%s), wrong device: %s, or friend: %s,  or event : %s" % (trigger.name, trigger.id, device.id, friend, triggertype))
-                    #self.logger.debug(u'or Checked Trigger Wrong event.  '+unicode(triggertype))
+                    #self.logger.debug(u'or Checked Trigger Wrong event.  '+str(triggertype))
                 else:
                     idfriend = ''
                     # get id from name
@@ -2443,22 +2444,22 @@ class Plugin(indigo.PluginBase):
                     # quicker than iterating through all devices looking for mathcing name
                     triggerdevice = indigo.devices[int(trigger.pluginProps['friendId'] )]
                     triggerdeviceFriendName = triggerdevice.pluginProps['friendName']
-                    self.logger.debug(u'Trigger device friendName is: '+unicode(triggerdeviceFriendName))
+                    self.logger.debug(u'Trigger device friendName is: '+str(triggerdeviceFriendName))
                     #self.logger.debug(triggerdevice)
 
                     if triggerdevice.enabled:
                         if str(friend) == str(triggerdeviceFriendName):
-                            self.logger.debug(u'Matching friend found:'+unicode(triggerdeviceFriendName)+' and trigger needed is:'+unicode(friend))
+                            self.logger.debug(u'Matching friend found:'+str(triggerdeviceFriendName)+' and trigger needed is:'+str(friend))
                             idfriend = triggerdevice.id
 
                     #for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
                     #    if dev.enabled:
                      #       iDevUniqueName = dev.pluginProps['friendName']
                      #       if iDevUniqueName == friend:
-                    #            self.logger.debug(u'Matching friend found:'+unicode(friend)+' id is :'+unicode(dev.id))
+                    #            self.logger.debug(u'Matching friend found:'+str(friend)+' id is :'+str(dev.id))
                     #
                     if idfriend=='':
-                        self.logger.debug(u'Trigger Does not  match friend :'+unicode(friend)+' to TriggerFriend Needed:'+unicode(triggerdeviceFriendName))
+                        self.logger.debug(u'Trigger Does not  match friend :'+str(friend)+' to TriggerFriend Needed:'+str(triggerdeviceFriendName))
                         continue #back to check other triggers
 
                     ## don't trigger if device is offline.

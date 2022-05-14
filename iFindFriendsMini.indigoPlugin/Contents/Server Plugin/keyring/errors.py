@@ -1,22 +1,36 @@
 import sys
 
-class PasswordSetError(Exception):
-    """Raised when the password can't be set.
-    """
 
-class PasswordDeleteError(Exception):
-    """Raised when the password can't be deleted.
-    """
+class KeyringError(Exception):
+    """Base class for exceptions in keyring"""
 
-class InitError(Exception):
-    """Raised when the keyring could not be initialised
-    """
 
-class ExceptionRaisedContext(object):
+class PasswordSetError(KeyringError):
+    """Raised when the password can't be set."""
+
+
+class PasswordDeleteError(KeyringError):
+    """Raised when the password can't be deleted."""
+
+
+class InitError(KeyringError):
+    """Raised when the keyring could not be initialised"""
+
+
+class KeyringLocked(KeyringError):
+    """Raised when the keyring failed unlocking"""
+
+
+class NoKeyringError(KeyringError, RuntimeError):
+    """Raised when there is no keyring backend"""
+
+
+class ExceptionRaisedContext:
     """
     An exception-trapping context that indicates whether an exception was
     raised.
     """
+
     def __init__(self, ExpectedException=Exception):
         self.ExpectedException = ExpectedException
         self.exc_info = None
@@ -28,13 +42,15 @@ class ExceptionRaisedContext(object):
     def __exit__(self, *exc_info):
         self.exc_info.__init__(*exc_info)
         return self.exc_info.type and issubclass(
-            self.exc_info.type, self.ExpectedException)
+            self.exc_info.type, self.ExpectedException
+        )
 
-class ExceptionInfo(object):
+
+class ExceptionInfo:
     def __init__(self, *info):
         if not info:
             info = sys.exc_info()
-        self.type, self.value, self.traceback = info
+        self.type, self.value, _ = info
 
     def __bool__(self):
         """

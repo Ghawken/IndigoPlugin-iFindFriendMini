@@ -1,94 +1,125 @@
 #!/usr/bin/env python
 """Simple command line interface to get/set password from a keyring"""
 
-from __future__ import print_function
-
 import getpass
-from optparse import OptionParser
+import argparse
 import sys
 
-from . import get_keyring, set_keyring, get_password, set_password, delete_password
 from . import core
+from . import backend
+from . import set_keyring, get_password, set_password, delete_password
 
 
-class CommandLineTool(object):
+class CommandLineTool:
     def __init__(self):
-        self.parser = OptionParser(
-                        usage="%prog [get|set|del] SERVICE USERNAME")
-        self.parser.add_option("-p", "--keyring-path",
-                               dest="keyring_path", default=None,
-                               help="Path to the keyring backend")
-        self.parser.add_option("-b", "--keyring-backend",
-                               dest="keyring_backend", default=None,
-                               help="Name of the keyring backend")
+        self.parser = argparse.ArgumentParser()
+        self.parser.add_argument(
+            "-p",
+            "--keyring-path",
+            dest="keyring_path",
+            default=None,
+            help="Path to the keyring backend",
+        )
+        self.parser.add_argument(
+            "-b",
+            "--keyring-backend",
+            dest="keyring_backend",
+            default=None,
+            help="Name of the keyring backend",
+        )
+        self.parser.add_argument(
+            "--list-backends",
+            action="store_true",
+            help="List keyring backends and exit",
+        )
+        self.parser.add_argument(
+            "--disable", action="store_true", help="Disable keyring and exit"
+        )
+        self.parser.add_argument(
+            'operation',
+            help="get|set|del",
+            nargs="?",
+        )
+        self.parser.add_argument(
+            'service',
+            nargs="?",
+        )
+        self.parser.add_argument(
+            'username',
+            nargs="?",
+        )
 
     def run(self, argv):
-        opts, args = self.parser.parse_args(argv)
+        args = self.parser.parse_args(argv)
+        vars(self).update(vars(args))
+
+        if args.list_backends:
+            for k in backend.get_all_keyring():
+                print(k)
+            return
+
+        if args.disable:
+            core.disable()
+            return
+
+        self._check_args()
+        self._load_spec_backend()
+        method = getattr(self, f'do_{self.operation}', self.invalid_op)
+        return method()
+
+    def _check_args(self):
+        if self.operation:
+            if self.service is None or self.username is None:
+                self.parser.error(f"{self.operation} requires service and username")
+
+    def do_get(self):
+        password = get_password(self.service, self.username)
+        if password is None:
+            raise SystemExit(1)
+        print(password)
+
+    def do_set(self):
+        password = self.input_password(
+            f"Password for '{self.username}' in '{self.service}': "
+        )
+        set_password(self.service, self.username, password)
+
+    def do_del(self):
+        delete_password(self.service, self.username)
+
+    def invalid_op(self):
+        self.parser.error("Specify operation 'get', 'del', or 'set'.")
+
+    def _load_spec_backend(self):
+        if self.keyring_backend is None:
+            return
 
         try:
-            kind, service, username = args
-        except ValueError:
-            if len(args) == 0:
-                # Be nice with the user if he just tries to launch the tool
-                self.parser.print_help()
-                return 1
-            else:
-                self.parser.error("Wrong number of arguments")
-
-        if opts.keyring_backend is not None:
-            try:
-                if opts.keyring_path:
-                    sys.path.insert(0, opts.keyring_path)
-                backend = core.load_keyring(opts.keyring_backend)
-                set_keyring(backend)
-            except (Exception,):
-                # Tons of things can go wrong here:
-                #   ImportError when using "fjkljfljkl"
-                #   AttributeError when using "os.path.bar"
-                #   TypeError when using "__builtins__.str"
-                # So, we play on the safe side, and catch everything.
-                e = sys.exc_info()[1]
-                self.parser.error("Unable to load specified keyring: %s" % e)
-
-        if kind == 'get':
-            password = get_password(service, username)
-            if password is None:
-                return 1
-
-            self.output_password(password)
-            return 0
-
-        elif kind == 'set':
-            password = self.input_password("Password for '%s' in '%s': " %
-                                           (username, service))
-            set_password(service, username, password)
-            return 0
-
-        elif kind == 'del':
-            password = self.input_password("Deleting password for '%s' in '%s': " %
-                                      (username, service))
-            delete_password(service, username)
-            return 0
-
-        else:
-            self.parser.error("You can only 'get', 'del' or 'set' a password.")
-            pass
+            if self.keyring_path:
+                sys.path.insert(0, self.keyring_path)
+            set_keyring(core.load_keyring(self.keyring_backend))
+        except (Exception,) as exc:
+            # Tons of things can go wrong here:
+            #   ImportError when using "fjkljfljkl"
+            #   AttributeError when using "os.path.bar"
+            #   TypeError when using "__builtins__.str"
+            # So, we play on the safe side, and catch everything.
+            self.parser.error(f"Unable to load specified keyring: {exc}")
 
     def input_password(self, prompt):
-        """Ask for a password to the user.
+        """Retrieve password from input."""
+        return self.pass_from_pipe() or getpass.getpass(prompt)
 
-        This mostly exists to ease the testing process.
-        """
+    @classmethod
+    def pass_from_pipe(cls):
+        """Return password from pipe if not on TTY, else False."""
+        is_pipe = not sys.stdin.isatty()
+        return is_pipe and cls.strip_last_newline(sys.stdin.read())
 
-        return getpass.getpass(prompt)
-
-    def output_password(self, password):
-        """Output the password to the user.
-
-        This mostly exists to ease the testing process.
-        """
-
-        print(password, file=sys.stdout)
+    @staticmethod
+    def strip_last_newline(str):
+        """Strip one last newline, if present."""
+        return str[: -str.endswith('\n')]
 
 
 def main(argv=None):
