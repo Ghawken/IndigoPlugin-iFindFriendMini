@@ -847,7 +847,7 @@ class Plugin(indigo.PluginBase):
                             # Update device with data from iFindFriends service
                             self.refreshDataForDev(dev, follow)
 
-            for dev in indigo.devices.itervalues("self.myDevice"):
+            for dev in indigo.devices.iter("self.myDevice"):
                 # Check AppleID of Device
                 if dev.enabled:
                     targetFriend = dev.pluginProps['targetFriend']
@@ -867,7 +867,7 @@ class Plugin(indigo.PluginBase):
             return
 
         except PyiCloudAPIResponseException as e:
-            self.logger.debug(u'Login Failed API Response Error.   ' + str(e.message) + str(e.__dict__))
+            self.logger.debug(u'Login Failed API Response Error.   ' + str(e) + str(e.__dict__))
             if e.code in [450,421,500]:
                 self.logger.info("Error Code 450/421/500 Given: Re-authentication seems to be required.  Reauthenicating now.")
                 self.appleAPI.authenticate(True)
