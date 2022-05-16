@@ -831,7 +831,7 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(u"{0:=^130}".format(""))
                 return
 
-            for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
+            for dev in indigo.devices.iter("self.FindFriendsFriend"):
                 # Check AppleID of Device
                 if dev.enabled:
                     targetFriend = dev.pluginProps['targetFriend']
@@ -916,7 +916,7 @@ class Plugin(indigo.PluginBase):
         try:
 
             self.logger.debug('update GeoFences time called')
-            for geoDevices in indigo.devices.itervalues('self.FindFriendsGeofence'):
+            for geoDevices in indigo.devices.iter('self.FindFriendsGeofence'):
                 if geoDevices.enabled:
                     #localProps = geoDevices.pluginProps
                     lastArrivaltimestamp = float(geoDevices.states['lastArrivaltimestamp'])
@@ -943,7 +943,7 @@ class Plugin(indigo.PluginBase):
             # need to start with GeofFence and then go through all devices
             # iDevName = dev.states['friendName']
             # Check GeoFences after devices
-            for geoDevices in indigo.devices.itervalues('self.FindFriendsGeofence'):
+            for geoDevices in indigo.devices.iter('self.FindFriendsGeofence'):
                 if geoDevices.enabled:
                     listFriends = []
                     igeoFriendsRange = 0
@@ -962,7 +962,7 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(u'Old GeoDevice Friends Equals:')
                     self.logger.debug(str(iGeolistFriends))
 
-                    for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
+                    for dev in indigo.devices.iter("self.FindFriendsFriend"):
                         #add online check here
                         if dev.enabled and dev.states['deviceIsOnline'] == True:
                             self.logger.debug('Geo Details on check:' + str(igeoName) + ' For Friend:' + str(dev.name))
@@ -1203,7 +1203,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"refreshDataforMyDevice() method called.")
         try:
             if self.debugicloud:
-                self.logger.debug(str('Now updating Data for : ' + str(dev.name) + ' with data received: ' + str(follow)))
+                self.logger.debug(str('Now updating Data for : ' + str(dev.name) + ' with data received: '))
 
             # self.logger.error(str(devices))
             # self.logger.error(devices['id'])
@@ -1685,7 +1685,7 @@ class Plugin(indigo.PluginBase):
 
     def allDevicesOffline(self):
         self.logger.debug("all Devices Offline")
-        for dev in indigo.devices.itervalues("self"):
+        for dev in indigo.devices.iter("self"):
             # add check here make sure dev is Online before checking details of GeoFences
             if dev.enabled:
                 dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
@@ -1792,13 +1792,13 @@ class Plugin(indigo.PluginBase):
         except ValueError as e:
             self.logger.error(u"{0:=^130}".format(""))
             self.logger.error(u'Login failed - 2FA Authenication is supported. ')
-            self.logger.debug(u'Error Given is:'+str(e.message)+str(e.__dict__))
+            self.logger.debug(u'Error Given is:'+str(e)+str(e.__dict__))
             self.logger.error(u"{0:=^130}".format(""))
             self.allDevicesOffline()
             return 1, 'NL'
 
         except PyiCloudAPIResponseException as e:
-            self.logger.debug(u'Login Failed API Response Error.   ' + str(e.message) + str(e.__dict__))
+            self.logger.debug(u'Login Failed API Response Error.   ' + str(e) + str(e.__dict__))
             self.logger.debug(e)
             if e.code in [450,421,500]:
                 self.logger.info("Error Code 450/421/500 Given: Re-authentication seems to be required.  Reauthenicating now.")
@@ -1816,7 +1816,7 @@ class Plugin(indigo.PluginBase):
             return 1, 'NI'
 
         except Exception as e:
-            self.logger.debug(u'Login Failed General Error.   ' + str(e.message) + str(e.__dict__))
+            self.logger.debug(u'Login Failed General Error.   ' + str(e) + str(e.__dict__))
             self.logger.info(u"Issue connecting to icloud.  ?Internet issue, or temp icloud server down...")
             self.logger.debug(e)
             return 1, 'NI'
@@ -2145,7 +2145,7 @@ class Plugin(indigo.PluginBase):
             #     self.logger.info(u"{0:=^130}".format(""))
             #     return
 
-            for geoDevices in indigo.devices.itervalues('self.FindFriendsGeofence'):
+            for geoDevices in indigo.devices.iter('self.FindFriendsGeofence'):
                 if geoDevices.enabled:
                     igeoFriendsRange = 0
                     localProps = geoDevices.pluginProps
@@ -2158,7 +2158,7 @@ class Plugin(indigo.PluginBase):
                         igeoLat = float(localProps['geoLatitude'])
                         igeoRangeDistance = int(localProps['geoRange'])
                         igeoFriendsRangeOld = int(geoDevices.states['friendsInRange'])
-                        for dev in indigo.devices.itervalues("self.myDevice"):
+                        for dev in indigo.devices.iter("self.myDevice"):
                             # add check here make sure dev is Online before checking details of GeoFences
                             if dev.enabled and dev.states['deviceIsOnline'] == True:
                                 self.logger.debug('Home Check Details on check:' + str(igeoName) + ' For Friend:' + str(dev.name))
@@ -2176,7 +2176,7 @@ class Plugin(indigo.PluginBase):
                                     dev.updateStateOnServer('homeDistance', value=route_distance )
                                     dev.updateStateOnServer('homeTime', value=route_time)
                         #This is home Geo - now update all devices
-                        for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
+                        for dev in indigo.devices.iter("self.FindFriendsFriend"):
                             # add check here make sure dev is Online before checking details of GeoFences
                             if dev.enabled and dev.states['deviceIsOnline'] == True:
                                 self.logger.debug('Home Check Details on check:' + str(igeoName) + ' For Friend:' + str(dev.name))
@@ -2201,7 +2201,7 @@ class Plugin(indigo.PluginBase):
                         igeoFriendsRangeOld = int(geoDevices.states['friendsInRange'])
 
                         # This is home Geo - now update all devices
-                        for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
+                        for dev in indigo.devices.iter("self.FindFriendsFriend"):
                             if dev.enabled and dev.states['deviceIsOnline'] == True:
                                 self.logger.debug(
                                     'Other Geo Check Details on check:' + str(igeoName) + ' For Friend:' + str(dev.name))
@@ -2220,7 +2220,7 @@ class Plugin(indigo.PluginBase):
                                     dev.updateStateOnServer('otherDistance', value=route_distance)
                                     dev.updateStateOnServer('otherTime', value=route_time)
 
-                        for dev in indigo.devices.itervalues("self.myDevice"):
+                        for dev in indigo.devices.iter("self.myDevice"):
                             if dev.enabled and dev.states['deviceIsOnline'] == True:
                                 self.logger.debug(
                                     'Other Geo Check Details on check:' + str(igeoName) + ' For Friend:' + str(dev.name))
@@ -2393,8 +2393,8 @@ class Plugin(indigo.PluginBase):
 
     def triggerCheck2fa(self):
         self.logger.debug("Checking trigger as 2FA state called")
-        for triggerId, trigger in sorted(self.triggers.iteritems()):
-            self.logger.debug("Checking Trigger %s (%s), Type: %s, Friend: %s, and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+        for triggerId, trigger in sorted(self.triggers.items()):
+            self.logger.debug("Checking Trigger (%s), Type: %s, Friend: %s, and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
             # self.logger.error(str(trigger))
             if trigger.pluginTypeId == "account2FAneeded" :
                 # 2fa failed
@@ -2420,7 +2420,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u'Trigger Cancelled as Device is Not Online')
                 return
 
-            for triggerId, trigger in sorted(self.triggers.iteritems()):
+            for triggerId, trigger in sorted(self.triggers.items()):
 
                 self.logger.debug("Checking Trigger %s (%s), Type: %s, Friend: %s, and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId, friend, triggertype))
                 #self.logger.error(str(trigger))
@@ -2452,7 +2452,7 @@ class Plugin(indigo.PluginBase):
                             self.logger.debug(u'Matching friend found:'+str(triggerdeviceFriendName)+' and trigger needed is:'+str(friend))
                             idfriend = triggerdevice.id
 
-                    #for dev in indigo.devices.itervalues("self.FindFriendsFriend"):
+                    #for dev in indigo.devices.iter("self.FindFriendsFriend"):
                     #    if dev.enabled:
                      #       iDevUniqueName = dev.pluginProps['friendName']
                      #       if iDevUniqueName == friend:
