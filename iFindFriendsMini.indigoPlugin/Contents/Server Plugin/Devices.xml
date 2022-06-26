@@ -52,6 +52,11 @@
 				<TriggerLabel>Timestamp of last arrival</TriggerLabel>
 				<ControlPageLabel>Timestamp of last arrival</ControlPageLabel>
 			</State>
+            <State id="occupied">
+				<ValueType>Boolean</ValueType>
+				<TriggerLabel>Occupied True or False</TriggerLabel>
+				<ControlPageLabel>Occupied True or False</ControlPageLabel>
+			</State>
             <State id="listFriends">
 				<ValueType>String</ValueType>
 				<TriggerLabel>List of Friends within Geofence</TriggerLabel>

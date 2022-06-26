@@ -391,7 +391,7 @@ class Plugin(indigo.PluginBase):
                 #{'key': 'lastDeptimestamp', 'value': ''},
                 #{'key': 'minutessincelastArrival', 'value': 0},
                 #{'key': 'minutessincelastDep', 'value': 0},
-                #{'key': 'listFriends', 'value': ''},
+                {'key': 'occupied', 'value': False},
                 {'key': 'deviceIsOnline', 'value': False, 'uiValue':'Waiting'}]
 
             #self.logger.debug(str(stateList))
@@ -406,6 +406,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'locationTimestamp', 'value': ''},
                 {'key': 'timestamp', 'value': ''},
                 {'key': 'altitude', 'value': ''},
+        #        {'key':'isHome','value':False,
                 {'key': 'homeDistance', 'value': 0},
                 {'key': 'homeTime', 'value': 0},
                 {'key': 'otherDistance', 'value': 0},
@@ -435,6 +436,7 @@ class Plugin(indigo.PluginBase):
                 {'key': 'altitude', 'value': ''},
                 {'key': 'homeDistance', 'value': 0},
                 {'key': 'homeTime', 'value': 0},
+          #      {'key': 'isHome', 'value': False,
                 {'key': 'batteryCharge', 'value': 0},
                 {'key': 'otherDistance', 'value': 0},
                 {'key': 'otherTime', 'value': 0},
@@ -1133,9 +1135,10 @@ class Plugin(indigo.PluginBase):
                             # Change Sensor Icon
                     if igeoFriendsRange==0:
                         geoDevices.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+                        geoDevices.updateStateOnServer("occupied", value=False)
                     if igeoFriendsRange >0:
                         geoDevices.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
-
+                        geoDevices.updateStateOnServer("occupied", value=True)
                     geoDevices.updateStateOnServer('listFriends', value=str(",".join(listFriends )))
                     # go through old list of friends and compare to new list
                     try:
