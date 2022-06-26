@@ -1906,8 +1906,6 @@ class Plugin(indigo.PluginBase):
             self.logger.info("Session is not Trusted. Requesting Trust...")
             result = self.appleAPI.trust_session()
             self.logger.info("Session Trust Result:"+ str(result))
-
-
         return valuesDict
 
 
@@ -1928,7 +1926,6 @@ class Plugin(indigo.PluginBase):
             mapLabel =  dev.pluginProps.get('mapLabel','lightblue1')
             # Create Map url
             mapCentre = 'center=' + str(latitude) + "," + str(longitude)
-
 
             # Set size
             if self.mapType=='google':

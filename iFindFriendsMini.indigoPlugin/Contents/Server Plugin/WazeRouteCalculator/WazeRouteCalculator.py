@@ -98,7 +98,7 @@ class WazeRouteCalculator(object):
             "lon": base_coords["lon"]
         }
 
-        response = requests.get(self.WAZE_URL + get_cord, params=url_options, headers=self.HEADERS)
+        response = requests.get(self.WAZE_URL + get_cord, params=url_options, headers=self.HEADERS, timeout=10)
         for response_json in response.json():
             if response_json.get('city'):
                 lat = response_json['location']['lat']
@@ -134,7 +134,7 @@ class WazeRouteCalculator(object):
         if self.avoid_subscription_roads is False:
             url_options["subscription"] = "*"
 
-        response = requests.get(self.WAZE_URL + routing_server, params=url_options, headers=self.HEADERS)
+        response = requests.get(self.WAZE_URL + routing_server, params=url_options, headers=self.HEADERS, timeout=10)
         response.encoding = 'utf-8'
         response_json = self._check_response(response)
         if response_json:
