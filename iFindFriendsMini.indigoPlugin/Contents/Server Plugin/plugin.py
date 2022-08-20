@@ -617,6 +617,7 @@ class Plugin(indigo.PluginBase):
                             self.logger.info(u"Account requires verification within Plugin Config.")
                             nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
                             updateGeofencedue = time.time() + 60
+                            self.triggerCheck2fa()
                     except:
                         self.logger.debug(u'Error within RunConcurrentLoop Update cycle')
                         nextloopdue = time.time() + int(60 * self.configMenuTimeCheck)
@@ -1723,6 +1724,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.info(u"{0:=^130}".format(""))
                 self.logger.info(u"{0:=^130}".format(""))
                 #self.appleAPI = None
+                self.triggerCheck2fa()
                 return 2, self.appleAPI
             # 2 = 2fa required
             #self.appleAPI = self.self.appleAPI
@@ -2442,9 +2444,13 @@ class Plugin(indigo.PluginBase):
                     # get indigo device name
                     # realised could save iteration here by finding name of device of current trigger via looking up name via indigodevice Id
                     # quicker than iterating through all devices looking for mathcing name
-                    triggerdevice = indigo.devices[int(trigger.pluginProps['friendId'] )]
-                    triggerdeviceFriendName = triggerdevice.pluginProps['friendName']
-                    self.logger.debug(u'Trigger device friendName is: '+str(triggerdeviceFriendName))
+                    if (int(trigger.pluginProps['friendId'] ) in indigo.devices):
+                        triggerdevice = indigo.devices[int(trigger.pluginProps['friendId'] )]
+                        triggerdeviceFriendName = triggerdevice.pluginProps['friendName']
+                        self.logger.debug(u'Trigger device friendName is: '+str(triggerdeviceFriendName))
+                    else:
+                        self.logger.info("Device Key ID not longer exists. Skipping")
+                        continue
                     #self.logger.debug(triggerdevice)
 
                     if triggerdevice.enabled:
