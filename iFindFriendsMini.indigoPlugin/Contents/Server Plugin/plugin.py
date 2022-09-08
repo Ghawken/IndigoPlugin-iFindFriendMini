@@ -2432,7 +2432,7 @@ class Plugin(indigo.PluginBase):
                     # send trigger.
                     self.logger.debug("======== Executing Trigger %s (%d)" % (trigger.name, trigger.id))
                     indigo.trigger.execute(trigger)
-
+                    continue
 
                 if trigger.pluginProps["geofenceId"] != str(device.id) or (trigger.pluginTypeId == "geoFenceExit" and triggertype !='EXIT') or (trigger.pluginTypeId == "geoFenceEnter" and triggertype !='ENTER'):
                     self.logger.debug("Skipping Trigger %s (%s), wrong device: %s, or friend: %s,  or event : %s" % (trigger.name, trigger.id, device.id, friend, triggertype))
