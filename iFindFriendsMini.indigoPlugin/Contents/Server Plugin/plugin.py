@@ -2427,12 +2427,16 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug("Checking Trigger %s (%s), Type: %s, Friend: %s, and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId, friend, triggertype))
                 #self.logger.error(str(trigger))
 
-                if trigger.pluginTypeId == "account2FAneeded" and triggertype=='account2FAneeded':
+                if trigger.pluginTypeId =='account2FAneeded':  ## selected a 2FA triggertype
+                    if triggertype=='account2FAneeded':
                     # 2fa failed
                     # send trigger.
-                    self.logger.debug("======== Executing Trigger %s (%d)" % (trigger.name, trigger.id))
-                    indigo.trigger.execute(trigger)
-                    continue
+                        self.logger.debug("======== Executing Trigger %s (%d)" % (trigger.name, trigger.id))
+                        indigo.trigger.execute(trigger)
+                        continue
+                    else:
+                        self.logger.debug("Skipping further checks as this is a 2FA trigger.")
+                        continue
 
                 if trigger.pluginProps["geofenceId"] != str(device.id) or (trigger.pluginTypeId == "geoFenceExit" and triggertype !='EXIT') or (trigger.pluginTypeId == "geoFenceEnter" and triggertype !='ENTER'):
                     self.logger.debug("Skipping Trigger %s (%s), wrong device: %s, or friend: %s,  or event : %s" % (trigger.name, trigger.id, device.id, friend, triggertype))
