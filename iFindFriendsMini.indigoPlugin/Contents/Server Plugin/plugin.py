@@ -30,7 +30,9 @@ import math
 import logging
 #import OpenSSL
 import WazeRouteCalculator
-
+import os
+from os import path
+import traceback
 import time as t
 import json
 try:
@@ -38,6 +40,8 @@ try:
 except ImportError:
     MajorProblem = 2  #1 to restart, 2 to disable
     pass
+
+import itertools
 
 try:
     from pyicloud import PyiCloudService
@@ -189,13 +193,76 @@ kDefaultPluginPrefs = {
     u'updaterEmailsEnabled': False  # Notification of plugin updates wanted.
 }
 
+# update to python3 changes
+################################################################################
+class IndigoLogHandler(logging.Handler):
+    def __init__(self, display_name, level=logging.NOTSET):
+        super().__init__(level)
+        self.displayName = display_name
+
+    def emit(self, record):
+        """ not used by this class; must be called independently by indigo """
+        logmessage = ""
+        try:
+            levelno = int(record.levelno)
+            is_error = False
+            is_exception = False
+            if self.level <= levelno:  ## should display this..
+                if record.exc_info !=None:
+                    is_exception = True
+                if levelno == 5:	# 5
+                    logmessage = '({}:{}:{}): {}'.format(path.basename(record.pathname), record.funcName, record.lineno, record.getMessage())
+                elif levelno == logging.DEBUG:	# 10
+                    logmessage = '({}:{}:{}): {}'.format(path.basename(record.pathname), record.funcName, record.lineno, record.getMessage())
+                elif levelno == logging.INFO:		# 20
+                    logmessage = record.getMessage()
+                elif levelno == logging.WARNING:	# 30
+                    logmessage = record.getMessage()
+                elif levelno == logging.ERROR:		# 40
+                    logmessage = '({}: Function: {}  line: {}):    Error :  Message : {}'.format(path.basename(record.pathname), record.funcName, record.lineno, record.getMessage())
+                    is_error = True
+                if is_exception:
+                    logmessage = '({}: Function: {}  line: {}):    Exception :  Message : {}'.format(path.basename(record.pathname), record.funcName, record.lineno, record.getMessage())
+                    indigo.server.log(message=logmessage, type=self.displayName, isError=is_error, level=levelno)
+                    if record.exc_info !=None:
+                        etype,value,tb = record.exc_info
+                        tb_string = "".join(traceback.format_tb(tb))
+                        indigo.server.log(f"Traceback:\n{tb_string}", type=self.displayName, isError=is_error, level=levelno)
+                        indigo.server.log(f"Error in plugin execution:\n\n{traceback.format_exc(30)}", type=self.displayName, isError=is_error, level=levelno)
+                    indigo.server.log(f"\nExc_info: {record.exc_info} \nExc_Text: {record.exc_text} \nStack_info: {record.stack_info}",type=self.displayName, isError=is_error, level=levelno)
+                    return
+                indigo.server.log(message=logmessage, type=self.displayName, isError=is_error, level=levelno)
+        except Exception as ex:
+            indigo.server.log(f"Error in Logging: {ex}",type=self.displayName, isError=is_error, level=levelno)
+
 
 class Plugin(indigo.PluginBase):
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
         """ docstring placeholder """
-
-
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
+
+        pfmt = logging.Formatter('%(asctime)s.%(msecs)03d\t%(levelname)s\t%(name)s.%(funcName)s:%(filename)s:%(lineno)s:\t%(message)s', datefmt='%d-%m-%Y %H:%M:%S')
+        self.plugin_file_handler.setFormatter(pfmt)
+        ################################################################################
+        # Setup Logging
+        ################################################################################
+        self.logger.setLevel(logging.DEBUG)
+        try:
+            self.logLevel = int(self.pluginPrefs["showDebugLevel"])
+            self.fileloglevel = int(self.pluginPrefs["showDebugFileLevel"])
+        except:
+            self.logLevel = logging.INFO
+            self.fileloglevel = logging.DEBUG
+
+        self.logger.removeHandler(self.indigo_log_handler)
+        self.previousVersion = self.pluginPrefs.get("previousVersion", "0.0.1")
+        self.indigo_log_handler = IndigoLogHandler(pluginDisplayName, logging.INFO)
+        ifmt = logging.Formatter("%(message)s")
+        self.indigo_log_handler.setFormatter(ifmt)
+        self.indigo_log_handler.setLevel(self.logLevel)
+        self.logger.addHandler(self.indigo_log_handler)
+
+
         self.startingUp = True
         apleAPI = None
         self.pluginIsInitializing = True
@@ -213,10 +280,6 @@ class Plugin(indigo.PluginBase):
         self.logger.info(u"{0:=^130}".format(""))
 
         self.iprefDirectory = '{}/Preferences/Plugins/com.GlennNZ.indigoplugin.FindFriendsMini'.format(indigo.server.getInstallFolderPath())
-        #Change to logging
-        pfmt = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s',
-                                 datefmt='%Y-%m-%d %H:%M:%S')
-        self.plugin_file_handler.setFormatter(pfmt)
 
         try:
             self.logLevel = int(self.pluginPrefs[u"showDebugLevel"])
@@ -227,7 +290,7 @@ class Plugin(indigo.PluginBase):
         try:
             self.newloggerhandler = logging.FileHandler(u"{0}/Logs/com.GlennNZ.indigoplugin.FindFriendsMini/FFM-GeofenceData.log".format(
             indigo.server.getInstallFolderPath()))
-            formatter = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s',
+            formatter = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(message)s',
                                      datefmt='%Y-%m-%d %H:%M:%S')
             self.newloggerhandler.setFormatter(formatter)
             self.newlogger = logging.getLogger('FindFriends-GeofenceData')
@@ -261,6 +324,17 @@ class Plugin(indigo.PluginBase):
             self.newlogger.info(u"{0:<30} {1}".format("Major Problem equals: ", MajorProblem))
             self.newlogger.info(u"{0:=^130}".format(""))
 
+        if self.debugicloud:
+            pyatv_logging = logging.getLogger("Plugin.pyiCloud2fa")
+
+            pyatv_logging.setLevel(logging.THREADDEBUG)
+            #pyatv_logging.addHandler(self.indigo_log_handler)
+            pyatv_logging.addHandler(self.plugin_file_handler)
+
+        else:
+            pyatv_logging = logging.getLogger("Plugin.pyiCloud2fa")
+            pyatv_logging.setLevel(logging.INFO)
+            pyatv_logging.addHandler(self.plugin_file_handler)
 
         self.TwoFAverified = False
 
@@ -808,31 +882,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(str('Follower is Type: '+ str(type(follower))))
             if self.debugicloud:
                 self.logger.debug(str('More debugging: Follower: '+str(follower)))
-            if len(follower) == 0:
-                self.logger.info(u'No Followers Found for this Account.  Have you any friends?')
-                if self.debugicloud:
-                    self.logger.debug(u'Full Dump of self.appleAPI data follows:')
-                    self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(str(friendsdata))
-                    self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(u'Please PM developer this log.')
-                    self.logger.debug(u"{0:=^130}".format(""))
-                return
 
-            if follower is None:
-                self.logger.info(u'No Followers Found for this Account.  Have you any (enabled) friends?')
-                if self.debugicloud:
-                    self.logger.debug(u'Full Dump of self.appleAPI data follows:')
-                    self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(str(iLogin[1].friends.data))
-                    self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(u'Please PM developer this log.')
-                    self.logger.debug(u"{0:=^130}".format(""))
-                return
 
             for dev in indigo.devices.iter("self.FindFriendsFriend"):
                 # Check AppleID of Device
@@ -840,15 +890,16 @@ class Plugin(indigo.PluginBase):
                     targetFriend = dev.pluginProps['targetFriend']
                     if self.debugicloud:
                         self.logger.debug(u'targetFriend of Device equals:' + str(targetFriend))
-                    for follow in follower:
-                        if self.debugicloud:
-                            self.logger.debug (str(follow['id']))
-                        if follow['id'] == targetFriend:
+                    if follower !=None:
+                        for follow in follower:
                             if self.debugicloud:
-                                self.logger.debug(u'Found Target Friend in Data:  Updating Device:' + str(dev.name))
-                                self.logger.debug(str(follow))
-                            # Update device with data from iFindFriends service
-                            self.refreshDataForDev(dev, follow)
+                                self.logger.debug (str(follow['id']))
+                            if follow['id'] == targetFriend:
+                                if self.debugicloud:
+                                    self.logger.debug(u'Found Target Friend in Data:  Updating Device:' + str(dev.name))
+                                    self.logger.debug(str(follow))
+                                # Update device with data from iFindFriends service
+                                self.refreshDataForDev(dev, follow)
 
             for dev in indigo.devices.iter("self.myDevice"):
                 # Check AppleID of Device
@@ -942,7 +993,6 @@ class Plugin(indigo.PluginBase):
 
             self.logger.debug('Check GeoFences Called..')
 
-
             # need to start with GeofFence and then go through all devices
             # iDevName = dev.states['friendName']
             # Check GeoFences after devices
@@ -965,20 +1015,18 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(u'Old GeoDevice Friends Equals:')
                     self.logger.debug(str(iGeolistFriends))
 
-                    for dev in indigo.devices.iter("self.FindFriendsFriend"):
+                    for dev in itertools.chain(indigo.devices.iter("self.FindFriendsFriend"), indigo.devices.iter("self.myDevice")):
                         #add online check here
+                        #self.logger.error(f"{dev.name}")
                         if dev.enabled and dev.states['deviceIsOnline'] == True:
                             self.logger.debug('Geo Details on check:' + str(igeoName) + ' For Friend:' + str(dev.name))
                             iDevLatitude = float(dev.states['latitude'])
                             iDevLongitude = float(dev.states['longitude'])
                             iDevUniqueName = dev.pluginProps['friendName']
                             iDevAccuracy = float(dev.states['horizontalAccuracy'])
-
-
                             #self.logger.error(str(iDevUniqueName))
                             # Now check the distance for each device
                             # Calculate the distance
-
                             self.logger.debug('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(iDevLatitude) + ',' + str(iDevLongitude))
                             iSeparation = self.iDistance(igeoLat, igeoLong, iDevLatitude, iDevLongitude)
 
@@ -1626,17 +1674,20 @@ class Plugin(indigo.PluginBase):
                 iFriendArray.append(iWait)
                 return iFriendArray
 
-            following = iLogin[1].friends.data['following']
-            for fol in following:
-                # self.logger.info(str(fol['id']))
-                # self.logger.info(str(fol['invitationFromEmail']))
-                iOption2 = fol['id'], fol['invitationAcceptedByEmail']
-                #self.logger.info(str(iOption2))
-                iFriendArray.append(iOption2)
+            if 'following' in iLogin[1].friends.data:
+                following = iLogin[1].friends.data['following']
+                if following !=None:
+                    for fol in following:
+                        # self.logger.info(str(fol['id']))
+                        # self.logger.info(str(fol['invitationFromEmail']))
+                        iOption2 = fol['id'], fol['invitationAcceptedByEmail']
+                        #self.logger.info(str(iOption2))
+                        iFriendArray.append(iOption2)
             return iFriendArray
 
         except:
             self.logger.info(u'Error within myFriendsDevices')
+            self.logger.debug(f"Exception details", exc_info=True)
             return []
 
 
@@ -1733,12 +1784,13 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'type self.appleAPI result equals:')
                 self.logger.debug(str(type(self.appleAPI)))
+
                 #self.logger.debug(u'self.appleAPI.devices equals:')
                 #self.logger.debug(str(self.appleAPI.devices))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'self.appleAPI.friends.details equals:')
-                self.logger.debug(str(self.appleAPI.friends.details))
+               # self.logger.erlogger.errorror(f"{self.appleAPI.friends.data}")
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'self.appleAPI.friends.locations equals:')
@@ -1757,20 +1809,13 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(str(self.appleAPI.friends.data))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'self.appleAPI.friends.data[followers] equals:')
-                self.logger.debug(str(self.appleAPI.friends.data['followers']))
+               # self.logger.debug(u'self.appleAPI.friends.data[followers] equals:')
+                #self.logger.debug(str(self.appleAPI.friends.data['followers']))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
 
-                follower = self.appleAPI.friends.data['followers']
-                self.logger.debug(u'follower or self.appleAPI.friends.data[followers] equals:')
-                for fol in follower:
-                    self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(u"{0:=^130}".format(""))
-                    self.logger.debug(u'Follower in follower: ID equals')
-                    self.logger.debug(str(fol['id']))
-                    self.logger.debug(u'email address from Id equals:')
-                    self.logger.debug(str(fol['invitationFromEmail']))
+                #follower = self.appleAPI.friends.data['followers']
+                #self.logger.debug(u'follower or self.appleAPI.friends.data[followers] equals:')
 
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
@@ -1823,7 +1868,7 @@ class Plugin(indigo.PluginBase):
         except Exception as e:
             self.logger.debug(u'Login Failed General Error.   ' + str(e) + str(e.__dict__))
             self.logger.info(u"Issue connecting to icloud.  ?Internet issue, or temp icloud server down...")
-            self.logger.debug(e)
+            self.logger.debug(f"{e}", exc_info=True)
             return 1, 'NI'
 
     def deleteAccount(self,valuesDict):

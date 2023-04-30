@@ -290,7 +290,7 @@
     </Device>
 
  <Device type="custom" id="myDevice" >
-        <Name>FindFriends My Own Device</Name>
+        <Name>FindFriends Family Device</Name>
 
         <ConfigUI>
   			<Field id="autoLabela22"

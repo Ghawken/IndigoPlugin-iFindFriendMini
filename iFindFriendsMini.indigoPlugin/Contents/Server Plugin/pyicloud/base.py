@@ -1,14 +1,20 @@
 """Library base file."""
+import urllib.request
+import re
+
+import urllib3
 from six import PY2, string_types
 from uuid import uuid1
 import inspect
 import json
 import logging
 from requests import Session
+import requests
 from tempfile import gettempdir
 from os import path, mkdir
 from re import match
 import http.cookiejar as cookielib
+from urllib import parse
 
 #import http.cookiejar as cookielib
 
@@ -116,6 +122,8 @@ class PyiCloudSession(Session):
             except Exception:
                 pass
 
+            LOGGER.debug(f"Headers: {response.headers}, Reason {response.reason}, Response {response.text}")
+
             if has_retried is None and response.status_code in [421, 450, 500]:
                 api_error = PyiCloudAPIResponseException( response.reason, response.status_code, retry=True   )
                 request_logger.debug(api_error)
@@ -125,7 +133,8 @@ class PyiCloudSession(Session):
             self._raise_error(response.status_code, response.reason)
 
         if content_type not in json_mimetypes:
-            LOGGER.debug("Response:"+str(response))
+            LOGGER.debug("Response:2:"+str(response))
+            LOGGER.debug(f"Response Headers {response.headers}")
             return response
 
         try:
@@ -155,7 +164,7 @@ class PyiCloudSession(Session):
             if reason:
                 self._raise_error(code, reason)
 
-        LOGGER.debug("Response:" + str(response))
+        LOGGER.debug("Response:1:" + str(response))
         return response
 
     def _raise_error(self, code, reason):
@@ -307,10 +316,10 @@ class PyiCloudService(object):
                             self.params.update({"dsid": self.data["dsInfo"]["dsid"]}) ## should already be set, but no harm...
                     else:
                         login_successful = False
-                        self.logger.error(u"No DSID in return data:"+str(self.data))
+                        self.logger.debug(u"No DSID in return data:"+str(self.data))
                 else:
                     login_successful = False
-                    self.logger.error(u"No DSID in return data:" + str(self.data))
+                    self.logger.debug(u"No DSID in return data:" + str(self.data))
 
 
             except PyiCloudAPIResponseException:
@@ -334,8 +343,9 @@ class PyiCloudService(object):
             if self.session_data.get("session_id"):
                 headers["X-Apple-ID-Session-Id"] = self.session_data.get("session_id")
 
-            #LOGGER.error("************ Headers for /validate with Token Session ***************")
-           # LOGGER.error(str(headers))
+            LOGGER.debug("************ Headers for /validate with Token Session ***************")
+            LOGGER.debug(str(headers))
+
             try:
                 req = self.session.post(
                     "%s/signin" % self.AUTH_ENDPOINT,
@@ -347,13 +357,155 @@ class PyiCloudService(object):
                 msg = "Invalid email/password combination."
                 raise PyiCloudFailedLoginException(msg, error)
 
-            self._authenticate_with_token()
+            LOGGER.debug(f"**** Success.  Headers:{req.headers}  {req}")
 
+            if "X-Apple-Repair-Session-Token" in req.headers:
+                LOGGER.debug(f"*************** Repair Token Found: NON 2fa being stuffed.")
+                self._bypass_Repair2FA(req)
+
+            self._authenticate_with_token()
+            self.params.update({
+                "dsid": self.data.get("dsInfo").get("dsid")
+            })
             #self.trust_session()  ## delete me afte rlogging
 
         self._webservices = self.data["webservices"]
 
         LOGGER.debug("Authentication completed successfully")
+
+    def _get_auth_non2FA_headers(self, overrides=None):
+        headers = {
+            "Accept": "*/*",
+            "Content-Type": "application/json",
+            "X-Apple-OAuth-Client-Id": "d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d",
+            "X-Apple-OAuth-Client-Type": "firstPartyAuth",
+            "X-Apple-OAuth-Redirect-URI": "https://www.icloud.com",
+            "X-Apple-OAuth-Require-Grant-Code": "true",
+            "X-Apple-OAuth-Response-Mode": "web_message",
+            "X-Apple-OAuth-Response-Type": "code",
+            "X-Apple-Frame-Id": self.client_id,
+            "X-Apple-Domain-Id": 3,
+            "X-Apple-OAuth-State": self.client_id,
+            "X-Apple-Widget-Key": "d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d",
+        }
+        if overrides:
+            headers.update(overrides)
+        return headers
+
+    def _bypass_Repair2FA(self, response):
+        LOGGER.info("Non 2FA being used, Apple wants to repair this/upgrade this, attempting to bypass and resume usual login")
+
+        http = urllib3.PoolManager()
+
+        old_location = f"{response.headers['location']}"
+        widgetKey = parse.parse_qs(parse.urlparse(old_location).query)['widgetKey'][0]
+        ##  if &rv=1 fails (!) That was 2 hours I won't get back
+        location = old_location.replace("&rv=1","&rv=3")
+        LOGGER.debug(f"Location:{location}")
+        needuseragent = {}
+        needuseragent['Content-Type'] = 'application/json'
+        needuseragent['Accept'] ='text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9'
+        needuseragent["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
+
+        LOGGER.debug(f"Using URL: {location}\n Headers:\n {needuseragent}")
+        missed_req = http.request("GET", url=location, headers=needuseragent)
+
+        LOGGER.debug(f"Missed_Req:url {location}\n{missed_req}, \n widgetKey {widgetKey}, \n missed_req headers {missed_req.headers}")
+        LOGGER.debug(f"Status of Missed one: {missed_req.status}")
+        #LOGGER.error(f"Data returned:{missed_req.content}")
+
+        LOGGER.debug("Need to get SAet-Cookie aidsp")
+        LOGGER.debug(f'{missed_req.headers["Set-Cookie"]}')
+        cookies =f'{missed_req.headers["Set-Cookie"]}'
+        result = re.search('aidsp=(.*); Domain=', cookies)  ## Split off aidsp from the cookie string.
+        LOGGER.debug(f"Result cookies = {result.group(1)}")
+        SessionID = result.group(1)
+
+        url = "https://appleid.apple.com/account/manage/repair/options"
+        new_headers =  {} #response.headers
+        new_headers['scnt'] = missed_req.headers['scnt']
+        new_headers['X-Apple-ID-Session-Id'] = SessionID
+        ## Session ID comes from set-Cookie aidsp, from the repair Widget request
+        new_headers['X-Apple-Session-Token'] = response.headers['X-Apple-Repair-Session-Token']
+        new_headers['X-Apple-Skip-Repair-Attributes'] = '[]'
+        new_headers['X-Apple-Widget-Key'] = widgetKey
+        new_headers['Content-Type'] = 'application/json'
+        new_headers['X-Requested-With'] = 'XMLHttpRequest'
+        new_headers['Accept'] = 'application/json, text/javascript'
+        #new_headers['X-Apple-OAuth-Context']= missed_req.headers['X-Apple-OAuth-Context']
+     #   new_headers['Referer'] = "https://appleid.apple.com/"
+    #    new_headers['Host'] = "appleid.apple.com"
+        new_headers['User-Agent']= "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
+
+        #    req = self.session.post("%s/validate" % self.SETUP_ENDPOINT, params=self.params, data="null")
+        LOGGER.debug(f"myattempt: url: {url} \n new_headers {new_headers}")
+        myattempt = http.request("GET", url=url, headers=new_headers)
+        LOGGER.debug(f"Try myattempt: {myattempt}, {myattempt.headers} ")
+
+        LOGGER.debug(f"Status of MyAttempt: {myattempt.status}")
+
+        next_headers = {}
+        url = "https://appleid.apple.com/account/security/upgrade/setuplater"
+        next_headers['scnt'] = missed_req.headers['scnt']
+        next_headers['X-Apple-ID-Session-Id'] = SessionID
+        next_headers['X-Apple-Session-Token'] = myattempt.headers['X-Apple-Session-Token']
+        next_headers['X-Apple-Skip-Repair-Attributes'] = '["hsa2_enrollment"]'
+        next_headers['X-Apple-Widget-Key'] = widgetKey
+        next_headers['Content-Type'] = 'application/json'
+        next_headers['X-Requested-With'] = 'XMLHttpRequest'
+        next_headers['Accept'] = 'application/json, text/javascript'
+        next_headers['User-Agent']= "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
+
+        LOGGER.debug(f"NextAttempt: url: {url} \n new_headers {next_headers}")
+        nextattempt = http.request("GET", url=url, headers=next_headers)
+        LOGGER.debug(f"Try nextattempt: {nextattempt}, {nextattempt.headers}")
+        LOGGER.debug(f"Status of NextAttempt: {nextattempt.status}")
+
+        last_headers =self._get_auth_non2FA_headers()
+
+        url = "https://idmsa.apple.com/appleauth/auth/repair/complete"
+        last_headers['scnt'] = missed_req.headers['scnt']
+
+        last_headers['X-Apple-ID-Session-Id'] = SessionID
+        #next_headers['X-Apple-Session-Token'] = myattempt.headers['X-Apple-Session-Token']
+        last_headers['X-Apple-Repair-Session-Token'] = myattempt.headers['X-Apple-Session-Token']
+        last_headers['X-Apple-Widget-Key'] = widgetKey
+
+        last_headers['Content-Type'] = 'application/json'
+        last_headers['X-Requested-With'] = 'XMLHttpRequest'
+        last_headers['Accept'] = 'application/json;charset=utf-8'
+
+        #last_headers['User-Agent'] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
+       # LOGGER.debug(f'X-Auth: {response.headers["X-Apple-Auth-Attributes"]}')
+       # last_headers["X-Apple-Auth-Attributes"]= response.headers["X-Apple-Auth-Attributes"]
+       # last_headers["Content-Length"]=0
+       # last_headers["Origin"]= "https://idmsa.apple.com"
+       # last_headers["Referer"]= "https://idmsa.apple.com/"
+       # last_headers["Host"] = "idmsa.apple.com"
+       # last_headers["X-Apple-Locale"] = "en_GB"
+       # LOGGER.error(f'Response Set-Cookie: {response.headers["Set-Cookie"]}')
+       # last_headers["Set-Cookie"]= response.headers["Set-Cookie"]
+        #data = json.dumps({})
+       # last_headers["X-Apple-I-FD-Client-Info"]= '{"U":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36","L":"en-GB","Z":"GMT+11:00","V":"1.1","F":"Fta44j1e3NlY5BNlY5BSs5uQ32SCVc8NTjN37FSHmr9k.uJtHoqvynx9MsFyxY25CKw..BN.Fg4JRK8mcK9rTKIwBfxFETlWY5BNlYJNNlY5QB4bVNjMk.3v5"}'
+        data = {}
+        data["trustTokens"] = []
+        if self.session_data.get("trust_token"):
+            data["trustTokens"] = [self.session_data.get("trust_token")]
+
+
+        #if self.session_data.get("trust_token"):
+        #    data["trustTokens"] = [self.session_data.get("trust_token")]
+
+
+        last_attempt = http.request("POST", url=url, body=json.dumps(data), headers=last_headers)
+        LOGGER.debug(f"Try last: Status:{last_attempt.status} ")
+        LOGGER.debug(f" Total: {last_attempt},\nHeaders: {last_attempt.headers} ")
+        LOGGER.debug(f"lastOne: url:\n{url}\n last_headers:\n{last_headers}")
+        LOGGER.debug(f" Last_Attempt: {last_attempt.data} ")
+
+        if last_attempt.status == 204:
+            LOGGER.info("Repair of non 2FA skipped, successfully it would seem. Hopefully logins normally now")
+        return
 
     def _authenticate_with_token(self):
         """Authenticate using session token."""
@@ -363,6 +515,7 @@ class PyiCloudService(object):
             "extended_login": True,
             "trustToken": self.session_data.get("trust_token", ""),
         }
+
         LOGGER.debug("************ Headers for _authenicate with Token /accountLogin Session ***************")
         LOGGER.debug(str(self.session.headers))
         try:
@@ -378,6 +531,7 @@ class PyiCloudService(object):
 
     def _update_dsid(self,data):
         try:
+            LOGGER.debug((f"updating dsid {data}"))
             if 'dsInfo' in data:  ## check self.data returned and contains dsid
                 if 'dsid' in data['dsInfo']:        # as above
                     self.params["dsid"]= str(data["dsInfo"]["dsid"])
