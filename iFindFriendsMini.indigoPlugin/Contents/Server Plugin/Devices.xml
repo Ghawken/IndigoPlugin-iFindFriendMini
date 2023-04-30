@@ -349,6 +349,11 @@
                 <TriggerLabel>Device Timestamp</TriggerLabel>
                 <ControlPageLabel>Device Timestamp</ControlPageLabel>
             </State>
+                        <State id="labels">
+                <ValueType>String</ValueType>
+                <TriggerLabel>labels</TriggerLabel>
+                <ControlPageLabel>labels</ControlPageLabel>
+            </State>
                         <State id="mapUpdateNeeded">
                 <ValueType>Boolean</ValueType>
                 <TriggerLabel>Map needs to be updated</TriggerLabel>

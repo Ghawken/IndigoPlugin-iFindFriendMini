@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ -*- coding: utf-8 -*-
 """Waze route calculator"""
 
 import logging
@@ -56,12 +56,12 @@ class WazeRouteCalculator(object):
         self.vehicle_type = ''
         if vehicle_type and vehicle_type in self.VEHICLE_TYPES:
             self.vehicle_type = vehicle_type.upper()
-        self.route_options = ['AVOID_TRAILS']
-        if avoid_toll_roads:
-            self.route_options.append('AVOID_TOLL_ROADS')
+        self.ROUTE_OPTIONS = {
+            'AVOID_TRAILS': 't',
+            'AVOID_TOLL_ROADS': 't' if avoid_toll_roads else 'f',
+            'AVOID_FERRIES': 't' if avoid_ferries else 'f'
+        }
         self.avoid_subscription_roads = avoid_subscription_roads
-        if avoid_ferries:
-            self.route_options.append('AVOID_FERRIES')
         if self.already_coords(start_address):  # See if we have coordinates or address to resolve
             self.start_coords = self.coords_string_parser(start_address)
         else:
@@ -98,7 +98,7 @@ class WazeRouteCalculator(object):
             "lon": base_coords["lon"]
         }
 
-        response = requests.get(self.WAZE_URL + get_cord, params=url_options, headers=self.HEADERS, timeout=10)
+        response = requests.get(self.WAZE_URL + get_cord, params=url_options, headers=self.HEADERS)
         for response_json in response.json():
             if response_json.get('city'):
                 lat = response_json['location']['lat']
@@ -126,7 +126,7 @@ class WazeRouteCalculator(object):
             "returnInstructions": "true",
             "timeout": 60000,
             "nPaths": npaths,
-            "options": ','.join('%s:t' % route_option for route_option in self.route_options),
+            "options": ','.join('%s:%s' % (opt, value) for (opt, value) in self.ROUTE_OPTIONS.items()),
         }
         if self.vehicle_type:
             url_options["vehicleType"] = self.vehicle_type
@@ -134,7 +134,7 @@ class WazeRouteCalculator(object):
         if self.avoid_subscription_roads is False:
             url_options["subscription"] = "*"
 
-        response = requests.get(self.WAZE_URL + routing_server, params=url_options, headers=self.HEADERS, timeout=10)
+        response = requests.get(self.WAZE_URL + routing_server, params=url_options, headers=self.HEADERS)
         response.encoding = 'utf-8'
         response_json = self._check_response(response)
         if response_json:
@@ -206,8 +206,11 @@ class WazeRouteCalculator(object):
         """Calculate all route infos."""
 
         routes = self.get_route(npaths, time_delta)
-        results = {route['routeName' if 'routeName' in route else 'route_name']: self._add_up_route(route['results' if 'results' in route else 'result'], real_time=real_time, stop_at_bounds=stop_at_bounds) for route in routes}
+        try:
+            results = {"%s-%s" % (''.join(route.get('routeType', [])[:1]), route.get('shortRouteName', 'unkown')): self._add_up_route(route['results' if 'results' in route else 'result'], real_time=real_time, stop_at_bounds=stop_at_bounds) for route in routes}
+        except KeyError:
+            raise WRCError("wrong response")
         route_time = [route[0] for route in results.values()]
         route_distance = [route[1] for route in results.values()]
-        self.log.info('Time %.2f - %.2f minutes, distance %.2f - %.2f km.', min(route_time), max(route_time), min(route_distance), max(route_distance))
+        self.log.info('Min\tMax\n%.2f\t%.2f minutes\n%.2f\t%.2f km', min(route_time), max(route_time), min(route_distance), max(route_distance))
         return results
