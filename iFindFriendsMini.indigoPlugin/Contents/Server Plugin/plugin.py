@@ -1514,6 +1514,8 @@ class Plugin(indigo.PluginBase):
             with open(file, 'wb') as f:
                 for chunk in r.iter_content():
                     f.write(chunk)
+
+
         except:
             if self.debugmaps:
                 self.logger.exception("Exception in saveURL Requests")
@@ -1549,8 +1551,6 @@ class Plugin(indigo.PluginBase):
                 #os.system(fileMap)
 
                 self.requestSaveUrl(drawUrl[0],file)
-
-
                 self.logger.debug('Saving Map...' + file)
 
                 filename = 'All_device.jpg'
@@ -1578,6 +1578,23 @@ class Plugin(indigo.PluginBase):
                     webbrowser.open_new(drawUrlall)
                     self.logger.debug(u'Mapping URL:')
                     self.logger.debug(str(drawUrlall))
+
+                try:
+                    username = self.pluginPrefs.get('appleId', 'demo@indigo.net')
+                    url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={latitude}&lon={longitude}&zoom=18&addressdetails=1&email={username}"
+                    self.logger.debug(f"Using Noiminatime {url}")
+                    re = requests.get(url, timeout=10)
+                    if re.status_code==200:
+                        jn = json.loads(re.text)
+                        address = jn['display_name']
+                        self.logger.debug(f"Results Nom {jn}")
+                        dev.updateStateOnServer('address', value=str(address))
+                    else:
+                        self.logger.debug("Error with Nominatim")
+                except:
+                    self.logger.debug(f"Error with Nominatim", exc_info=True)
+                    pass
+
                 return
             else:
                 self.logger.debug(u'No Mapping Needed.')
