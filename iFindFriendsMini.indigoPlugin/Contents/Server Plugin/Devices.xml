@@ -482,6 +482,31 @@
                 <TriggerLabel>Address</TriggerLabel>
                 <ControlPageLabel>Address</ControlPageLabel>
             </State>
+            <State id="address-road">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Address road</TriggerLabel>
+                <ControlPageLabel>Address road</ControlPageLabel>
+            </State>
+            <State id="address-suburb">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Address Suburb</TriggerLabel>
+                <ControlPageLabel>Address Suburb</ControlPageLabel>
+            </State>
+                        <State id="address-number">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Address House Number</TriggerLabel>
+                <ControlPageLabel>Address House Number</ControlPageLabel>
+            </State>
+            <State id="address-city">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Address City</TriggerLabel>
+                <ControlPageLabel>Address City</ControlPageLabel>
+            </State>
+                        <State id="address-country">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Address Country</TriggerLabel>
+                <ControlPageLabel>Address Country</ControlPageLabel>
+            </State>
             <State id="latitude">
                 <ValueType>String</ValueType>
                 <TriggerLabel>latitude</TriggerLabel>

@@ -522,9 +522,14 @@ class Plugin(indigo.PluginBase):
                 {'key': 'longitude', 'value': 'unknown'},
                 {'key': 'horizontalAccuracy', 'value': ''},
                 {'key': 'address', 'value': ''},
+                {'key': 'address-road', 'value': ""},
+                {'key': 'address-city', 'value': ""},
+                {'key': 'address-country', 'value': ""},
+                {'key': 'address-suburb', 'value': ""},
+                {'key': 'address-number', 'value': ""},
                 {'key': 'latitude', 'value': 'unknown'},
                 {'key': 'devSummary', 'value': 'Offline'},
-                {'key': 'mapUpdateNeeded', 'value': True},
+                {'key': 'mapUpdateNeeded', 'value': True}
 
             ]
             #self.logger.debug(str(stateList))
@@ -1581,14 +1586,44 @@ class Plugin(indigo.PluginBase):
 
                 try:
                     username = self.pluginPrefs.get('appleId', 'demo@indigo.net')
+                    address_display = ""
+                    address_road = ""
+                    address_suburb = ""
+                    address_city = ""
+                    address_country = ""
+                    address_hnumber = ""
                     url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={latitude}&lon={longitude}&zoom=18&addressdetails=1&email={username}"
                     self.logger.debug(f"Using Noiminatime {url}")
                     re = requests.get(url, timeout=10)
                     if re.status_code==200:
                         jn = json.loads(re.text)
-                        address = jn['display_name']
-                        self.logger.debug(f"Results Nom {jn}")
-                        dev.updateStateOnServer('address', value=str(address))
+
+                        if 'address' in jn:
+                            jn_address = jn['address']
+                            self.logger.debug(f"Results Nom {jn}")
+                            if "house_number" in jn_address:
+                                address_hnumber = jn_address['house_number']
+                            if 'suburb' in jn_address:
+                                address_suburb = jn_address['suburb']
+                            if 'road' in jn_address:
+                                address_road = jn_address['road']
+                            if 'city' in jn_address:
+                                address_city = jn_address['city']
+                            elif 'town' in jn_address:
+                                address_city = jn_address['town']
+                            if 'country' in jn_address:
+                                address_country = jn_address['country']
+                            if 'display_name' in jn:
+                                address_display = jn['display_name']
+                            stateList = [
+                                 {'key': 'address', 'value': f"{address_display}"},
+                                 {'key': 'address-road', 'value': f'{address_road}' },
+                                 {'key': 'address-city', 'value': f'{address_city}'},
+                                 {'key': 'address-country', 'value': f'{address_country}'},
+                                 {'key': 'address-suburb', 'value': f'{address_suburb}'},
+                                {'key': 'address-number', 'value': f'{address_hnumber}'}
+                                ]
+                            dev.updateStatesOnServer(stateList)
                     else:
                         self.logger.debug("Error with Nominatim")
                 except:
