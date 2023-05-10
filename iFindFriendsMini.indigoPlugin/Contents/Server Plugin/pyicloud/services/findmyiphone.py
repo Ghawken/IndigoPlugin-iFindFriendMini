@@ -40,7 +40,7 @@ class FindMyiPhoneServiceManager(object):
             data=json.dumps(
                 {
                     "clientContext": {
-                        "fmly": self.with_family,
+                        "fmly": True,
                         "shouldLocate": True,
                         "selectedDevice": "all",
                         "deviceListVersion": 1,
@@ -192,6 +192,30 @@ class AppleDevice(object):
     def data(self):
         """Gets the device data."""
         return self.content
+
+    @property
+    def locations(self):
+        return "locations blank"
+
+    @property
+    def followers(self):
+        return "followers blank"
+
+    @property
+    def friend_fences(self):
+        return "fence blank"
+
+    @property
+    def my_fences(self):
+        return "myFence Blank"
+
+    @property
+    def details(self):
+        return "contactDetails Blank"
+
+    @property
+    def following(self):
+        return "following Blank"
 
     def __getitem__(self, key):
         return self.content[key]

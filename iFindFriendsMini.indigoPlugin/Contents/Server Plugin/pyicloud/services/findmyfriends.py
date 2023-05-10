@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-
+import json
 
 
 
@@ -24,8 +24,26 @@ class FindFriendsService(object):
         Fetches all data from Find my Friends endpoint
         """
         params = dict(self.params)
-        fake_data = '{"dataContext":null,"serverContext":null,"clientContext":{"productType":"fmfWeb","appVersion":"1.0","contextApp":"com.icloud.web.fmf","userInactivityTimeInMS":537,"windowInFocus":false,"windowVisible":true,"mapkitAvailable":true,"tileServer":"Apple"}}'
-        req = self.session.post(self._friend_endpoint, data=fake_data, params=params)
+
+        fake_data = '{"dataContext":null,"serverContext":null,"clientContext":{"productType":"iphone6,1","appVersion":"1.0","contextApp":"com.icloud.web.fmf","userInactivityTimeInMS":537,"windowInFocus":false,"windowVisible":true,"mapkitAvailable":true,"tileServer":"Apple"}}'
+        fake_data = '{"clientContext":{"appName":"FindMyiPhone","fmly":"True","clientTimestamp":"0","productType":"iphone14,2","appVersion":"5.0","buildVersion":"376","deviceUDID":"","osVersion":"14.0","inactiveTime":"1"}}'
+        mock_payload = json.dumps(
+            {
+                "clientContext": {
+                    "appVersion": "1.0",
+                    "contextApp": "com.icloud.web.fmf",
+                    "mapkitAvailable": True,
+                    "productType": "fmfWeb",
+                    "tileServer": "Apple",
+                    "userInactivityTimeInMS": 537,
+                    "windowInFocus": False,
+                    "windowVisible": True,
+                },
+                "dataContext": None,
+                "serverContext": None,
+            }
+        )
+        req = self.session.post(self._friend_endpoint, data=mock_payload, params=params)
         self.response = req.json()
         return self.response
 
@@ -37,24 +55,24 @@ class FindFriendsService(object):
 
     @property
     def locations(self):
-        return self.data.get('locations')
+        return "locations blank"
 
     @property
     def followers(self):
-        return self.data.get('followers')
+        return "followers blank"
 
     @property
     def friend_fences(self):
-        return self.data.get('friendFencesISet')
+        return "fence blank"
 
     @property
     def my_fences(self):
-        return self.data.get('myFencesISet')
+        return "myFence Blank"
 
     @property
     def details(self):
-        return self.data.get('contactDetails')
+        return "contactDetails Blank"
 
     @property
     def following(self):
-        return self.data.get('following')
+        return "following Blank"

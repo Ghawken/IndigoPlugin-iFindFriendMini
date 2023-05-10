@@ -731,7 +731,8 @@ class PyiCloudService(object):
     @property
     def friends(self):
         service_root = self._get_webservice_url("findme")
-        return FindFriendsService(service_root, self.session, self.params)
+        return FindMyiPhoneServiceManager(service_root, self.session, self.params)
+        #return FindFriendsService(service_root, self.session, self.params)
 
     @property
     def photos(self):

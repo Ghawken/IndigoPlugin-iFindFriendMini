@@ -880,8 +880,9 @@ class Plugin(indigo.PluginBase):
 
             self.appleAPI = iLogin[1]
 
-            follower = self.appleAPI.friends.locations
-            friendsdata = iLogin[1].friends.data
+           # follower = self.appleAPI.friends.locations
+            follower = None
+            friendsdata = None #iLogin[1].friends.data
 
             if self.debugicloud:
                 self.logger.debug(str('Follower is Type: '+ str(type(follower))))
@@ -1845,20 +1846,20 @@ class Plugin(indigo.PluginBase):
                # self.logger.erlogger.errorror(f"{self.appleAPI.friends.data}")
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'self.appleAPI.friends.locations equals:')
-                self.logger.debug(str(self.appleAPI.friends.locations))
+                #self.logger.debug(u'self.appleAPI.friends.locations equals:')
+                #self.logger.debug(str(self.appleAPI.friends.locations))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'Type of self.appleAPI.friends.locations equals:')
-                self.logger.debug(str(type(self.appleAPI.friends.locations)))
+                #self.logger.debug(str(type(self.appleAPI.friends.locations)))
                 self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u"{0:=^130}".format(""))
+                #self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'Type of self.appleAPI.friends.data')
-                self.logger.debug(str(type(self.appleAPI.friends.data)))
+                #self.logger.debug(str(type(self.appleAPI.friends.data)))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'self.appleAPI.friends.data equals')
-                self.logger.debug(str(self.appleAPI.friends.data))
+                #self.logger.debug(str(self.appleAPI.friends.data))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                # self.logger.debug(u'self.appleAPI.friends.data[followers] equals:')
@@ -1872,7 +1873,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'self.appleAPI.friends.details equals:')
-                self.logger.debug(str(self.appleAPI.friends.details))
+                #self.logger.debug(str(self.appleAPI.friends.details))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
             return 0, self.appleAPI
