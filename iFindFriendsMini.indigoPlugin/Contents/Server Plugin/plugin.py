@@ -1364,9 +1364,9 @@ class Plugin(indigo.PluginBase):
             self.godoMapping(str(latitude), str(longitude), dev)
 
         except Exception as e:
-            self.logger.debug(str('Exception in refreshDataformyDevice: ' + str(e)))
+            self.logger.debug(str('Exception in refreshDataformyDevice: ' + str(e)), exc_info=True)
             self.logger.debug('Exception:')
-            self.logger.exception(str('Possibility missing some data from icloud:  Is your account setup with FindFriends enabled on iOS/Mobile device?'))
+            self.logger.info('Error from iCloud :  Is your account setup with FindFriends enabled on iOS/Mobile device?')
             dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             return
