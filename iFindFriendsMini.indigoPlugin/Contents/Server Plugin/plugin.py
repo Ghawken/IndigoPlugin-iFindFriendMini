@@ -893,6 +893,7 @@ class Plugin(indigo.PluginBase):
             for dev in indigo.devices.iter("self.FindFriendsFriend"):
                 # Check AppleID of Device
                 if dev.enabled:
+                    self.logger.info(f"{dev.name} : These devices are depreciated by apple, please convert a Family Device or Delete")
                     targetFriend = dev.pluginProps['targetFriend']
                     if self.debugicloud:
                         self.logger.debug(u'targetFriend of Device equals:' + str(targetFriend))
@@ -1268,10 +1269,6 @@ class Plugin(indigo.PluginBase):
             # self.logger.error(devices.status())
             # self.logger.error(devices.location())
 
-            locationdata = appleDevice.location()
-            devicestatus = appleDevice.status(additional=["deviceModel","batteryStatus"])
-            deviceid = appleDevice['id']
-
             if appleDevice is None:
                 self.logger.debug(u'No data received for device:' + str(
                     dev.name) + ' . Most likely device is offline/airplane mode or has disabled sharing location')
@@ -1281,6 +1278,10 @@ class Plugin(indigo.PluginBase):
                     dev.updateStateOnServer('deviceIsOnline', value=False, uiValue='Offline')
                     dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
                 return
+
+            locationdata = appleDevice.location()
+            devicestatus = appleDevice.status(additional=["deviceModel","batteryStatus"])
+            deviceid = appleDevice['id']
 
             if locationdata is None:
                 self.logger.debug(u'No data received for device:' + str(
@@ -1840,28 +1841,28 @@ class Plugin(indigo.PluginBase):
 
                 #self.logger.debug(u'self.appleAPI.devices equals:')
                 #self.logger.debug(str(self.appleAPI.devices))
-                self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'self.appleAPI.friends.details equals:')
+                #self.logger.debug(u"{0:=^130}".format(""))
+                #self.logger.debug(u"{0:=^130}".format(""))
+                #self.logger.debug(u'self.appleAPI.friends.details equals:')
                # self.logger.erlogger.errorror(f"{self.appleAPI.friends.data}")
-                self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u"{0:=^130}".format(""))
+               # self.logger.debug(u"{0:=^130}".format(""))
+                #self.logger.debug(u"{0:=^130}".format(""))
                 #self.logger.debug(u'self.appleAPI.friends.locations equals:')
                 #self.logger.debug(str(self.appleAPI.friends.locations))
-                self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'Type of self.appleAPI.friends.locations equals:')
-                #self.logger.debug(str(type(self.appleAPI.friends.locations)))
-                self.logger.debug(u"{0:=^130}".format(""))
                 #self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'Type of self.appleAPI.friends.data')
+               # self.logger.debug(u"{0:=^130}".format(""))
+              #  self.logger.debug(u'Type of self.appleAPI.friends.locations equals:')
+                #self.logger.debug(str(type(self.appleAPI.friends.locations)))
+                #self.logger.debug(u"{0:=^130}".format(""))
+                #self.logger.debug(u"{0:=^130}".format(""))
+                #self.logger.debug(u'Type of self.appleAPI.friends.data')
                 #self.logger.debug(str(type(self.appleAPI.friends.data)))
-                self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'self.appleAPI.friends.data equals')
+                #self.logger.debug(u"{0:=^130}".format(""))
+                #self.logger.debug(u"{0:=^130}".format(""))
+                #self.logger.debug(u'self.appleAPI.friends.data equals')
                 #self.logger.debug(str(self.appleAPI.friends.data))
-                self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u"{0:=^130}".format(""))
+                #self.logger.debug(u"{0:=^130}".format(""))
+               # self.logger.debug(u"{0:=^130}".format(""))
                # self.logger.debug(u'self.appleAPI.friends.data[followers] equals:')
                 #self.logger.debug(str(self.appleAPI.friends.data['followers']))
                 self.logger.debug(u"{0:=^130}".format(""))
@@ -1870,9 +1871,9 @@ class Plugin(indigo.PluginBase):
                 #follower = self.appleAPI.friends.data['followers']
                 #self.logger.debug(u'follower or self.appleAPI.friends.data[followers] equals:')
 
-                self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(u'self.appleAPI.friends.details equals:')
+                #self.logger.debug(u"{0:=^130}".format(""))
+                #self.logger.debug(u"{0:=^130}".format(""))
+               # self.logger.debug(u'self.appleAPI.friends.details equals:')
                 #self.logger.debug(str(self.appleAPI.friends.details))
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u"{0:=^130}".format(""))
@@ -2071,7 +2072,7 @@ class Plugin(indigo.PluginBase):
 
             mapOSM = 'http://staticmap.openstreetmap.de/staticmap.php?center='+str(latitude)+','+str(longitude)+'&'+str(mapZoom)+'&' + mapSize + '&markers='+str(latitude)+','+str(longitude)+','+str(mapLabel)
 
-            if self.mapType =='arcgisWorld2d' or 'Bing' in self.mapType or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap' or self.mapType=='arcgisWorldImageryHybrid' or self.mapType=='maps.six':
+            if self.mapType=="satellitespro" or self.mapType =='arcgisWorld2d' or 'Bing' in self.mapType or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap' or self.mapType=='arcgisWorldImageryHybrid' or self.mapType=='maps.six':
                 latitude = float(latitude)
                 longitude = float(longitude)
                 # Fudge a similar zoom
@@ -2092,6 +2093,9 @@ class Plugin(indigo.PluginBase):
                     mapWorld2d = 'http://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Imagery/MapServer/export?bbox=' + str(
                         toplongitude) + ',' + str(toplatitude) + ',' + str(bottomlongitude) + ',' + str(
                         bottomlatitude) + '&bboxSR=4326' + '&size=' + str(iHorizontal) + ',' + str(iVertical) + '&f=image'
+                if self.mapType == "satellitespro":
+                    mapWorld2d = f"https://satellites.pro/#{latitude},{longitude},{zoomFactor}"
+
                 if 'Bing' in self.mapType:
                     mapWorld2d = 'http://bing.com/maps/embed?cp=' + str(latitude) + '~' + str(longitude) + "&h="+str(iVertical)+ "&w="+str(iHorizontal)
                     BingStatic = 'http://dev.virtualearth.net/REST/v1/Imagery/Map'
@@ -2127,7 +2131,7 @@ class Plugin(indigo.PluginBase):
                 return customURL, urlmapGoogle
             elif self.mapType=='openstreetmap':
                 return mapOSM, urlmapGoogle
-            elif self.mapType =='arcgisWorld2d' or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap' or self.mapType=='maps.six':
+            elif self.mapType=="satellitespro" or self.mapType =='arcgisWorld2d' or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap' or self.mapType=='maps.six':
                 return mapWorld2d, urlmapGoogle
             elif 'Bing' in self.mapType:
                 return BingStatic, mapWorld2d
