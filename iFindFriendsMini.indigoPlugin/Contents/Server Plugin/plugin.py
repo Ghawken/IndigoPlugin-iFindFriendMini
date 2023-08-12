@@ -2498,7 +2498,7 @@ class Plugin(indigo.PluginBase):
     def triggerCheck2fa(self):
         self.logger.debug("Checking trigger as 2FA state called")
         for triggerId, trigger in sorted(self.triggers.items()):
-            self.logger.debug("Checking Trigger (%s), Type: %s, Friend: %s, and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+            self.logger.debug("Checking Trigger (%s), Type: %s, Friend: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
             # self.logger.error(str(trigger))
             if trigger.pluginTypeId == "account2FAneeded" :
                 # 2fa failed
