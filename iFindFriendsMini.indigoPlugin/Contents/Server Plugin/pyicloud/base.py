@@ -947,7 +947,7 @@ class PyiCloudService(object):
         if self.session_data.get("session_id"):
             headers["X-Apple-ID-Session-Id"] = self.session_data.get("session_id")
 
-        LOGGER.error(f"Headers for 2FA Code\n\n\n{headers}")
+        LOGGER.debug(f"Headers for 2FA Code\n\n\n{headers}")
 
         try:
             self.session.post(
