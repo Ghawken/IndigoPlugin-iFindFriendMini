@@ -1,7 +1,8 @@
 """Library base file."""
 import urllib.request
 import re
-
+from typing import Any, Callable, Dict, NamedTuple, Optional, Sequence
+import typing
 import urllib3
 from six import PY2, string_types
 from uuid import uuid1
@@ -15,6 +16,13 @@ from os import path, mkdir
 from re import match
 import http.cookiejar as cookielib
 from urllib import parse
+import srp
+from srp import User
+srp.rfc5054_enable()
+import time
+import hashlib
+import base64
+from datetime import datetime
 
 #import http.cookiejar as cookielib
 
@@ -45,6 +53,9 @@ HEADER_DATA = {
     "X-Apple-ID-Session-Id": "session_id",
     "X-Apple-Session-Token": "session_token",
     "X-Apple-TwoSV-Trust-Token": "trust_token",
+    "X-Apple-TwoSV-Trust-Eligible": "trust_eligible",
+    "X-Apple-I-Rscd": "apple_rscd",
+    "X-Apple-I-Ercd": "apple_ercd",
     "scnt": "scnt",
 }
 
@@ -80,23 +91,23 @@ class PyiCloudSession(Session):
         if self.service.password_filter not in request_logger.filters:
             request_logger.addFilter(self.service.password_filter)
 
-        request_logger.debug("%s %s %s" % ( method, url, kwargs.get("data", "") )  )
+        request_logger.debug("%s %s %s %s" % ( method, url, kwargs.get("data", ""), kwargs.get("json","") )  )
+
         has_retried = kwargs.get("retried")
         kwargs.pop("retried", None)
 
         response = super(PyiCloudSession, self).request(method, url, timeout=15, **kwargs )
 
-        #LOGGER.debug(u"Response Headers:"+str(response.headers))
-
         content_type = response.headers.get("Content-Type", "").split(";")[0]
         json_mimetypes = ["application/json", "text/json"]
 
-        for header in HEADER_DATA:
+        for header, value in HEADER_DATA.items():
             if response.headers.get(header):
-                session_arg = HEADER_DATA[header]
+                session_arg = value
                 self.service.session_data.update(
                     {session_arg: response.headers.get(header)}
                 )
+       # LOGGER.debug(f"{response.headers=}\n{self.service.session_data=}")
 
         # Save session_data to file
         with open(self.service.session_path, "w") as outfile:
@@ -110,17 +121,25 @@ class PyiCloudSession(Session):
         if not response.ok and (content_type not in json_mimetypes
                                 or response.status_code in [421, 450, 500]):
             try:
-                if has_retried is None and response.status_code == 450:
+                fmip_url = self.service._get_webservice_url("findme")
+                if (
+                        has_retried is None
+                        and response.status_code in [421, 450, 500]
+                        and fmip_url in url
+                ):
                     # Handle re-authentication for Find My iPhone
-                    LOGGER.debug("Re-authenticating Find My iPhone service")
+                    LOGGER.error(f"\n\n\nRe-authenticating Find My iPhone service\n{fmip_url=}{url=}\n{response.ok=}\n{content_type=}\n{response.status_code=}")
                     try:
-                        self.service.authenticate(True)
+                        # If 450, authentication requires a full sign in to the account
+                        service = None if response.status_code == 450 else "find"
+                        self.service.authenticate(True, service)
+
                     except PyiCloudAPIResponseException:
                         LOGGER.debug("Re-authentication failed")
                     kwargs["retried"] = True
                     return self.request(method, url, **kwargs)
             except Exception:
-                pass
+                LOGGER.exception("Was Passed.")
 
             LOGGER.debug(f"Headers: {response.headers}, Reason {response.reason}, Response {response.text}")
 
@@ -223,15 +242,17 @@ class PyiCloudService(object):
         if password is None:
             password = get_password_from_keyring(apple_id)
 
+        self.WIDGET_KEY = "d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d"
         self.user = {"accountName": apple_id, "password": password}
         self.data = {}
         self.client_id = client_id or ("auth-%s" % str(uuid1()).lower())
 
         self.params = {
-            "clientBuildNumber": "2021Project52",
-            "clientMasteringNumber": "2021B29",
-            "ckjsBuildVersion": "17DProjectDev77",
-            "clientId": self.client_id[5:],  ## remove 'auth-' first 5 characters not used here just raw client ID
+            'clientBuildNumber': '17DHotfix5',
+            'clientMasteringNumber': '17DHotfix5',
+            'ckjsBuildVersion': '17DProjectDev77',
+            'ckjsVersion': '2.0.5',
+            'clientId': self.client_id,
         }
         self.with_family = with_family
         self.session_data = {}
@@ -268,9 +289,12 @@ class PyiCloudService(object):
 
         self.session = PyiCloudSession(self)
         self.session.verify = verify
-        self.session.headers.update(
-            {"Origin": self.HOME_ENDPOINT, "Referer": "%s/" % self.HOME_ENDPOINT}
-        )
+
+        self.session.headers.update({
+            'Origin': self.HOME_ENDPOINT,
+            'Referer': '%s/' % self.HOME_ENDPOINT,
+            'User-Agent': 'Opera/9.52 (X11; Linux i686; U; en)'
+        })
 
         cookiejar_path = self.cookiejar_path
         self.session.cookies = cookielib.LWPCookieJar(filename=cookiejar_path)
@@ -292,7 +316,279 @@ class PyiCloudService(object):
         self._files = None
         self._photos = None
 
-    def authenticate(self, force_refresh=False):
+
+    def compute_hashcash(self, challenge, bits):
+        counter = 0
+        date_str = time.strftime('%Y%m%d%H%M%S', time.gmtime())
+        bits = int(bits)
+
+        while True:
+            # Hashcash string format: ver:bits:date:resource:rand1:counter
+            hashcash_str = f"1:{bits}:{date_str}:{challenge}:{counter}"
+            sha1_hash = hashlib.sha1(hashcash_str.encode('utf-8')).hexdigest()
+
+            # Convert hash to binary and check if it has the required number of leading zeros
+            hash_binary = bin(int(sha1_hash, 16))[2:].zfill(160)
+            if hash_binary.startswith('0' * bits):
+                return hashcash_str
+            counter += 1
+
+    def make_hashcash(bits, challenge):
+        """
+        Generates a hashcash string compatible with Apple's specifications.
+
+        Parameters:
+            bits (str): The number of leading zero bits required in the hash.
+            challenge (str): The challenge string provided by Apple.
+
+        Returns:
+            str: The generated hashcash string.
+        """
+        version = 1
+        date = datetime.now().strftime("%Y%m%d%H%M%S")
+        counter = 0
+
+        while True:
+            # Construct the hashcash string
+            # Note: There's an empty field between challenge and counter, represented by "::"
+            hc = f"{version}:{bits}:{date}:{challenge}::{counter}"
+
+            # Compute SHA1 digest
+            sha1_digest = hashlib.sha1(hc.encode('utf-8')).digest()
+
+            # Convert digest to binary string
+            digest_bits = ''.join(f"{byte:08b}" for byte in sha1_digest)
+
+            # Check if the first 'bits' bits are all zero
+            if int(digest_bits[:int(bits)], 2) == 0:
+                return hc
+
+            counter += 1
+    def fetch_hashcash(self):
+        """
+        Fetches hashcash by making a GET request to Apple's authentication endpoint.
+
+        Returns:
+            str or None: The generated hashcash string if successful, else None.
+        """
+        init_url = f"https://idmsa.apple.com/appleauth/auth/signin?widgetKey={self.WIDGET_KEY}"
+        headers = {
+            'Accept': 'application/json, text/javascript',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+        try:
+            response = requests.get(init_url, headers=headers)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            print(f"Failed to fetch hashcash: {e}")
+            return None
+
+        # Extract headers
+        bits = response.headers.get("X-Apple-HC-Bits")
+        challenge = response.headers.get("X-Apple-HC-Challenge")
+
+        if bits is None or challenge is None:
+            LOGGER.debug("Unable to find 'X-Apple-HC-Bits' and 'X-Apple-HC-Challenge' to make hashcash")
+            return None
+
+        # Generate hashcash
+        hashcash = self.make_hashcash(bits, challenge)
+        LOGGER.debug(f"{hashcash=}")
+        return hashcash
+    def authenticate(self, force_refresh:bool=False, service:Optional[Any]=None) -> None:
+        """
+        Handles authentication using SRP protocol and manages session tokens.
+        """
+        login_successful = False
+        username = self.user['accountName']
+        password = self.user["password"]
+
+        if self.session_data.get("session_token") and not force_refresh:
+            # Check if session token is still valid
+            LOGGER.debug(f"Checking Session Token Validity...")
+            try:
+                req = self.session.post(
+                    f"{self.SETUP_ENDPOINT}/validate",
+                    params=self.params,
+                    data="null"
+                )
+                self.data = req.json()
+                if 'dsInfo' in self.data:
+                    if 'dsid' in self.data['dsInfo']:
+                        if 'dsid' in self.params:  # already checked above, but recheck
+                            self.params.update({"dsid": self.data["dsInfo"]["dsid"]})
+                login_successful = True
+            except PyiCloudAPIResponseException:
+                LOGGER.debug("Invalid authentication token, will log in from scratch.")
+
+        if not login_successful and service is not None:
+            app = self.data["apps"][service]
+            if "canLaunchWithOneFactor" in app and app["canLaunchWithOneFactor"]:
+                LOGGER.debug(
+                    "Authenticating as %s for %s", self.user["accountName"], service
+                )
+                try:
+                    self._authenticate_with_credentials_service(service)
+                    login_successful = True
+                except Exception:
+                    LOGGER.debug(
+                        "Could not log into service. Attempting brand new login."
+                    )
+
+        if not login_successful:
+            headers = self._get_auth_headers()
+            if self.session_data.get("scnt"):
+                headers["scnt"] = self.session_data.get("scnt")
+            if self.session_data.get("session_id"):
+                headers["X-Apple-ID-Session-Id"] = self.session_data.get("session_id")
+
+            LOGGER.debug("************ Headers for Token Session ***************")
+            LOGGER.debug(str(headers))
+            class SrpPassword():
+                def __init__(self, password: str):
+                    self.password = password
+
+                def set_encrypt_info(self, salt: bytes, iterations: int, key_length: int):
+                    self.salt = salt
+                    self.iterations = iterations
+                    self.key_length = key_length
+
+                def encode(self):
+                    password_hash = hashlib.sha256(self.password.encode('utf-8')).digest()
+                    return hashlib.pbkdf2_hmac('sha256', password_hash, salt, iterations, key_length)
+
+            LOGGER.debug("Authenticating as %s using SRP" % self.user["accountName"])
+
+            srp_password = SrpPassword(self.user["password"])
+            srp.rfc5054_enable()
+            srp.no_username_in_x()
+            usr = srp.User(self.user["accountName"], srp_password, hash_alg=srp.SHA256, ng_type=srp.NG_2048)
+
+            uname, A = usr.start_authentication()
+
+            # Step 3: Send 'A' to Apple and receive 'B' and 'salt'
+            init_url = '%s/signin/init' % self.AUTH_ENDPOINT
+
+            init_data = {
+                'a': base64.b64encode(A).decode(),
+                'accountName': uname,
+                'protocols': ['s2k', 's2k_fo']
+            }
+
+            LOGGER.debug(f"SRP init URL: {init_url}")
+            LOGGER.debug(f"SRP init headers: {headers}")
+            LOGGER.debug(f"SRP init data: {init_data}")
+
+            try:
+                init_resp = self.session.post(init_url, data=json.dumps(init_data), headers=headers)
+                init_resp.raise_for_status()
+
+            except PyiCloudAPIResponseException as e:
+                msg = f"SRP init failed: {e}"
+                raise PyiCloudFailedLoginException(msg, e) from e
+
+            init_resp_data = init_resp.json()
+            LOGGER.debug(f"SRP init response status: {init_resp.status_code}")
+            LOGGER.debug(f"SRP init response content: {init_resp.text}")
+            LOGGER.debug(f"SRP init response Headers: {init_resp.headers}")
+            LOGGER.debug(f"{init_resp_data=}")
+
+            scnt = self.session_data.get("scnt")
+            if scnt:
+                headers["scnt"] = scnt
+            session_id = self.session_data.get("session_id")
+            if session_id:
+                headers["X-Apple-ID-Session-Id"] = session_id
+
+            salt = base64.b64decode(init_resp_data['salt'])
+            b = base64.b64decode(init_resp_data['b'])
+            c = init_resp_data['c']
+            iterations = init_resp_data['iteration']
+            key_length = 32
+            srp_password.set_encrypt_info(salt, iterations, key_length)
+
+            m1 = usr.process_challenge(salt, b)
+            m2 = usr.H_AMK
+
+            if not m1:
+                raise Exception("Failed to process challenge: m1 is None")
+            LOGGER.debug(f" m1 (Python): {m1}  m2 (Python): {m2}")
+
+            complete_url = '%s/signin/complete?isRememberMeEnabled=false' % self.AUTH_ENDPOINT
+           # headers.update( {
+          #      "X-Apple-HC": hashcash_token    }
+          #  )
+
+            complete_data = {
+                "accountName": uname,
+                "c": c,
+                "m1": base64.b64encode(m1).decode(),
+                "m2": base64.b64encode(m2).decode(),
+                "rememberMe": True,
+                "trustTokens": [],
+            }
+            if self.session_data.get("trust_token"):
+                complete_data["trustTokens"] = [self.session_data.get("trust_token")]
+
+            LOGGER.debug(f"Sending: Complete_data\n {complete_data}\n")
+            LOGGER.debug(f"With Complete Headers:\n\n{headers}")
+            # Send 'm1' to the server
+
+            try:
+                complete_resp = self.session.post(
+                    "%s/signin/complete" % self.AUTH_ENDPOINT,
+                    params={"isRememberMeEnabled": "true"},
+                    data=json.dumps(complete_data),
+                    headers=headers,
+                )
+            except PyiCloudAPIResponseException as error:
+                LOGGER.exception("Complete failed")
+                msg = "Invalid email/password combination."
+                raise PyiCloudFailedLoginException(msg, error) from error
+
+            complete_resp_data = complete_resp.json()
+
+            LOGGER.debug(f"{complete_resp_data}")
+            LOGGER.debug(f"Complete Headers: \n\n{complete_resp.headers}\n\n")
+            if complete_resp.status_code == 409:
+                LOGGER.info("Two Factor Authentication enabled for this Account.  Please enter Code and Press Button")
+                return
+                #login_successful = True
+
+            elif complete_resp.status_code == 200:
+                LOGGER.info("Account Successfully logged in.")
+                login_successful = True
+                if 'dsInfo' in self.data and 'dsid' in self.data['dsInfo']:
+                    self.params.update({"dsid": self.data["dsInfo"]["dsid"]})
+                self._authenticate_with_token()
+            else:
+                LOGGER.debug(f"{complete_resp.status_code}  Returned from Authenicate Complete Call")
+
+        if login_successful:
+            self._webservices = self.data["webservices"]
+            LOGGER.debug("Authentication completed successfully")
+        else:
+            raise Exception("Authentication failed")
+
+        ##
+    def _authenticate_with_credentials_service(self, service: str) -> None:
+        """Authenticate to a specific service using credentials."""
+        data = {
+            "appName": service,
+            "apple_id": self.user["accountName"],
+            "password": self.user["password"],
+        }
+
+        try:
+            self.session.post(
+                "%s/accountLogin" % self.SETUP_ENDPOINT, data=json.dumps(data)
+            )
+
+            self.data = self._validate_token()
+        except PyiCloudAPIResponseException as error:
+            msg = "Invalid email/password combination."
+            raise PyiCloudFailedLoginException(msg, error) from error
+    def authenticate_old(self, force_refresh=False):
         """
         Handles authentication, and persists cookies so that
         subsequent logins will not cause additional e-mails from Apple.
@@ -329,27 +625,24 @@ class PyiCloudService(object):
             LOGGER.debug("Authenticating as %s" % self.user["accountName"])
 
             data = dict(self.user)
-
             data["rememberMe"] = True
             data["trustTokens"] = []
             if self.session_data.get("trust_token"):
                 data["trustTokens"] = [self.session_data.get("trust_token")]
 
             headers = self._get_auth_headers()
-
             if self.session_data.get("scnt"):
                 headers["scnt"] = self.session_data.get("scnt")
-
             if self.session_data.get("session_id"):
                 headers["X-Apple-ID-Session-Id"] = self.session_data.get("session_id")
-
-            LOGGER.debug("************ Headers for /validate with Token Session ***************")
+            LOGGER.debug("************ Headers for Token Session ***************")
             LOGGER.debug(str(headers))
 
             try:
+                LOGGER.debug(f"/signin \n\nJson Data: {json.dumps(data)} and {headers=}")
                 req = self.session.post(
-                    "%s/signin" % self.AUTH_ENDPOINT,
-                    params={"isRememberMeEnabled": "true"},
+                    "%s/federate" % self.AUTH_ENDPOINT,
+                    params={"isRememberMeEnabled": "true" },
                     data=json.dumps(data),
                     headers=headers,
                 )
@@ -363,15 +656,19 @@ class PyiCloudService(object):
                 LOGGER.debug(f"*************** Repair Token Found: NON 2fa being stuffed.")
                 self._bypass_Repair2FA(req)
 
-            self._authenticate_with_token()
+
             self.params.update({
                 "dsid": self.data.get("dsInfo").get("dsid")
             })
             #self.trust_session()  ## delete me afte rlogging
 
         self._webservices = self.data["webservices"]
-
+        self._authenticate_with_token()
         LOGGER.debug("Authentication completed successfully")
+
+## Move to SRP
+
+
 
     def _get_auth_non2FA_headers(self, overrides=None):
         headers = {
@@ -509,6 +806,7 @@ class PyiCloudService(object):
 
     def _authenticate_with_token(self):
         """Authenticate using session token."""
+        LOGGER.error(f"{self.session_data}")
         data = {
             "accountCountryCode": self.session_data.get("account_country"),
             "dsWebAuthToken": self.session_data.get("session_token"),
@@ -520,7 +818,7 @@ class PyiCloudService(object):
         LOGGER.debug(str(self.session.headers))
         try:
             req = self.session.post(
-                "%s/accountLogin?clientBuildNumber=2021Project52&clientMasteringNumber=2021B29&clientId=%s" % (self.SETUP_ENDPOINT, self.client_id[5:]), data=json.dumps(data)
+                "%s/accountLogin?clientBuildNumber=2426&Hotfix45Project52&clientMasteringNumber=2021B29&clientId=%s" % (self.SETUP_ENDPOINT, self.client_id[5:]), data=json.dumps(data)
             )
         except PyiCloudAPIResponseException as error:
             msg = "Invalid authentication token."
@@ -546,16 +844,16 @@ class PyiCloudService(object):
 
     def _get_auth_headers(self, overrides=None):
         headers = {
-            "Accept": "*/*",
+            "Accept": "application/json, text/javascript",
             "Content-Type": "application/json",
-            "X-Apple-OAuth-Client-Id": "d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d",
+            "X-Apple-OAuth-Client-Id": self.WIDGET_KEY,
             "X-Apple-OAuth-Client-Type": "firstPartyAuth",
             "X-Apple-OAuth-Redirect-URI": "https://www.icloud.com",
             "X-Apple-OAuth-Require-Grant-Code": "true",
             "X-Apple-OAuth-Response-Mode": "web_message",
             "X-Apple-OAuth-Response-Type": "code",
             "X-Apple-OAuth-State": self.client_id,
-            "X-Apple-Widget-Key": "d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d",
+            "X-Apple-Widget-Key": self.WIDGET_KEY,
         }
         if overrides:
             headers.update(overrides)
@@ -587,9 +885,11 @@ class PyiCloudService(object):
     @property
     def requires_2fa(self):
         """Returns True if two-factor authentication is required."""
-        return self.data["dsInfo"].get("hsaVersion", 0) == 2 and (
+
+        return self.data.get("dsInfo",{}).get("hsaVersion", 0) == 2 and (
             self.data.get("hsaChallengeRequired", False) or not self.is_trusted_session
         )
+        return None
 
     @property
     def is_trusted_session(self):
@@ -646,6 +946,8 @@ class PyiCloudService(object):
 
         if self.session_data.get("session_id"):
             headers["X-Apple-ID-Session-Id"] = self.session_data.get("session_id")
+
+        LOGGER.error(f"Headers for 2FA Code\n\n\n{headers}")
 
         try:
             self.session.post(

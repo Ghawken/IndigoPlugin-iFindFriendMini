@@ -20,7 +20,7 @@ class FindMyiPhoneServiceManager(object):
         self.with_family = with_family
 
         fmip_endpoint = "%s/fmipservice/client/web" % service_root
-        self._fmip_refresh_url = "%s/refreshClient" % fmip_endpoint
+        self._fmip_refresh_url = "%s/refreshClient?clientBuildNumber=2426Project45&clientMasteringNumber=2426B25" % fmip_endpoint
         self._fmip_sound_url = "%s/playSound" % fmip_endpoint
         self._fmip_message_url = "%s/sendMessage" % fmip_endpoint
         self._fmip_lost_url = "%s/lostDevice" % fmip_endpoint
@@ -34,6 +34,8 @@ class FindMyiPhoneServiceManager(object):
         This ensures that the location data is up-to-date.
 
         """
+        #LOGGER.error(f"Refreshing Client\{self._fmip_refresh_url=}\n{self.params=}}")
+        # https://p46-fmipweb.icloud.com/fmipservice/client/web/refreshClient?clientBuildNumber=2426Project45&clientMasteringNumber=2426B25&clientId=af965785-0914-4216-991e-1f67717074ab&dsid=1327437402
         req = self.session.post(
             self._fmip_refresh_url,
             params=self.params,

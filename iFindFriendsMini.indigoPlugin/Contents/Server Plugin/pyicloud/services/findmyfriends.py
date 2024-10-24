@@ -17,6 +17,8 @@ class FindFriendsService(object):
         self._friend_endpoint = '%s/fmipservice/client/fmfWeb/initClient' % (
             self._service_root,
         )
+
+
         self._data = {}
 
     def refresh_data(self):

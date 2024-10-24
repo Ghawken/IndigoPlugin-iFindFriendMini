@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>PluginVersion</key>
-	<string>1.5.10</string>
+	<string>1.6.0</string>
 	<key>ServerApiVersion</key>
-	<string>3.0</string>
+	<string>3.4</string>
 	<key>CFBundleDisplayName</key>
 	<string>FindFriendsMini</string>
 	<key>CFBundleName</key>
