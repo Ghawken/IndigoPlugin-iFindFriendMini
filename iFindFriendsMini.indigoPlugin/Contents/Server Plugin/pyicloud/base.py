@@ -128,7 +128,7 @@ class PyiCloudSession(Session):
                         and fmip_url in url
                 ):
                     # Handle re-authentication for Find My iPhone
-                    LOGGER.error(f"\n\n\nRe-authenticating Find My iPhone service\n{fmip_url=}{url=}\n{response.ok=}\n{content_type=}\n{response.status_code=}")
+                    LOGGER.debug(f"\n\n\nRe-authenticating Find My iPhone service\n{fmip_url=}{url=}\n{response.ok=}\n{content_type=}\n{response.status_code=}")
                     try:
                         # If 450, authentication requires a full sign in to the account
                         service = None if response.status_code == 450 else "find"
@@ -139,7 +139,7 @@ class PyiCloudSession(Session):
                     kwargs["retried"] = True
                     return self.request(method, url, **kwargs)
             except Exception:
-                LOGGER.exception("Was Passed.")
+                LOGGER.debug("Exception Was Passed.", exc_info=True)
 
             LOGGER.debug(f"Headers: {response.headers}, Reason {response.reason}, Response {response.text}")
 
@@ -806,7 +806,7 @@ class PyiCloudService(object):
 
     def _authenticate_with_token(self):
         """Authenticate using session token."""
-        LOGGER.error(f"{self.session_data}")
+        #LOGGER.debug(f"{self.session_data}")
         data = {
             "accountCountryCode": self.session_data.get("account_country"),
             "dsWebAuthToken": self.session_data.get("session_token"),
@@ -958,11 +958,11 @@ class PyiCloudService(object):
         except PyiCloudAPIResponseException as error:
             if error.code == -21669:
                 # Wrong verification code
-                LOGGER.error("Code verification failed.")
+                LOGGER.info("*** Code verification failed. ***")
                 return False
             raise
 
-        LOGGER.debug("Code verification successful.")
+        LOGGER.info("Code verification successful.")
 
         self.trust_session()
         return not self.requires_2sa
@@ -989,7 +989,7 @@ class PyiCloudService(object):
             self._authenticate_with_token()
             return True
         except PyiCloudAPIResponseException:
-            LOGGER.error("Session trust failed.  Appears to be incorrect Code.")
+            LOGGER.info("Session trust failed.  Appears to be incorrect Code.")
             return False
 
     def _get_webservice_url(self, ws_key):
