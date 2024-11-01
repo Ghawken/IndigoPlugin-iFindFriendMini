@@ -553,8 +553,7 @@ class PyiCloudService(object):
             if complete_resp.status_code == 409:
                 LOGGER.info("Two Factor Authentication enabled for this Account.  Please enter Code and Press Button")
                 return
-                #login_successful = True
-
+                #Dont validate token and dont try to assign webservices which can be none
             elif complete_resp.status_code == 200:
                 LOGGER.info("Account Successfully logged in.")
                 login_successful = True

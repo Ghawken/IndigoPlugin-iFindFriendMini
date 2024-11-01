@@ -948,7 +948,8 @@ class Plugin(indigo.PluginBase):
             return
 
         except PyiCloudFailedLoginException:
-            self.logger.debug(u'Login failed - Check username/password - has it changed recently?. ')
+            self.logger.debug(u'Login failed - Check username/password combination')
+            self.logger.debug(f"Secure Remote Password Login Failed.  If first attempt delete account in PluginConfig and try again.")
             return
 
         except PyiCloud2SARequiredException:
