@@ -57,7 +57,7 @@ class GitHubPluginUpdater(object):
 		latestRelease = self.getLatestRelease()
 
 		if (latestRelease == None):
-			self.logger.error('No release available')
+			self.logger.warn('No release available')
 			return False
 
 		try:
@@ -190,9 +190,9 @@ class GitHubPluginUpdater(object):
 			self.logger.debug(u'Json results:'+unicode(data))
 		elif (400 <= f.status < 500):
 			error = json.loads(out)
-			self.logger.error('%s' % error['message'])
+			self.logger.warn('%s' % error['message'])
 		else:
-			self.logger.error('Error: %s' % unicode(err))
+			self.logger.warn('Error: %s' % unicode(err))
 
 		return data
 
@@ -203,7 +203,7 @@ class GitHubPluginUpdater(object):
 
 		# sort out the currentVersion based on user params
 		if ((currentVersion == None) and (self.plugin == None)):
-			self.logger.error('Must provide either currentVersion or plugin reference')
+			self.logger.warn('Must provide either currentVersion or plugin reference')
 			return None
 		elif (currentVersion == None):
 			currentVersion = str(self.plugin.pluginVersion)

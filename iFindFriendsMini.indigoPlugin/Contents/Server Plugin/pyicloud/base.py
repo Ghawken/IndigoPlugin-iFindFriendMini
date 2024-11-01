@@ -266,7 +266,7 @@ class PyiCloudService(object):
             with open(self.session_path) as session_f:
                 self.session_data = json.load(session_f)
         except:  # pylint: disable=bare-except
-            LOGGER.info("Session file does not exist")
+            LOGGER.info("No saved Session details exists, starting afresh.")
 
         if not path.exists(self._session_directory):
             mkdir(self._session_directory)
@@ -542,8 +542,8 @@ class PyiCloudService(object):
                     headers=headers,
                 )
             except PyiCloudAPIResponseException as error:
-                LOGGER.exception("Complete failed")
-                msg = "Invalid email/password combination."
+                LOGGER.debug("Complete failed")
+                msg = "Invalid username/password combination."
                 raise PyiCloudFailedLoginException(msg, error) from error
 
             complete_resp_data = complete_resp.json()
@@ -567,7 +567,9 @@ class PyiCloudService(object):
             self._webservices = self.data["webservices"]
             LOGGER.debug("Authentication completed successfully")
         else:
-            raise Exception("Authentication failed")
+            LOGGER.info("Login was not successful.  Please check username and password combination.")
+            LOGGER.info("If recent changes, consider deleting plugin acccount via delete button at bottom of plugin Config Page and trying again")
+            raise PyiCloudFailedLoginException("Login was not successful.", "Error.")
 
         ##
     def _authenticate_with_credentials_service(self, service: str) -> None:

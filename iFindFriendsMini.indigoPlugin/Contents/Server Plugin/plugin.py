@@ -367,16 +367,16 @@ class Plugin(indigo.PluginBase):
             plugin = indigo.server.getPlugin('com.GlennNZ.indigoplugin.FindFriendsMini')
 
             if MajorProblem == 1:
-                self.logger.error(u'Major Problem:  Restarting Plugin...')
+                self.logger.warn(u'Major Problem:  Restarting Plugin...')
                 if plugin.isEnabled():
                     plugin.restart(waitUntilDone=False)
                 self.sleep(1)
             if MajorProblem == 2:
-                self.logger.error(u"{0:=^130}".format(""))
-                self.logger.error(u"{0:=^130}".format(""))
-                self.logger.error(u'Major Problem:   Please Disable Plugin.  Now Sleeping.  Please contact Developer.')
-                self.logger.error(u"{0:=^130}".format(""))
-                self.logger.error(u"{0:=^130}".format(""))
+                self.logger.warn(u"{0:=^130}".format(""))
+                self.logger.warn(u"{0:=^130}".format(""))
+                self.logger.warn(u'Major Problem:   Please Disable Plugin.  Now Sleeping.  Please contact Developer.')
+                self.logger.warn(u"{0:=^130}".format(""))
+                self.logger.warn(u"{0:=^130}".format(""))
                 if plugin.isEnabled():
                     # Can't disabled
                     # Can Sleep Forever Though
@@ -620,10 +620,10 @@ class Plugin(indigo.PluginBase):
 
             devicetargets = self.appleAPI.devices
             for devices in devicetargets:
-                # self.logger.error(str(devices))
-                # self.logger.error(devices['id'])
-                # self.logger.error(devices.status())
-                # self.logger.error(devices.location())
+                # self.logger.warn(str(devices))
+                # self.logger.warn(devices['id'])
+                # self.logger.warn(devices.status())
+                # self.logger.warn(devices.location())
                 if str(targetDevice) == str(devices['id']):
                     devices.play_sound(subject=targetSubject)
 
@@ -646,10 +646,10 @@ class Plugin(indigo.PluginBase):
 
             devicetargets = self.appleAPI.devices
             for devices in devicetargets:
-                # self.logger.error(str(devices))
-                # self.logger.error(devices['id'])
-                # self.logger.error(devices.status())
-                # self.logger.error(devices.location())
+                # self.logger.warn(str(devices))
+                # self.logger.warn(devices['id'])
+                # self.logger.warn(devices.status())
+                # self.logger.warn(devices.location())
                 if str(targetDevice) == str(devices['id']):
                     devices.display_message(subject=targetSubject, message=targetMessage, sounds=soundenabled)
 
@@ -915,13 +915,14 @@ class Plugin(indigo.PluginBase):
                     if self.debugicloud:
                         self.logger.debug(u'targetDevice of Device equals:' + str(targetFriend))
                     devicetargets = self.appleAPI.devices
-                    for devices in devicetargets:
-                        #self.logger.error(str(devices))
-                        #self.logger.error(devices['id'])
-                        #self.logger.error(devices.status())
-                        #self.logger.error(devices.location())
-                        if str(targetFriend) == str(devices['id']):
-                            self.refreshDataforMyDevice( dev, devices)
+                    if devicetargets != None:
+                        for devices in devicetargets:
+                            #self.logger.warn(str(devices))
+                            #self.logger.warn(devices['id'])
+                            #self.logger.warn(devices.status())
+                            #self.logger.warn(devices.location())
+                            if str(targetFriend) == str(devices['id']):
+                                self.refreshDataforMyDevice( dev, devices)
 
                     #elf.logger.error("**:"+str(targetdevice))
 
@@ -947,8 +948,9 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(e)
             return
 
-        except PyiCloudFailedLoginException:
+        except PyiCloudFailedLoginException as e:
             self.logger.debug(u'Login failed - Check username/password combination')
+            self.logger.debug(f"Exception message: {e}")
             self.logger.debug(f"Secure Remote Password Login Failed.  If first attempt delete account in PluginConfig and try again.")
             return
 
@@ -1025,14 +1027,14 @@ class Plugin(indigo.PluginBase):
 
                     for dev in itertools.chain(indigo.devices.iter("self.FindFriendsFriend"), indigo.devices.iter("self.myDevice")):
                         #add online check here
-                        #self.logger.error(f"{dev.name}")
+                        #self.logger.warn(f"{dev.name}")
                         if dev.enabled and dev.states['deviceIsOnline'] == True:
                             self.logger.debug('Geo Details on check:' + str(igeoName) + ' For Friend:' + str(dev.name))
                             iDevLatitude = float(dev.states['latitude'])
                             iDevLongitude = float(dev.states['longitude'])
                             iDevUniqueName = dev.pluginProps['friendName']
                             iDevAccuracy = float(dev.states['horizontalAccuracy'])
-                            #self.logger.error(str(iDevUniqueName))
+                            #self.logger.warn(str(iDevUniqueName))
                             # Now check the distance for each device
                             # Calculate the distance
                             self.logger.debug('Point 1' + ' ' + str(igeoLat) + ',' + str(igeoLong) + ' Point 2 ' + str(iDevLatitude) + ',' + str(iDevLongitude))
@@ -1255,8 +1257,8 @@ class Plugin(indigo.PluginBase):
             iurl="http://www.latlong.net"
             self.browserOpen(iurl)
         except:
-            self.logger.error(u'Default web browser did not open - check Mac set up')
-            self.logger.error(u'or issues contacting the www.latlong.net site.  Is internet working?')
+            self.logger.warn(u'Default web browser did not open - check Mac set up')
+            self.logger.warn(u'or issues contacting the www.latlong.net site.  Is internet working?')
         return
 
     def refreshDataforMyDevice(self,dev, appleDevice):
@@ -1265,10 +1267,10 @@ class Plugin(indigo.PluginBase):
             if self.debugicloud:
                 self.logger.debug(str('Now updating Data for : ' + str(dev.name) + ' with data received: '))
 
-            # self.logger.error(str(devices))
-            # self.logger.error(devices['id'])
-            # self.logger.error(devices.status())
-            # self.logger.error(devices.location())
+            # self.logger.warn(str(devices))
+            # self.logger.warn(devices['id'])
+            # self.logger.warn(devices.status())
+            # self.logger.warn(devices.location())
 
             if appleDevice is None:
                 self.logger.debug(u'No data received for device:' + str(
@@ -1449,7 +1451,7 @@ class Plugin(indigo.PluginBase):
             if follow is not None:
                 if 'location' in follow:
                     if follow['location'] is not None:
-                        #self.logger.error(f"{follow['location']}")
+                        #self.logger.warn(f"{follow['location']}")
                         if 'address' in follow['location'] and follow['location']['address'] is not None:
                             if 'formattedAddressLines' in follow['location']['address'] and follow['location']['address']['formattedAddressLines'] is not None:
                                 address = ','.join(follow['location']['address']['formattedAddressLines'])
@@ -1882,13 +1884,13 @@ class Plugin(indigo.PluginBase):
             return 0, self.appleAPI
 
         except PyiCloudFailedLoginException:
-            self.logger.error(u'Login failed - Check username/password - has it changed recently?. ')
+            self.logger.warn(u'Login failed - Check username/password - has it changed recently?. ')
             self.appleAPI = None
             self.allDevicesOffline()
             return 1, 'NL'
 
         except PyiCloud2SARequiredException:
-            self.logger.error(u'Login failed.  Account requires 2nd factor, verification code setup.  Please see config window')
+            self.logger.warn(u'Login failed.  Account requires 2nd factor, verification code setup.  Please see config window')
             self.requires2FA = True
             self.appleAPI = None
             self.allDevicesOffline()
@@ -1896,10 +1898,10 @@ class Plugin(indigo.PluginBase):
             return 1, 'NL'
 
         except ValueError as e:
-            self.logger.error(u"{0:=^130}".format(""))
-            self.logger.error(u'Login failed - 2FA Authenication is supported. ')
+            self.logger.warn(u"{0:=^130}".format(""))
+            self.logger.warn(u'Login failed - 2FA Authenication is supported. ')
             self.logger.debug(u'Error Given is:'+str(e)+str(e.__dict__))
-            self.logger.error(u"{0:=^130}".format(""))
+            self.logger.warn(u"{0:=^130}".format(""))
             self.allDevicesOffline()
             return 1, 'NL'
 
@@ -1964,8 +1966,8 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"Using Details: Username:"+str(valuesDict['appleId'])+u" and password:"+str(valuesDict['applePwd']))
         self.appleAPI = None
         self.pluginPrefs['appleAPIid']= ""
-        self.logger.info(u"{0:=^130}".format(""))
-        self.logger.info(u'Attempting Login to Apple Account:'+str(valuesDict['appleId']))
+        #self.logger.info(u"{0:=^130}".format(""))
+        self.logger.info(u'Attempting Login to Apple Account:  '+str(valuesDict['appleId']))
 
 
         valuesDict['appleAPIid']=''
@@ -1973,7 +1975,7 @@ class Plugin(indigo.PluginBase):
         if self.appleAPI != None:
             #self.logger.info(u"Account username and password has been verifed by Apple")
             self.logger.debug(u"Account Requires 2FA to continue = "+str(self.appleAPI.requires_2fa))
-            self.logger.info(u"{0:=^130}".format(""))
+            #self.logger.info(u"{0:=^130}".format(""))
             self.requires2FA = self.appleAPI.requires_2fa
         return valuesDict
 
@@ -1981,13 +1983,13 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u'submit Code Button pressed Called.')
         vercode = valuesDict['verficationcode']
         if vercode is None:
-            self.logger.error("Please enter code")
+            self.logger.warn("Please enter code")
             return
 
         validcode = self.appleAPI.validate_2fa_code(vercode)
 
         if validcode == False:
-            self.logger.error("Code Error:  Please try again...")
+            self.logger.warn("Code Error:  Please try again...")
             return
         else:
             self.logger.info("Verification Code Accepted.")
@@ -2489,7 +2491,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug("Checking trigger as 2FA state called")
         for triggerId, trigger in sorted(self.triggers.items()):
             self.logger.debug("Checking Trigger (%s), Type: %s, Friend: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
-            # self.logger.error(str(trigger))
+            # self.logger.warn(str(trigger))
             if trigger.pluginTypeId == "account2FAneeded" :
                 # 2fa failed
                 # send trigger.
@@ -2517,7 +2519,7 @@ class Plugin(indigo.PluginBase):
             for triggerId, trigger in sorted(self.triggers.items()):
 
                 self.logger.debug("Checking Trigger %s (%s), Type: %s, Friend: %s, and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId, friend, triggertype))
-                #self.logger.error(str(trigger))
+                #self.logger.warn(str(trigger))
 
                 if trigger.pluginTypeId =='account2FAneeded':  ## selected a 2FA triggertype
                     if triggertype=='account2FAneeded':
