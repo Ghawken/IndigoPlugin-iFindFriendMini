@@ -8,6 +8,14 @@
         <Name>Refresh Maps For All Friends</Name>
         <CallbackMethod>actionrefreshmaps</CallbackMethod>
     </Action>
+        <Action id="disableConnection" >
+        <Name>Disable all icloud Communication</Name>
+        <CallbackMethod>actionDisableCommunication</CallbackMethod>
+    </Action>
+    <Action id="enableConnection">
+        <Name>Enable all icloud Communication</Name>
+        <CallbackMethod>actionEnableCommunication</CallbackMethod>
+    </Action>
     <Action id="changeRefresh" uiPath="DeviceActions">
         <Name>Change Refresh Data interval</Name>
         <CallbackMethod>changeInterval</CallbackMethod>

@@ -18,6 +18,8 @@ import http.cookiejar as cookielib
 from urllib import parse
 import srp
 from srp import User
+from typing_extensions import override
+
 srp.rfc5054_enable()
 import time
 import hashlib
@@ -78,10 +80,11 @@ class PyiCloudPasswordFilter(logging.Filter):
 class PyiCloudSession(Session):
     """iCloud session."""
 
-    def __init__(self, service):
+    def __init__(self, service: Any):
         self.service = service
-        Session.__init__(self)
+        super().__init__()
 
+    @override
     def request(self, method, url, **kwargs):  # pylint: disable=arguments-differ
 
         # Charge logging to the right service endpoint
@@ -448,14 +451,20 @@ class PyiCloudService(object):
                 def __init__(self, password: str):
                     self.password = password
 
-                def set_encrypt_info(self, salt: bytes, iterations: int, key_length: int):
+                def set_encrypt_info(self, protocol: str, salt: bytes, iterations: int, key_length: int):
+                    self.protocol = protocol
                     self.salt = salt
                     self.iterations = iterations
                     self.key_length = key_length
 
                 def encode(self):
-                    password_hash = hashlib.sha256(self.password.encode('utf-8')).digest()
+                    if (self.protocol == 's2k_fo'):
+                        password_hash = hashlib.sha256(self.password.encode('utf-8')).hexdigest()[:-1]
+                    else:
+                        password_hash = hashlib.sha256(self.password.encode('utf-8')).digest()
+
                     return hashlib.pbkdf2_hmac('sha256', password_hash, salt, iterations, key_length)
+
 
             LOGGER.debug("Authenticating as %s using SRP" % self.user["accountName"])
 
@@ -502,10 +511,12 @@ class PyiCloudService(object):
 
             salt = base64.b64decode(init_resp_data['salt'])
             b = base64.b64decode(init_resp_data['b'])
+            protocol = init_resp_data['protocol']
             c = init_resp_data['c']
             iterations = init_resp_data['iteration']
             key_length = 32
-            srp_password.set_encrypt_info(salt, iterations, key_length)
+
+            srp_password.set_encrypt_info(protocol, salt, iterations, key_length)
 
             m1 = usr.process_challenge(salt, b)
             m2 = usr.H_AMK
@@ -561,7 +572,7 @@ class PyiCloudService(object):
                     self.params.update({"dsid": self.data["dsInfo"]["dsid"]})
                 self._authenticate_with_token()
             else:
-                LOGGER.debug(f"{complete_resp.status_code}  Returned from Authenicate Complete Call")
+                LOGGER.debug(f"{complete_resp.status_code}  Returned from Authenticate Complete Call")
 
         if login_successful:
             self._webservices = self.data["webservices"]
@@ -995,11 +1006,13 @@ class PyiCloudService(object):
 
     def _get_webservice_url(self, ws_key):
         """Get webservice URL, raise an exception if not exists."""
-        if self._webservices.get(ws_key) is None:
-            raise PyiCloudServiceNotActivatedException(
-                "Webservice not available", ws_key
-            )
-        return self._webservices[ws_key]["url"]
+        try:
+            if self._webservices.get(ws_key) is None:
+               return None
+            return self._webservices[ws_key]["url"]
+        except:
+            LOGGER.debug("Exception Ignored getting webservice url")
+            return None
 
     @property
     def devices(self):

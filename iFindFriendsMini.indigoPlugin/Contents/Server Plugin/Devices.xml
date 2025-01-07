@@ -354,6 +354,11 @@
                 <TriggerLabel>labels</TriggerLabel>
                 <ControlPageLabel>labels</ControlPageLabel>
             </State>
+            <State id="url_mapping">
+                <ValueType>String</ValueType>
+                <TriggerLabel>URL to google Map for Friend</TriggerLabel>
+                <ControlPageLabel>URL to Google Map for Friend</ControlPageLabel>
+            </State>
                         <State id="mapUpdateNeeded">
                 <ValueType>Boolean</ValueType>
                 <TriggerLabel>Map needs to be updated</TriggerLabel>

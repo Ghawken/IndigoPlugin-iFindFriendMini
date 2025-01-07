@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <PluginConfig>
 
-    <Field id="infoLabel0" type="label" fontColor="black" alignText="right" >
+    <Field id="infoLabel0" type="label" fontColor="blue" alignText="right" >
         <Label>FindFriendsMini Plugin</Label>
     </Field>
 
@@ -59,6 +59,16 @@
         <Label>Submit Code</Label>
 				<CallbackMethod>submitCode</CallbackMethod>
 	</Field>
+
+    <Field id="disable_Connection" defaultValue="false" type="checkbox" fontColor="red" >
+        <Label>Disable All iCloud Communication</Label>
+        <Description></Description>
+    </Field>
+
+    <Field id="description" type="label" fontColor="red" alignText="right" visibleBindingId="disable_Connection" visibleBindingValue="true">
+        <Label>NOTE: With this CheckBox Enabled all plugin Functions are disabled.</Label>
+    </Field>
+
 
 
     <Field id="sep44aa" type="separator"/>

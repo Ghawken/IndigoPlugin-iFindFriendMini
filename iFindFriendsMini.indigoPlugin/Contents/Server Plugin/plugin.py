@@ -305,6 +305,11 @@ class Plugin(indigo.PluginBase):
 
         self.appleAPI = None
 
+        ## Master disable of all communication
+        self.disable_all_connections = self.pluginPrefs.get('disable_Connection', False)
+        if self.disable_all_connections:
+            self.logger.info("Note:  All Plugin Connections are currently Disabled. Enable in PluginConfig.")
+
         self.debugicloud = self.pluginPrefs.get('debugicloud', False)
         self.debugLevel = int(self.pluginPrefs.get('showDebugLevel', 20))
         self.debugmaps = self.pluginPrefs.get('debugmaps', False)
@@ -424,6 +429,11 @@ class Plugin(indigo.PluginBase):
             self.configVerticalMap = valuesDict.get('verticalMap', "600")
             self.useMaps = valuesDict.get('useMaps',False)
             self.mapType = self.pluginPrefs.get('mapType', "openstreetmap")
+
+            self.disable_all_connections = self.pluginPrefs.get('disable_Connection', False)
+            if self.disable_all_connections:
+                self.logger.info("Note:  All Plugin Connections are currently Disabled. Enable in PluginConfig.")
+
             self.configHorizontalMap = valuesDict.get('horizontalMap', "600")
             self.configZoomMap = valuesDict.get('ZoomMap', "15")
             self.datetimeFormat = valuesDict.get('datetimeFormat', '%c')
@@ -557,6 +567,20 @@ class Plugin(indigo.PluginBase):
         self.checkGeofence()
         self.sleep(2)
         self.checkHomeOther()
+        return
+
+    def actionDisableCommunication(self, action):
+
+        self.logger.debug(u"Disable All iCloud FindFriends Communication..")
+        self.disable_all_connections = True
+        self.pluginPrefs['disable_Connection'] = True
+        return
+
+    def actionEnableCommunication(self, action):
+
+        self.logger.debug(u"Enable All iCloud FindFriends Communication..")
+        self.disable_all_connections = False
+        self.pluginPrefs['disable_Connection'] = False
         return
 
     def actionrefreshmaps(self, action):
@@ -1263,6 +1287,11 @@ class Plugin(indigo.PluginBase):
 
     def refreshDataforMyDevice(self,dev, appleDevice):
         self.logger.debug(u"refreshDataforMyDevice() method called.")
+
+        if self.disable_all_connections:
+            self.logger.debug("Disable all connections active. Skipping.")
+            return
+
         try:
             if self.debugicloud:
                 self.logger.debug(str('Now updating Data for : ' + str(dev.name) + ' with data received: '))
@@ -1578,6 +1607,7 @@ class Plugin(indigo.PluginBase):
                 dev.updateStateOnServer('mapUpdateNeeded',value=False)
 
                 dev.updateStateOnServer('googleMapUrl', value=str(drawUrl[1]) )
+                dev.updateStateOnServer('url_mapping', value=str(drawUrl[2]))
                 self.logger.debug(u'Updating Variable:'+str(dev.name))
 
                 variablename =''.join(dev.name.split())
@@ -1812,6 +1842,12 @@ class Plugin(indigo.PluginBase):
         # Logs into the find my phone API and returns an error if it doesn't work correctly
 
         self.logger.debug('iAuthorise: Attempting login...')
+
+        if self.disable_all_connections:
+            self.logger.debug("Disable All Plugin Functions is enabled.  Skipping any attempts at login.")
+            self.logger.info("Plugin Functions are Disabled.  Reenable via Action or PluginConfig to continue")
+            return 1,'NI'
+
         # Logs into the API as required
         try:
             if self.appleAPI == None:
@@ -2055,12 +2091,19 @@ class Plugin(indigo.PluginBase):
             mapMarkerPhone = "markers=icon:http://chart.apis.google.com/chart?chst=d_map_pin_icon%26chld=mobile%257CFF0000%7C" + str(
                 latitude) + "," + str(longitude)
             mapGoogle = 'https://maps.googleapis.com/maps/api/staticmap?'
+
+            mapGoogleEmbed = 'https://www.google.com/maps/embed/v1/view?' ##key=YOUR_API_KEY&PARAMETERS'
+
             #urlmapGoogle = 'https://www.google.com/maps/@?api=1&map_action=map&center='+str(latitude)+','+str(longitude)+'&zoom='+str(iZoom)+'&basemap=satellite'
             urlmapGoogle = 'comgooglemaps://maps.google.com/maps?z='+str(iZoom)+'&t=h&q=' + str(latitude) + ',' + str(longitude)
             #Remove API usage altogether
             customURL = mapGoogle + mapCentre + '&' + mapZoom + '&' + mapSize + '&' + mapFormat + '&' + mapMarkerGeo + '&' + mapMarkerPhone + '&key=' + mapAPIKey
             self.logger.debug(u'StaticMap URL equals:'+str(customURL))
             self.logger.debug(u'Map URL equals:' + str(urlmapGoogle))
+
+            googleEmbedUrl = mapGoogleEmbed + mapCentre + '&' + mapZoom + '&key=' + mapAPIKey
+            self.logger.debug(u'Google Embed Map URL equals:' + str(googleEmbedUrl))
+
 
             mapOSM = 'http://staticmap.openstreetmap.de/staticmap.php?center='+str(latitude)+','+str(longitude)+'&'+str(mapZoom)+'&' + mapSize + '&markers='+str(latitude)+','+str(longitude)+','+str(mapLabel)
 
@@ -2120,15 +2163,15 @@ class Plugin(indigo.PluginBase):
                     
 
             if self.mapType=='google':
-                return customURL, urlmapGoogle
+                return customURL, urlmapGoogle, googleEmbedUrl
             elif self.mapType=='openstreetmap':
-                return mapOSM, urlmapGoogle
+                return mapOSM, urlmapGoogle, googleEmbedUrl
             elif self.mapType=="satellitespro" or self.mapType =='arcgisWorld2d' or self.mapType=='arcgisWorldImagery' or self.mapType=='arcgisWorldStreetMap' or self.mapType=='maps.six':
-                return mapWorld2d, urlmapGoogle
+                return mapWorld2d, urlmapGoogle, googleEmbedUrl
             elif 'Bing' in self.mapType:
-                return BingStatic, mapWorld2d
+                return BingStatic, mapWorld2d, googleEmbedUrl
             else:
-                return 0,0
+                return 0,0,0
 
 
         except Exception as e:
