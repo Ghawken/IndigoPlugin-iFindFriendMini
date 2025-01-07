@@ -2058,7 +2058,7 @@ class Plugin(indigo.PluginBase):
             mapLabel =  dev.pluginProps.get('mapLabel','lightblue1')
             # Create Map url
             mapCentre = 'center=' + str(latitude) + "," + str(longitude)
-
+            embedMarker = 'q=' + str(latitude) + "," + str(longitude)
             # Set size
             if self.mapType=='google':
                 if iZoom < 0:
@@ -2083,7 +2083,7 @@ class Plugin(indigo.PluginBase):
                 mapAPIKey = self.BingAPI
 
             mapZoom = 'zoom=' + str(iZoom)
-
+            embedZoom = 'zoom=18'
             mapSize = 'size=' + str(iHorizontal) + 'x' + str(iVertical)
             mapFormat = 'format=jpg&maptype=hybrid'
             # Use a standard marker for a GeoFence Centre
@@ -2092,8 +2092,8 @@ class Plugin(indigo.PluginBase):
                 latitude) + "," + str(longitude)
             mapGoogle = 'https://maps.googleapis.com/maps/api/staticmap?'
 
-            mapGoogleEmbed = 'https://www.google.com/maps/embed/v1/view?' ##key=YOUR_API_KEY&PARAMETERS'
-
+            mapGoogleEmbed = 'https://www.google.com/maps/embed/v1/place?' ##key=YOUR_API_KEY&PARAMETERS'
+          ##  https: // www.google.com / maps / embed / v1 / place?q = -53.416261800507876, 151.39133024066476 & zoom = 18
             #urlmapGoogle = 'https://www.google.com/maps/@?api=1&map_action=map&center='+str(latitude)+','+str(longitude)+'&zoom='+str(iZoom)+'&basemap=satellite'
             urlmapGoogle = 'comgooglemaps://maps.google.com/maps?z='+str(iZoom)+'&t=h&q=' + str(latitude) + ',' + str(longitude)
             #Remove API usage altogether
@@ -2101,7 +2101,7 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u'StaticMap URL equals:'+str(customURL))
             self.logger.debug(u'Map URL equals:' + str(urlmapGoogle))
 
-            googleEmbedUrl = mapGoogleEmbed + mapCentre + '&' + mapZoom + '&key=' + mapAPIKey
+            googleEmbedUrl = mapGoogleEmbed + embedMarker + '&' + embedZoom + '&key=' + mapAPIKey
             self.logger.debug(u'Google Embed Map URL equals:' + str(googleEmbedUrl))
 
 
