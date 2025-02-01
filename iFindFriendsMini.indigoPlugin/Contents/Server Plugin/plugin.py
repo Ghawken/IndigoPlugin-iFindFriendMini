@@ -1871,7 +1871,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u'Login to account successful...')
                 self.logger.debug(u"Account Requires 2FA:")
 
-            if self.appleAPI:
+            elif self.appleAPI:
                 self.appleAPI.authenticate(force_refresh=False)
                 self.logger.debug(u'Refresh Session appleAPI only.')
 

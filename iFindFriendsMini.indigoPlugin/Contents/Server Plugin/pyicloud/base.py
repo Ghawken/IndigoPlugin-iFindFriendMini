@@ -459,9 +459,10 @@ class PyiCloudService(object):
                     self.protocol = protocol
                     self.salt = salt
                     self.iterations = iterations
-                    self.key_length = key_length
+                    self.key_length = 32 # key_length
 
                 def encode(self):
+                    key_length = 32
                     if (self.protocol == 's2k_fo'):
                         password_hash = hashlib.sha256(self.password.encode('utf-8')).hexdigest()[:-1]
                     else:
@@ -494,7 +495,7 @@ class PyiCloudService(object):
 
             try:
                 init_resp = self.session.post(init_url, data=json.dumps(init_data), headers=headers)
-                init_resp.raise_for_status()
+                #init_resp.raise_for_status()
 
             except PyiCloudAPIResponseException as e:
                 msg = f"SRP init failed: {e}"
@@ -545,7 +546,7 @@ class PyiCloudService(object):
             if self.session_data.get("trust_token"):
                 complete_data["trustTokens"] = [self.session_data.get("trust_token")]
 
-            LOGGER.debug(f"Sending: Complete_data\n {complete_data}\n")
+            LOGGER.debug(f"Sending: Complete_data\n {json.dumps(complete_data)}\n")
             LOGGER.debug(f"With Complete Headers:\n\n{headers}")
             # Send 'm1' to the server
 
