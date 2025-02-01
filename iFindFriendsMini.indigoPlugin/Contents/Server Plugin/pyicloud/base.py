@@ -128,6 +128,7 @@ class PyiCloudSession(Session):
                 if (
                         has_retried is None
                         and response.status_code in [421, 450, 500]
+                        and fmip_url is not None
                         and fmip_url in url
                 ):
                     # Handle re-authentication for Find My iPhone
@@ -212,6 +213,9 @@ class PyiCloudSession(Session):
         if code in [421, 450, 500]:
             reason = "Authentication required for Account."
 
+        if code in [503]:
+            reason = "Service Temporarily Unavailable.  Please try again later."
+            LOGGER.info("503 Service Temporaily Unavailable Error Received.")
         api_error = PyiCloudAPIResponseException(reason, code)
         LOGGER.debug(api_error)
         raise api_error

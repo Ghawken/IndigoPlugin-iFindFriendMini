@@ -264,7 +264,7 @@ class Plugin(indigo.PluginBase):
 
 
         self.startingUp = True
-        apleAPI = None
+        self.appleAPI = None
         self.pluginIsInitializing = True
         self.pluginIsShuttingDown = False
         self.prefsUpdated = False
@@ -417,6 +417,12 @@ class Plugin(indigo.PluginBase):
 
         if userCancelled:
             self.logger.debug(u"User prefs dialog cancelled.")
+            self.debug = valuesDict.get('showDebugInfo', False)
+            self.debugLevel = int(valuesDict.get('showDebugLevel', "20"))
+            self.debugicloud = valuesDict.get('debugicloud', False)
+            self.debugmaps = valuesDict.get('debugmaps', False)
+            self.debuggeofence = valuesDict.get('debuggeofence', False)
+            self.debugdistance = valuesDict.get('debugdistance', False)
 
         if not userCancelled:
             self.debug = valuesDict.get('showDebugInfo', False)
@@ -428,7 +434,7 @@ class Plugin(indigo.PluginBase):
             self.datetimeFormat = valuesDict.get('datetimeFormat', '%c')
             self.configVerticalMap = valuesDict.get('verticalMap', "600")
             self.useMaps = valuesDict.get('useMaps',False)
-            self.mapType = self.pluginPrefs.get('mapType', "openstreetmap")
+            self.mapType = valuesDict.get('mapType', "openstreetmap")
 
             self.disable_all_connections = self.pluginPrefs.get('disable_Connection', False)
             if self.disable_all_connections:
@@ -454,6 +460,15 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"logLevel = " + str(self.logLevel))
             self.logger.debug(u"User prefs saved.")
             self.logger.debug(u"Debugging on (Level: {0})".format(self.debugLevel))
+
+            if self.debugicloud:
+                pyatv_logging = logging.getLogger("Plugin.pyiCloud2fa")
+                pyatv_logging.setLevel(logging.THREADDEBUG)
+                pyatv_logging.addHandler(self.plugin_file_handler)
+            else:
+                pyatv_logging = logging.getLogger("Plugin.pyiCloud2fa")
+                pyatv_logging.setLevel(logging.INFO)
+                pyatv_logging.addHandler(self.plugin_file_handler)
 
 
 
