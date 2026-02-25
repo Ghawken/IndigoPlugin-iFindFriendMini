@@ -1327,6 +1327,7 @@ class Plugin(indigo.PluginBase):
                 return
 
             locationdata = appleDevice.location()
+            self.logger.debug(f"{appleDevice['id']}  \nLocation Data Received: {locationdata}")
             devicestatus = appleDevice.status(additional=["deviceModel","batteryStatus"])
             deviceid = appleDevice['id']
 
@@ -1495,7 +1496,7 @@ class Plugin(indigo.PluginBase):
             if follow is not None:
                 if 'location' in follow:
                     if follow['location'] is not None:
-                        #self.logger.warn(f"{follow['location']}")
+                        #self.logger.error(f"{follow['location']}")
                         if 'address' in follow['location'] and follow['location']['address'] is not None:
                             if 'formattedAddressLines' in follow['location']['address'] and follow['location']['address']['formattedAddressLines'] is not None:
                                 address = ','.join(follow['location']['address']['formattedAddressLines'])
@@ -1643,15 +1644,25 @@ class Plugin(indigo.PluginBase):
                     address_city = ""
                     address_country = ""
                     address_hnumber = ""
+
                     url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={latitude}&lon={longitude}&zoom=18&addressdetails=1&email={username}"
-                    self.logger.debug(f"Using Noiminatime {url}")
-                    re = requests.get(url, timeout=10)
-                    if re.status_code==200:
-                        jn = json.loads(re.text)
+                    self.logger.debug(f"Using Nominatim {url}")
+
+                    headers = {
+                        "User-Agent": "IndigoPlugin/1.0 (contact: demo@indigo.net)",
+                        "Accept": "application/json"
+                    }
+
+                    re = requests.get(url, headers=headers, timeout=10)
+
+                    if re.status_code == 200:
+                        jn = re.json()  # simpler and safer than json.loads(re.text)
 
                         if 'address' in jn:
+                            self.logger.debug(f"OpenStreetMap Address: {jn['address']}")
                             jn_address = jn['address']
                             self.logger.debug(f"Results Nom {jn}")
+
                             if "house_number" in jn_address:
                                 address_hnumber = jn_address['house_number']
                             if 'suburb' in jn_address:
@@ -1666,19 +1677,21 @@ class Plugin(indigo.PluginBase):
                                 address_country = jn_address['country']
                             if 'display_name' in jn:
                                 address_display = jn['display_name']
+
                             stateList = [
-                                 {'key': 'address', 'value': f"{address_display}"},
-                                 {'key': 'address-road', 'value': f'{address_road}' },
-                                 {'key': 'address-city', 'value': f'{address_city}'},
-                                 {'key': 'address-country', 'value': f'{address_country}'},
-                                 {'key': 'address-suburb', 'value': f'{address_suburb}'},
+                                {'key': 'address', 'value': f"{address_display}"},
+                                {'key': 'address-road', 'value': f'{address_road}'},
+                                {'key': 'address-city', 'value': f'{address_city}'},
+                                {'key': 'address-country', 'value': f'{address_country}'},
+                                {'key': 'address-suburb', 'value': f'{address_suburb}'},
                                 {'key': 'address-number', 'value': f'{address_hnumber}'}
-                                ]
+                            ]
                             dev.updateStatesOnServer(stateList)
                     else:
-                        self.logger.debug("Error with Nominatim")
-                except:
-                    self.logger.debug(f"Error with Nominatim", exc_info=True)
+                        self.logger.error(f"Nominatim HTTP {re.status_code}: {re.text[:500]}")
+
+                except Exception:
+                    self.logger.exception("Error with Nominatim")
                     pass
 
                 return
