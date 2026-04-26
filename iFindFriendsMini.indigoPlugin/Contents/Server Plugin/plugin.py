@@ -42,7 +42,7 @@ except ImportError:
     pass
 
 import itertools
-
+import platform
 try:
     from pyicloud import PyiCloudService
     #from pyicloud.exceptions import PyiCloudFailedLoginException
@@ -262,22 +262,27 @@ class Plugin(indigo.PluginBase):
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.addHandler(self.indigo_log_handler)
 
-
+        self.pathtoPlugin = os.getcwd()
         self.startingUp = True
         self.appleAPI = None
         self.pluginIsInitializing = True
         self.pluginIsShuttingDown = False
         self.prefsUpdated = False
-        self.logger.info(u"")
-        self.logger.info(u"{0:=^130}".format(" Initializing New Plugin Session "))
-        self.logger.info(u"{0:<30} {1}".format("Plugin name:", pluginDisplayName))
-        self.logger.info(u"{0:<30} {1}".format("Plugin version:", pluginVersion))
-        self.logger.info(u"{0:<30} {1}".format("Plugin ID:", pluginId))
-        self.logger.info(u"{0:<30} {1}".format("Indigo version:", indigo.server.version))
-        self.logger.info(u"{0:<30} {1}".format("Python version:", sys.version.replace('\n', '')))
-        self.logger.info(u"{0:<30} {1}".format("Python Directory:", sys.prefix.replace('\n', '')))
-        self.logger.info(u"{0:<30} {1}".format("Major Problem equals: ", MajorProblem))
-        self.logger.info(u"{0:=^130}".format(""))
+        system_version, product_version, longer_name = self.get_macos_version()
+        self.logger.info("{0:=^130}".format(f" 🚀 Initializing New Plugin Session for Plugin: {pluginDisplayName} "))
+        self.logger.info("{0:<30} {1}".format("🔌 Plugin name:", pluginDisplayName))
+        self.logger.info("{0:<30} {1}".format("🏷 Plugin version:", pluginVersion))
+        self.logger.info("{0:<30} {1}".format("🆔 Plugin ID:", pluginId))
+        self.logger.info("{0:<30} {1}".format("🏠 Indigo version:", indigo.server.version))
+        for label, value in self.get_indigo_server_info():
+            self.logger.info("{0:<30} {1}".format(label, value))
+        self.logger.info("{0:<30} {1}".format("🍎 System version:", f"{system_version} {longer_name}".strip()))
+        self.logger.info("{0:<30} {1}".format("📦 Product version:", product_version))
+        self.logger.info("{0:<30} {1}".format("🧬 Silicon version:", str(platform.machine())))
+        self.logger.info("{0:<30} {1}".format("🐍 Python version:", sys.version.replace('\n', '')))
+        self.logger.info("{0:<30} {1}".format("📂 Python Directory:", sys.prefix.replace('\n', '')))
+        self.logger.info("{0:<30} {1}".format("📁 Install Path:", self.pathtoPlugin.replace('\n', '')))
+        self.logger.info("{0:=^130}".format(" End Initializing New Plugin "))
 
         self.iprefDirectory = '{}/Preferences/Plugins/com.GlennNZ.indigoplugin.FindFriendsMini'.format(indigo.server.getInstallFolderPath())
 
@@ -473,6 +478,101 @@ class Plugin(indigo.PluginBase):
 
 
         return True
+
+        ########################################
+
+    def get_macos_version(self):
+        """Return (system_version, product_version, marketing_name) for the host macOS.
+
+        Falls back to empty strings if anything goes wrong so init logging
+        never aborts plugin start-up.
+        """
+        try:
+            version, _, _ = platform.mac_ver()
+            longer_version = platform.platform()
+            longer_name = self.get_macos_marketing_name(version)
+            return version, longer_version, longer_name
+        except Exception:
+            self.logger.debug("get_macos_version exception:", exc_info=True)
+            return "", "", ""
+
+    def get_macos_marketing_name(self, version: str) -> str:
+        """Return the marketing name for a given macOS version number."""
+        versions = {
+            "10.0": "Cheetah",
+            "10.1": "Puma",
+            "10.2": "Jaguar",
+            "10.3": "Panther",
+            "10.4": "Tiger",
+            "10.5": "Leopard",
+            "10.6": "Snow Leopard",
+            "10.7": "Lion",
+            "10.8": "Mountain Lion",
+            "10.9": "Mavericks",
+            "10.10": "Yosemite",
+            "10.11": "El Capitan",
+            "10.12": "Sierra",
+            "10.13": "High Sierra",
+            "10.14": "Mojave",
+            "10.15": "Catalina",
+            # macOS 11+ uses a single major version number as the key.
+            "11": "Big Sur",
+            "12": "Monterey",
+            "13": "Ventura",
+            "14": "Sonoma",
+            "15": "Sequoia",
+            # Apple jumped to year-based numbering in 2025: macOS 26 = Tahoe.
+            "26": "Tahoe",
+        }
+        if not version:
+            return "Unknown macOS version"
+        try:
+            major_version_parts = version.split(".")
+            if int(major_version_parts[0]) >= 11:
+                major_version = major_version_parts[0]
+            else:
+                major_version = ".".join(major_version_parts[:2])
+        except (ValueError, IndexError):
+            return f"Unknown macOS version for {version}"
+        self.logger.debug(f"Major Version== {major_version}")
+        return versions.get(major_version, f"Unknown macOS version for {version}")
+
+        ########################################
+
+    def get_indigo_server_info(self):
+        """Return a list of (label, value) tuples describing the running Indigo server.
+
+        Each endpoint is probed defensively so a missing/changed API on a
+        given Indigo build never breaks plugin start-up — endpoints that
+        raise or return None are simply omitted. Centralised here so future
+        Indigo metadata can be added in one place.
+        """
+        rows = []
+        # Map of (emoji label, callable returning the value). Callables are
+        # used (rather than precomputed values) so each probe is wrapped in
+        # its own try/except below.
+        probes = [
+            #  ("🌐 Web server URL:", lambda: indigo.server.getWebServerURL()),
+            #  ("🔁 Reflector URL:", lambda: indigo.server.getReflectorURL()),
+            #   ("🗄 Database name:", lambda: indigo.server.getDbName()),
+            #   ("💾 Database file path:", lambda: indigo.server.getDbFilePath()),
+            ("⏰ API Version:", lambda: indigo.server.apiVersion),
+            ("🪪 License status:", lambda: indigo.server.licenseStatus),
+            #   ("📥 Install folder:", lambda: indigo.server.getInstallFolderPath()),
+            #   ("🪵 Logs folder:", lambda: indigo.server.getLogsFolderPath()),
+            #    ("💽 Database folder:", lambda: indigo.server.getDbFolderPath()),
+        ]
+        for label, getter in probes:
+            try:
+                value = getter()
+            except Exception:
+                # API not present on this Indigo build — skip silently.
+                self.logger.debug(f"Indigo server probe {label!r} unavailable", exc_info=True)
+                continue
+            if value is None or value == "":
+                continue
+            rows.append((label, value))
+        return rows
 
     def deviceStartComm(self, dev):
         """ docstring placeholder """
