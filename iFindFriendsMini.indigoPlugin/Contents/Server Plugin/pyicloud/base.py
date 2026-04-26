@@ -446,6 +446,19 @@ class PyiCloudService(object):
                             self.params.update({"dsid": self.data["dsInfo"]["dsid"]})
                 login_successful = True
                 LOGGER.debug("Session token validation succeeded.")
+                # If Apple's validate response confirms the browser/session is
+                # trusted and no challenge is required, ensure the sticky
+                # _2fa_required flag (set on a previous 409 hsa2) is cleared
+                # so requires_2fa stops claiming 2FA is still needed.
+                try:
+                    if (
+                        self.data.get("dsInfo", {}).get("hsaVersion", 0) == 2
+                        and not self.data.get("hsaChallengeRequired", False)
+                        and self.data.get("hsaTrustedBrowser", False)
+                    ):
+                        self._2fa_required = False
+                except Exception:
+                    pass
             except PyiCloudAPIResponseException:
                 LOGGER.debug("Invalid authentication token, will log in from scratch.")
 
@@ -1083,6 +1096,7 @@ class PyiCloudService(object):
             raise
 
         self.trust_session()
+        self._2fa_required = False
 
         return not self.requires_2sa
 
@@ -1132,6 +1146,12 @@ class PyiCloudService(object):
         LOGGER.info("Code verification successful.")
 
         self.trust_session()
+        # Clear the sticky 2FA-required flag set on the 409 hsa2 branch so
+        # requires_2fa stops returning True now that the code has been
+        # accepted and trust_session has refreshed self.data.
+        self._2fa_required = False
+        self._2fa_use_sms = False
+        self._2fa_sms_phone_id = None
         return not self.requires_2sa
 
     def trust_session(self):
