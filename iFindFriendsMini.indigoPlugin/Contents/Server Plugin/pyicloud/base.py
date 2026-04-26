@@ -596,6 +596,34 @@ class PyiCloudService(object):
             if complete_resp.status_code == 409:
                 LOGGER.info("Two Factor Authentication enabled for this Account.  Please enter Code and Press Button")
                 self._2fa_required = True
+
+                # Trigger Apple to push the 6-digit verification code popup
+                # to all trusted devices. Apple does NOT push the code
+                # automatically after signin/complete returns 409 hsa2 — the
+                # client must follow up with a GET to /appleauth/auth
+                # (carrying the same scnt + X-Apple-ID-Session-Id headers).
+                # That GET is what Apple interprets as "client is waiting for
+                # 2FA" and dispatches the push fan-out. Reference:
+                # gcobb321/icloud3_v3 apple_acct.py (is_session_trusted_auth_check).
+                try:
+                    auth_url = "%s/auth" % self.AUTH_ENDPOINT
+                    auth_headers = self._get_auth_headers({"Accept": "application/json"})
+                    auth_headers["Origin"] = "https://idmsa.apple.com"
+                    auth_headers["Referer"] = "https://idmsa.apple.com/"
+                    if self.session_data.get("scnt"):
+                        auth_headers["scnt"] = self.session_data.get("scnt")
+                    if self.session_data.get("session_id"):
+                        auth_headers["X-Apple-ID-Session-Id"] = self.session_data.get("session_id")
+                    LOGGER.debug("Triggering 2FA device push: GET %s" % auth_url)
+                    push_resp = self.session.get(auth_url, headers=auth_headers)
+                    LOGGER.debug("2FA device push trigger returned (status=%s)" % push_resp.status_code)
+                    if push_resp.status_code in (200, 409):
+                        LOGGER.info("Verification code pushed to trusted devices.")
+                    else:
+                        LOGGER.info("Trusted Device push request returned %s; the code may not appear on devices." % push_resp.status_code)
+                except Exception as push_err:
+                    LOGGER.debug("Exception triggering 2FA device push: %s" % push_err)
+
                 return
                 #Dont validate token and dont try to assign webservices which can be none
             elif complete_resp.status_code == 200:
