@@ -254,6 +254,9 @@ class PyiCloudService(object):
         self.WIDGET_KEY = "d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d"
         self.user = {"accountName": apple_id, "password": password}
         self.data = {}
+        # Set when signin/complete returns 409 (hsa2 challenge); read by requires_2fa
+        # so callers see the correct state even though self.data has not been populated yet.
+        self._2fa_required = False
         self.client_id = client_id or ("auth-%s" % str(uuid1()).lower())
 
         self.params = {
@@ -575,11 +578,13 @@ class PyiCloudService(object):
             LOGGER.debug(f"Complete Headers: \n\n{complete_resp.headers}\n\n")
             if complete_resp.status_code == 409:
                 LOGGER.info("Two Factor Authentication enabled for this Account.  Please enter Code and Press Button")
+                self._2fa_required = True
                 return
                 #Dont validate token and dont try to assign webservices which can be none
             elif complete_resp.status_code == 200:
                 LOGGER.info("Account Successfully logged in.")
                 login_successful = True
+                self._2fa_required = False
                 if 'dsInfo' in self.data and 'dsid' in self.data['dsInfo']:
                     self.params.update({"dsid": self.data["dsInfo"]["dsid"]})
                 self._authenticate_with_token()
@@ -911,6 +916,11 @@ class PyiCloudService(object):
     @property
     def requires_2fa(self):
         """Returns True if two-factor authentication is required."""
+
+        # If signin/complete returned 409 (hsa2 challenge), self.data is empty
+        # at this point but 2FA is definitely required.
+        if getattr(self, "_2fa_required", False):
+            return True
 
         return self.data.get("dsInfo",{}).get("hsaVersion", 0) == 2 and (
             self.data.get("hsaChallengeRequired", False) or not self.is_trusted_session
