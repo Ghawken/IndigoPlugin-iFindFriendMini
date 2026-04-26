@@ -305,7 +305,16 @@ class PyiCloudService(object):
         self.session.headers.update({
             'Origin': self.HOME_ENDPOINT,
             'Referer': '%s/' % self.HOME_ENDPOINT,
-            'User-Agent': 'Opera/9.52 (X11; Linux i686; U; en)'
+            # Use a modern, realistic User-Agent. Apple's HSA2 server silently
+            # suppresses the trusted-device verification-code push when the
+            # client looks suspicious (the SRP exchange still returns 409
+            # hsa2, but no code is delivered). Match the User-Agent used by
+            # upstream pyicloud_ipd, which is known to receive code pushes.
+            'User-Agent': (
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/138.0.0.0 Safari/537.36'
+            )
         })
 
         cookiejar_path = self.cookiejar_path
@@ -450,6 +459,14 @@ class PyiCloudService(object):
 
         if not login_successful:
             headers = self._get_auth_headers()
+            # Apple's auth endpoint expects Origin/Referer pointing at
+            # idmsa.apple.com (not www.icloud.com which is the session
+            # default). Mismatched origins on /signin/init and
+            # /signin/complete cause Apple's HSA2 system to suppress the
+            # verification-code push to trusted devices. Match upstream
+            # pyicloud_ipd here.
+            headers["Origin"] = "https://idmsa.apple.com"
+            headers["Referer"] = "https://idmsa.apple.com/"
             if self.session_data.get("scnt"):
                 headers["scnt"] = self.session_data.get("scnt")
             if self.session_data.get("session_id"):
@@ -976,6 +993,10 @@ class PyiCloudService(object):
         data = {"securityCode": {"code": code}}
 
         headers = self._get_auth_headers({"Accept": "application/json"})
+        # Match the Origin/Referer used during the SRP signin flow so Apple
+        # treats this as the same client that requested the code.
+        headers["Origin"] = "https://idmsa.apple.com"
+        headers["Referer"] = "https://idmsa.apple.com/"
 
         if self.session_data.get("scnt"):
             headers["scnt"] = self.session_data.get("scnt")
