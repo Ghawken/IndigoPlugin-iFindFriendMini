@@ -156,7 +156,8 @@ class PyiCloudSession(Session):
             self._raise_error(response.status_code, response.reason)
 
         if content_type not in json_mimetypes:
-            LOGGER.debug("Response:2:"+str(response))
+            LOGGER.debug("Response:2: status=%s ok=%s url=%s content_type=%s" % (
+                response.status_code, response.ok, response.url, content_type))
             LOGGER.debug(f"Response Headers {response.headers}")
             return response
 
@@ -187,7 +188,8 @@ class PyiCloudSession(Session):
             if reason:
                 self._raise_error(code, reason)
 
-        LOGGER.debug("Response:1:" + str(response))
+        LOGGER.debug("Response:1: status=%s ok=%s url=%s" % (
+            response.status_code, response.ok, response.url))
         return response
 
     def _raise_error(self, code, reason):
@@ -252,6 +254,15 @@ class PyiCloudService(object):
         self.WIDGET_KEY = "d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d"
         self.user = {"accountName": apple_id, "password": password}
         self.data = {}
+        # Set when signin/complete returns 409 (hsa2 challenge); read by requires_2fa
+        # so callers see the correct state even though self.data has not been populated yet.
+        self._2fa_required = False
+        # When the 2FA challenge is delivered via SMS rather than a trusted-device
+        # popup, validate_2fa_code must POST to /verify/phone/securitycode instead
+        # of /verify/trusteddevice/securitycode. _2fa_sms_phone_id stores the phone
+        # number id (from trustedPhoneNumbers[].id) to validate against.
+        self._2fa_use_sms = False
+        self._2fa_sms_phone_id = None
         self.client_id = client_id or ("auth-%s" % str(uuid1()).lower())
 
         self.params = {
@@ -300,7 +311,16 @@ class PyiCloudService(object):
         self.session.headers.update({
             'Origin': self.HOME_ENDPOINT,
             'Referer': '%s/' % self.HOME_ENDPOINT,
-            'User-Agent': 'Opera/9.52 (X11; Linux i686; U; en)'
+            # Use a modern, realistic User-Agent. Apple's HSA2 server silently
+            # suppresses the trusted-device verification-code push when the
+            # client looks suspicious (the SRP exchange still returns 409
+            # hsa2, but no code is delivered). Match the User-Agent used by
+            # upstream pyicloud_ipd, which is known to receive code pushes.
+            'User-Agent': (
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/138.0.0.0 Safari/537.36'
+            )
         })
 
         cookiejar_path = self.cookiejar_path
@@ -425,6 +445,20 @@ class PyiCloudService(object):
                         if 'dsid' in self.params:  # already checked above, but recheck
                             self.params.update({"dsid": self.data["dsInfo"]["dsid"]})
                 login_successful = True
+                LOGGER.debug("Session token validation succeeded.")
+                # If Apple's validate response confirms the browser/session is
+                # trusted and no challenge is required, ensure the sticky
+                # _2fa_required flag (set on a previous 409 hsa2) is cleared
+                # so requires_2fa stops claiming 2FA is still needed.
+                try:
+                    if (
+                        self.data.get("dsInfo", {}).get("hsaVersion", 0) == 2
+                        and not self.data.get("hsaChallengeRequired", False)
+                        and self.data.get("hsaTrustedBrowser", False)
+                    ):
+                        self._2fa_required = False
+                except Exception:
+                    pass
             except PyiCloudAPIResponseException:
                 LOGGER.debug("Invalid authentication token, will log in from scratch.")
 
@@ -444,6 +478,14 @@ class PyiCloudService(object):
 
         if not login_successful:
             headers = self._get_auth_headers()
+            # Apple's auth endpoint expects Origin/Referer pointing at
+            # idmsa.apple.com (not www.icloud.com which is the session
+            # default). Mismatched origins on /signin/init and
+            # /signin/complete cause Apple's HSA2 system to suppress the
+            # verification-code push to trusted devices. Match upstream
+            # pyicloud_ipd here.
+            headers["Origin"] = "https://idmsa.apple.com"
+            headers["Referer"] = "https://idmsa.apple.com/"
             if self.session_data.get("scnt"):
                 headers["scnt"] = self.session_data.get("scnt")
             if self.session_data.get("session_id"):
@@ -496,9 +538,11 @@ class PyiCloudService(object):
             try:
                 init_resp = self.session.post(init_url, data=json.dumps(init_data), headers=headers)
                 #init_resp.raise_for_status()
+                LOGGER.debug("SRP init request returned (status=%s)" % init_resp.status_code)
 
             except PyiCloudAPIResponseException as e:
                 msg = f"SRP init failed: {e}"
+                LOGGER.debug(msg)
                 raise PyiCloudFailedLoginException(msg, e) from e
 
             init_resp_data = init_resp.json()
@@ -551,6 +595,7 @@ class PyiCloudService(object):
             # Send 'm1' to the server
 
             try:
+                LOGGER.debug("Posting SRP signin/complete...")
                 complete_resp = self.session.post(
                     "%s/signin/complete" % self.AUTH_ENDPOINT,
                     params={"isRememberMeEnabled": "true"},
@@ -558,21 +603,116 @@ class PyiCloudService(object):
                     headers=headers,
                 )
             except PyiCloudAPIResponseException as error:
-                LOGGER.debug("Complete failed")
+                LOGGER.debug("SRP signin/complete failed: %s" % error)
                 msg = "Invalid username/password combination."
                 raise PyiCloudFailedLoginException(msg, error) from error
 
+            LOGGER.debug("SRP signin/complete returned (status=%s)" % complete_resp.status_code)
             complete_resp_data = complete_resp.json()
 
             LOGGER.debug(f"{complete_resp_data}")
             LOGGER.debug(f"Complete Headers: \n\n{complete_resp.headers}\n\n")
             if complete_resp.status_code == 409:
                 LOGGER.info("Two Factor Authentication enabled for this Account.  Please enter Code and Press Button")
+                self._2fa_required = True
+
+                # Trigger Apple to push the 6-digit verification code popup
+                # to all trusted devices. Apple does NOT push the code
+                # automatically after signin/complete returns 409 hsa2 — the
+                # client must follow up with a GET to /appleauth/auth
+                # (carrying the same scnt + X-Apple-ID-Session-Id headers).
+                # That GET is what Apple interprets as "client is waiting for
+                # 2FA" and dispatches the push fan-out. Reference:
+                # gcobb321/icloud3_v3 apple_acct.py (is_session_trusted_auth_check).
+                try:
+                    auth_url = "%s/auth" % self.AUTH_ENDPOINT
+                    auth_headers = self._get_auth_headers({"Accept": "application/json"})
+                    auth_headers["Origin"] = "https://idmsa.apple.com"
+                    auth_headers["Referer"] = "https://idmsa.apple.com/"
+                    if self.session_data.get("scnt"):
+                        auth_headers["scnt"] = self.session_data.get("scnt")
+                    if self.session_data.get("session_id"):
+                        auth_headers["X-Apple-ID-Session-Id"] = self.session_data.get("session_id")
+                    LOGGER.debug("Triggering 2FA device push: GET %s" % auth_url)
+                    push_resp = self.session.get(auth_url, headers=auth_headers)
+                    LOGGER.debug("2FA device push trigger returned (status=%s)" % push_resp.status_code)
+                    if push_resp.status_code in (200, 409):
+                        # Parse the response to see what verification channels are
+                        # actually available. Modern Apple ID accounts often only
+                        # expose trustedPhoneNumbers (SMS) here — no trustedDevices
+                        # popup will appear in that case, so we must explicitly
+                        # request the SMS code be sent to the trusted phone.
+                        try:
+                            auth_data = push_resp.json()
+                        except Exception:
+                            auth_data = {}
+
+                        trusted_devices = auth_data.get("trustedDevices") or []
+                        phone_block = auth_data.get("phoneNumberVerification") or auth_data
+                        trusted_phones = phone_block.get("trustedPhoneNumbers") or []
+
+                        if trusted_devices:
+                            # Apple should be pushing the popup to trusted devices
+                            # via APNS — nothing else to do here.
+                            LOGGER.info("Verification code pushed to trusted devices.")
+                        elif trusted_phones:
+                            # No trusted device popup channel — this account is in
+                            # SMS-only 2FA state for this flow. Request the SMS by
+                            # calling PUT /appleauth/auth/verify/phone, mirroring
+                            # gcobb321/icloud3_v3 (request_auth_code_via_text_msg).
+                            phone_id = trusted_phones[0].get("id", 1)
+                            obfuscated = trusted_phones[0].get(
+                                "numberWithDialCode",
+                                trusted_phones[0].get("obfuscatedNumber", "trusted phone"),
+                            )
+                            sms_headers = self._get_auth_headers({"Accept": "application/json"})
+                            sms_headers["Origin"] = "https://idmsa.apple.com"
+                            sms_headers["Referer"] = "https://idmsa.apple.com/"
+                            if self.session_data.get("scnt"):
+                                sms_headers["scnt"] = self.session_data.get("scnt")
+                            if self.session_data.get("session_id"):
+                                sms_headers["X-Apple-ID-Session-Id"] = self.session_data.get("session_id")
+                            sms_url = "%s/verify/phone" % self.AUTH_ENDPOINT
+                            sms_body = {"phoneNumber": {"id": phone_id}, "mode": "sms"}
+                            try:
+                                sms_resp = self.session.put(
+                                    sms_url, data=json.dumps(sms_body), headers=sms_headers
+                                )
+                                LOGGER.debug(
+                                    "SMS request PUT %s returned status=%s"
+                                    % (sms_url, sms_resp.status_code)
+                                )
+                                if sms_resp.status_code in (200, 204):
+                                    self._2fa_use_sms = True
+                                    self._2fa_sms_phone_id = phone_id
+                                    LOGGER.info(
+                                        "Verification code sent via SMS to %s. "
+                                        "Enter the code in the Plugin Config."
+                                        % obfuscated
+                                    )
+                                else:
+                                    LOGGER.info(
+                                        "SMS verification request returned %s; "
+                                        "the code may not arrive." % sms_resp.status_code
+                                    )
+                            except Exception as sms_err:
+                                LOGGER.debug("Exception requesting SMS code: %s" % sms_err)
+                        else:
+                            LOGGER.info(
+                                "No trusted devices or phone numbers reported by Apple; "
+                                "the verification code may not appear automatically."
+                            )
+                    else:
+                        LOGGER.info("Trusted Device push request returned %s; the code may not appear on devices." % push_resp.status_code)
+                except Exception as push_err:
+                    LOGGER.debug("Exception triggering 2FA device push: %s" % push_err)
+
                 return
                 #Dont validate token and dont try to assign webservices which can be none
             elif complete_resp.status_code == 200:
                 LOGGER.info("Account Successfully logged in.")
                 login_successful = True
+                self._2fa_required = False
                 if 'dsInfo' in self.data and 'dsid' in self.data['dsInfo']:
                     self.params.update({"dsid": self.data["dsInfo"]["dsid"]})
                 self._authenticate_with_token()
@@ -838,9 +978,11 @@ class PyiCloudService(object):
                 "%s/accountLogin?clientBuildNumber=2426&Hotfix45Project52&clientMasteringNumber=2021B29&clientId=%s" % (self.SETUP_ENDPOINT, self.client_id[5:]), data=json.dumps(data)
             )
         except PyiCloudAPIResponseException as error:
+            LOGGER.debug("/accountLogin failed during token authentication: %s" % error)
             msg = "Invalid authentication token."
             raise PyiCloudFailedLoginException(msg, error)
 
+        LOGGER.debug("/accountLogin returned (status=%s) during token authentication." % req.status_code)
         self.data = req.json()
         self._update_dsid(self.data)
 
@@ -903,6 +1045,11 @@ class PyiCloudService(object):
     def requires_2fa(self):
         """Returns True if two-factor authentication is required."""
 
+        # If signin/complete returned 409 (hsa2 challenge), self.data is empty
+        # at this point but 2FA is definitely required.
+        if getattr(self, "_2fa_required", False):
+            return True
+
         return self.data.get("dsInfo",{}).get("hsaVersion", 0) == 2 and (
             self.data.get("hsaChallengeRequired", False) or not self.is_trusted_session
         )
@@ -949,14 +1096,31 @@ class PyiCloudService(object):
             raise
 
         self.trust_session()
+        self._2fa_required = False
 
         return not self.requires_2sa
 
     def validate_2fa_code(self, code):
         """Verifies a verification code received via Apple's 2FA system (HSA2)."""
-        data = {"securityCode": {"code": code}}
+        # When the code was delivered via SMS (no trusted device popup was
+        # available), the validation endpoint and payload differ.
+        if getattr(self, "_2fa_use_sms", False):
+            phone_id = self._2fa_sms_phone_id or 1
+            data = {
+                "phoneNumber": {"id": phone_id},
+                "securityCode": {"code": code},
+                "mode": "sms",
+            }
+            verify_url = "%s/verify/phone/securitycode" % self.AUTH_ENDPOINT
+        else:
+            data = {"securityCode": {"code": code}}
+            verify_url = "%s/verify/trusteddevice/securitycode" % self.AUTH_ENDPOINT
 
         headers = self._get_auth_headers({"Accept": "application/json"})
+        # Match the Origin/Referer used during the SRP signin flow so Apple
+        # treats this as the same client that requested the code.
+        headers["Origin"] = "https://idmsa.apple.com"
+        headers["Referer"] = "https://idmsa.apple.com/"
 
         if self.session_data.get("scnt"):
             headers["scnt"] = self.session_data.get("scnt")
@@ -968,7 +1132,7 @@ class PyiCloudService(object):
 
         try:
             self.session.post(
-                "%s/verify/trusteddevice/securitycode" % self.AUTH_ENDPOINT,
+                verify_url,
                 data=json.dumps(data),
                 headers=headers,
             )
@@ -982,6 +1146,12 @@ class PyiCloudService(object):
         LOGGER.info("Code verification successful.")
 
         self.trust_session()
+        # Clear the sticky 2FA-required flag set on the 409 hsa2 branch so
+        # requires_2fa stops returning True now that the code has been
+        # accepted and trust_session has refreshed self.data.
+        self._2fa_required = False
+        self._2fa_use_sms = False
+        self._2fa_sms_phone_id = None
         return not self.requires_2sa
 
     def trust_session(self):
