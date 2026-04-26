@@ -156,7 +156,8 @@ class PyiCloudSession(Session):
             self._raise_error(response.status_code, response.reason)
 
         if content_type not in json_mimetypes:
-            LOGGER.debug("Response:2:"+str(response))
+            LOGGER.debug("Response:2: status=%s ok=%s url=%s content_type=%s" % (
+                response.status_code, response.ok, response.url, content_type))
             LOGGER.debug(f"Response Headers {response.headers}")
             return response
 
@@ -187,7 +188,8 @@ class PyiCloudSession(Session):
             if reason:
                 self._raise_error(code, reason)
 
-        LOGGER.debug("Response:1:" + str(response))
+        LOGGER.debug("Response:1: status=%s ok=%s url=%s" % (
+            response.status_code, response.ok, response.url))
         return response
 
     def _raise_error(self, code, reason):
@@ -425,6 +427,7 @@ class PyiCloudService(object):
                         if 'dsid' in self.params:  # already checked above, but recheck
                             self.params.update({"dsid": self.data["dsInfo"]["dsid"]})
                 login_successful = True
+                LOGGER.debug("Session token validation succeeded.")
             except PyiCloudAPIResponseException:
                 LOGGER.debug("Invalid authentication token, will log in from scratch.")
 
@@ -496,9 +499,11 @@ class PyiCloudService(object):
             try:
                 init_resp = self.session.post(init_url, data=json.dumps(init_data), headers=headers)
                 #init_resp.raise_for_status()
+                LOGGER.debug("SRP init request returned (status=%s)" % init_resp.status_code)
 
             except PyiCloudAPIResponseException as e:
                 msg = f"SRP init failed: {e}"
+                LOGGER.debug(msg)
                 raise PyiCloudFailedLoginException(msg, e) from e
 
             init_resp_data = init_resp.json()
@@ -551,6 +556,7 @@ class PyiCloudService(object):
             # Send 'm1' to the server
 
             try:
+                LOGGER.debug("Posting SRP signin/complete...")
                 complete_resp = self.session.post(
                     "%s/signin/complete" % self.AUTH_ENDPOINT,
                     params={"isRememberMeEnabled": "true"},
@@ -558,10 +564,11 @@ class PyiCloudService(object):
                     headers=headers,
                 )
             except PyiCloudAPIResponseException as error:
-                LOGGER.debug("Complete failed")
+                LOGGER.debug("SRP signin/complete failed: %s" % error)
                 msg = "Invalid username/password combination."
                 raise PyiCloudFailedLoginException(msg, error) from error
 
+            LOGGER.debug("SRP signin/complete returned (status=%s)" % complete_resp.status_code)
             complete_resp_data = complete_resp.json()
 
             LOGGER.debug(f"{complete_resp_data}")
@@ -838,9 +845,11 @@ class PyiCloudService(object):
                 "%s/accountLogin?clientBuildNumber=2426&Hotfix45Project52&clientMasteringNumber=2021B29&clientId=%s" % (self.SETUP_ENDPOINT, self.client_id[5:]), data=json.dumps(data)
             )
         except PyiCloudAPIResponseException as error:
+            LOGGER.debug("/accountLogin failed during token authentication: %s" % error)
             msg = "Invalid authentication token."
             raise PyiCloudFailedLoginException(msg, error)
 
+        LOGGER.debug("/accountLogin returned (status=%s) during token authentication." % req.status_code)
         self.data = req.json()
         self._update_dsid(self.data)
 
