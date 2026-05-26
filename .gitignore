@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
+/iFindFriendsMini.indigoPlugin/.idea/
+/iFindFriendsMini.indigoPlugin/Contents/Packages/
