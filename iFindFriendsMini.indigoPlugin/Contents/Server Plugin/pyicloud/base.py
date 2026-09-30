@@ -33,6 +33,7 @@ from pyicloud.exceptions import (
     PyiCloudAPIResponseException,
     PyiCloud2SARequiredException,
     PyiCloudServiceNotActivatedException,
+    PyiCloudAcceptTermsException,
 )
 from pyicloud.services import (
     FindMyiPhoneServiceManager,
@@ -247,6 +248,7 @@ class PyiCloudService(object):
         verify=True,
         client_id=None,
         with_family=True,
+        accept_terms=False,
     ):
         if password is None:
             password = get_password_from_keyring(apple_id)
@@ -254,6 +256,14 @@ class PyiCloudService(object):
         self.WIDGET_KEY = "d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d"
         self.user = {"accountName": apple_id, "password": password}
         self.data = {}
+        # Map of webservice name -> {"url": ..., "status": ...} as advertised by
+        # Apple in the /accountLogin (or /validate) response. Always a dict so
+        # _get_webservice_url never trips over a missing attribute.
+        self._webservices = {}
+        # When True, an updated iCloud Terms of Use gate (termsUpdateNeeded in the
+        # /accountLogin response) is accepted automatically. Otherwise
+        # PyiCloudAcceptTermsException is raised so the user can accept them.
+        self.accept_terms = accept_terms
         # Set when signin/complete returns 409 (hsa2 challenge); read by requires_2fa
         # so callers see the correct state even though self.data has not been populated yet.
         self._2fa_required = False
@@ -720,7 +730,7 @@ class PyiCloudService(object):
                 LOGGER.debug(f"{complete_resp.status_code}  Returned from Authenticate Complete Call")
 
         if login_successful:
-            self._webservices = self.data["webservices"]
+            self._update_webservices()
             LOGGER.debug("Authentication completed successfully")
         else:
             LOGGER.info("Login was not successful.  Please check username and password combination.")
@@ -974,9 +984,7 @@ class PyiCloudService(object):
         LOGGER.debug("************ Headers for _authenicate with Token /accountLogin Session ***************")
         LOGGER.debug(str(self.session.headers))
         try:
-            req = self.session.post(
-                "%s/accountLogin?clientBuildNumber=2426&Hotfix45Project52&clientMasteringNumber=2021B29&clientId=%s" % (self.SETUP_ENDPOINT, self.client_id[5:]), data=json.dumps(data)
-            )
+            req = self.session.post(self._account_login_url(), data=json.dumps(data))
         except PyiCloudAPIResponseException as error:
             LOGGER.debug("/accountLogin failed during token authentication: %s" % error)
             msg = "Invalid authentication token."
@@ -984,7 +992,92 @@ class PyiCloudService(object):
 
         LOGGER.debug("/accountLogin returned (status=%s) during token authentication." % req.status_code)
         self.data = req.json()
+        # Apple periodically publishes updated iCloud Terms of Use. Until they are
+        # accepted /accountLogin still succeeds but answers termsUpdateNeeded=True
+        # with a reduced webservices map that has no "findme" entry, so Find My
+        # would fail with a None service root.
+        self._handle_accept_terms(data)
         self._update_dsid(self.data)
+        # /accountLogin returns a fresh webservices map. This method is also reached
+        # via trust_session() straight after 2FA, which previously never refreshed
+        # _webservices and left the Find My service root unresolved.
+        self._update_webservices()
+        if not self.is_trusted_session:
+            LOGGER.info("Apple reports this session is not yet trusted. Find My is unavailable until two factor authentication is completed via Plugin Config.")
+
+    def _account_login_url(self):
+        """URL for the setup /accountLogin call (shared by token auth and terms acceptance)."""
+        return "%s/accountLogin?clientBuildNumber=2426&Hotfix45Project52&clientMasteringNumber=2021B29&clientId=%s" % (
+            self.SETUP_ENDPOINT, self.client_id[5:])
+
+    def _handle_accept_terms(self, login_data):
+        """Handle Apple's updated iCloud Terms of Use gate on /accountLogin.
+
+        Mirrors upstream pyicloud (timlaing) _handle_accept_terms: fetch the
+        current terms version via /getTerms, acknowledge it via /repairDone and
+        then repeat /accountLogin so the full webservices map is returned.
+        """
+        if not isinstance(self.data, dict) or not self.data.get("termsUpdateNeeded"):
+            return
+        if not self.accept_terms:
+            LOGGER.info("Apple requires the updated iCloud Terms of Use to be accepted for this account before Find My can be used.")
+            LOGGER.info("Accept them on an iPhone/iPad/Mac signed into this account (or at https://www.icloud.com), then press Login again in Plugin Config.")
+            LOGGER.info("Alternatively enable 'Automatically accept updated Apple iCloud Terms of Use' in Plugin Config and Login again.")
+            raise PyiCloudAcceptTermsException("Updated iCloud Terms of Use must be accepted before Find My can be used.")
+
+        LOGGER.info("Apple requires the updated iCloud Terms of Use to be accepted. Accepting them now as configured in Plugin Config...")
+        try:
+            locale = self.data.get("dsInfo", {}).get("languageCode", "en_US")
+            resp = self.session.get(
+                "%s/getTerms" % self.SETUP_ENDPOINT,
+                params=self.params,
+                json={"locale": locale},
+            )
+            version = resp.json().get("iCloudTerms", {}).get("version")
+            if version is None:
+                raise PyiCloudAcceptTermsException("Could not determine the iCloud Terms of Use version to accept.")
+            self.session.get(
+                "%s/repairDone" % self.SETUP_ENDPOINT,
+                params=self.params,
+                json={"acceptedICloudTerms": version},
+            )
+            req = self.session.post(self._account_login_url(), data=json.dumps(login_data))
+            self.data = req.json()
+        except PyiCloudAcceptTermsException:
+            raise
+        except Exception as error:
+            LOGGER.debug("Accepting iCloud Terms of Use failed: %s" % error, exc_info=True)
+            raise PyiCloudAcceptTermsException("Accepting the updated iCloud Terms of Use failed: %s" % error)
+        if self.data.get("termsUpdateNeeded"):
+            raise PyiCloudAcceptTermsException("Apple still reports the iCloud Terms of Use need accepting after acceptance was sent.")
+        LOGGER.info("Updated iCloud Terms of Use accepted (version %s)." % version)
+
+    def _update_webservices(self):
+        """Refresh the webservice map from self.data and log what Apple offered."""
+        webservices = self.data.get("webservices") if isinstance(self.data, dict) else None
+        if not isinstance(webservices, dict):
+            LOGGER.debug("No webservices map in Apple response. Keys returned: %s" % (
+                sorted(self.data.keys()) if isinstance(self.data, dict) else type(self.data)))
+            return
+        self._webservices = webservices
+        LOGGER.debug("Webservices advertised by Apple: %s" % sorted(webservices.keys()))
+        if self._get_webservice_url("findme") is None:
+            LOGGER.info("Apple did not offer the Find My (findme) webservice for this session. termsUpdateNeeded=%s trustedSession=%s advertised=%s" % (
+                self.data.get("termsUpdateNeeded", False), self.is_trusted_session, sorted(webservices.keys())))
+
+    def _findme_unavailable_reason(self):
+        """Human readable explanation for a missing Find My service root."""
+        advertised = sorted(self._webservices.keys()) if isinstance(self._webservices, dict) else []
+        if self.data.get("termsUpdateNeeded"):
+            hint = "Apple requires the updated iCloud Terms of Use to be accepted."
+        elif not self.is_trusted_session:
+            hint = "The session is not trusted. Complete two factor authentication in Plugin Config."
+        elif not advertised:
+            hint = "Apple returned no webservices. Use Delete Account then Login again in Plugin Config."
+        else:
+            hint = ("Apple did not offer Find My for this account. Check Find My is enabled and, if Advanced Data "
+                    "Protection is on, that 'Access iCloud Data on the Web' is enabled.")
+        return "Find My (findme) webservice is not available. %s Services advertised by Apple: %s" % (hint, advertised)
 
     def _update_dsid(self,data):
         try:
@@ -1180,19 +1273,28 @@ class PyiCloudService(object):
             return False
 
     def _get_webservice_url(self, ws_key):
-        """Get webservice URL, raise an exception if not exists."""
+        """Get webservice URL, or None if Apple did not advertise a usable one."""
         try:
-            if self._webservices.get(ws_key) is None:
-               return None
-            return self._webservices[ws_key]["url"]
-        except:
-            LOGGER.debug("Exception Ignored getting webservice url")
+            entry = self._webservices.get(ws_key)
+            if not isinstance(entry, dict):
+                return None
+            url = entry.get("url")
+            # Apple sometimes advertises a service as an empty object, or with a
+            # blank url. Treat both as unavailable rather than building "None/..." URLs.
+            if not isinstance(url, str) or not url.strip():
+                LOGGER.debug("Webservice %s advertised without a usable url: %s" % (ws_key, entry))
+                return None
+            return url
+        except Exception:
+            LOGGER.debug("Exception ignored getting webservice url for %s" % ws_key, exc_info=True)
             return None
 
     @property
     def devices(self):
         """Returns all devices."""
         service_root = self._get_webservice_url("findme")
+        if not service_root:
+            raise PyiCloudServiceNotActivatedException(self._findme_unavailable_reason(), "findme")
         return FindMyiPhoneServiceManager(
             service_root, self.session, self.params, self.with_family
         )
@@ -1222,6 +1324,8 @@ class PyiCloudService(object):
     @property
     def friends(self):
         service_root = self._get_webservice_url("findme")
+        if not service_root:
+            raise PyiCloudServiceNotActivatedException(self._findme_unavailable_reason(), "findme")
         return FindMyiPhoneServiceManager(service_root, self.session, self.params)
         #return FindFriendsService(service_root, self.session, self.params)
 

@@ -35,6 +35,11 @@
         <Label/>
         <Description>Use Two Factor Authenication Enabled Account?</Description>
         </Field>
+        <Field id="acceptTerms" type="checkbox" default="False"
+               tooltip="Apple periodically publishes updated iCloud Terms of Use. Until accepted, Apple hides Find My from this plugin. Enable to have the plugin accept them for this account automatically.">
+        <Label/>
+        <Description>Automatically accept updated Apple iCloud Terms of Use?</Description>
+        </Field>
         <Field id="loginDevice"
 				   type="button"
 				   tooltip="Click on this Access Account"

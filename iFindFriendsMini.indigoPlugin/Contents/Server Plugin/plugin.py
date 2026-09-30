@@ -53,6 +53,7 @@ try:
         PyiCloudNoDevicesException,
         PyiCloud2SARequiredException,
         PyiCloudServiceNotActivatedException,
+        PyiCloudAcceptTermsException,
     )
 # try:
 #     from custompyicloud.custompyicloud import PyiCloudService
@@ -967,6 +968,18 @@ class Plugin(indigo.PluginBase):
 
             return
 
+        except PyiCloudServiceNotActivatedException as e:
+            self.logger.info(u"{0:=^130}".format(""))
+            self.logger.info(u'Find My data unavailable: ' + str(e.reason))
+            self.logger.info(u"{0:=^130}".format(""))
+            return
+
+        except PyiCloudAcceptTermsException as e:
+            self.logger.info(u"{0:=^130}".format(""))
+            self.logger.info(u'Apple requires the updated iCloud Terms of Use to be accepted before Find My can be used. ' + str(e))
+            self.logger.info(u"{0:=^130}".format(""))
+            return
+
         except PyiCloudAPIResponseException as e:
             self.logger.debug(u'Login Failed API Response Error.   ' + str(e) + str(e.__dict__))
             if e.code in [450,421,500]:
@@ -1879,7 +1892,8 @@ class Plugin(indigo.PluginBase):
         # Logs into the API as required
         try:
             if self.appleAPI == None:
-                self.appleAPI = PyiCloudService(iUsername, iPassword, cookie_directory=self.iprefDirectory, session_directory=self.iprefDirectory+"/session", verify=True)
+                self.appleAPI = PyiCloudService(iUsername, iPassword, cookie_directory=self.iprefDirectory, session_directory=self.iprefDirectory+"/session", verify=True,
+                                                accept_terms=bool(self.pluginPrefs.get("acceptTerms", False)))
                 self.logger.debug(u"PyiCloudService start or redo FULL self.appleAPI full login...")
                 self.logger.debug(u'Login to account successful...')
                 self.logger.debug(u"Account Requires 2FA:")
@@ -1959,6 +1973,13 @@ class Plugin(indigo.PluginBase):
             self.appleAPI = None
             self.allDevicesOffline()
             self.triggerCheck2fa()
+            return 1, 'NL'
+
+        except PyiCloudAcceptTermsException as e:
+            self.logger.warn(u"{0:=^130}".format(""))
+            self.logger.warn(u'Login halted: Apple requires the updated iCloud Terms of Use to be accepted. ' + str(e))
+            self.logger.warn(u"{0:=^130}".format(""))
+            self.allDevicesOffline()
             return 1, 'NL'
 
         except ValueError as e:
@@ -2050,7 +2071,19 @@ class Plugin(indigo.PluginBase):
             self.logger.warn("Please enter code")
             return
 
-        validcode = self.appleAPI.validate_2fa_code(vercode)
+        if self.appleAPI is None:
+            self.logger.warn("Please press Login iCloud Account first, then submit the code.")
+            return valuesDict
+
+        try:
+            validcode = self.appleAPI.validate_2fa_code(vercode)
+        except PyiCloudAcceptTermsException as e:
+            self.logger.warn("Code accepted, but Apple requires the updated iCloud Terms of Use to be accepted. " + str(e))
+            return valuesDict
+        except Exception as e:
+            self.logger.warn("Verification code submission failed: " + str(e))
+            self.logger.debug("submitCode exception", exc_info=True)
+            return valuesDict
 
         if validcode == False:
             self.logger.warn("Code Error:  Please try again...")

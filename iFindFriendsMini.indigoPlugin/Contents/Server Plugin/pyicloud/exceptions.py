@@ -39,6 +39,12 @@ class PyiCloud2SARequiredException(PyiCloudException):
         super(PyiCloud2SARequiredException, self).__init__(message)
 
 
+class PyiCloudAcceptTermsException(PyiCloudException):
+    """Apple requires the updated iCloud Terms of Use to be accepted before
+    services (including Find My) are made available to this session."""
+    pass
+
+
 class PyiCloudNoStoredPasswordAvailableException(PyiCloudException):
     """iCloud no stored password exception."""
     pass

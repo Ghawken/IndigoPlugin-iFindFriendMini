@@ -4,3 +4,7 @@ __pycache__/
 .DS_Store
 /iFindFriendsMini.indigoPlugin/.idea/
 /iFindFriendsMini.indigoPlugin/Contents/Packages/
+
+# Live iCloud session cookies written by the plugin during development
+/iFindFriendsMini.indigoPlugin/Contents/Server\ Plugin/cookies/
+.idea/
