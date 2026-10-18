@@ -70,6 +70,7 @@ Plugin Config Options:
 **Account Details:**
 Apple Account ID:  Your new icloud account, setup on ipad/iphone without 2-factor-authentication enabled.
 Apple Account Passport:
+Automatically accept updated Apple iCloud Terms of Use:  Apple periodically publishes new iCloud terms. Until they are accepted Apple hides Find My from the plugin and devices stop updating. Either accept the terms on an iPhone/iPad/Mac signed into the account (or at icloud.com) and press Login again, or tick this box and the plugin accepts them for you. (1.7.26+)
 Minutes between rechecking status of devices and Geofences:  5 minutes default
 **Mapping:**
 Vertical size of Map max allowed by Google is 640, in pixels
@@ -194,6 +195,20 @@ Then -->Action of your choice:
 Changelog:
 
 Latest Version:
+**1.7.27**
+- Fix Waze distance and time calculations (Waze Error: empty response). Since 30 Sept 2026 Waze blocks any client that does not look like a web browser. The plugin now uses curl_cffi browser impersonation, the same approach as Home Assistant's Waze integration.
+- Indigo installs curl_cffi automatically from the plugin's requirements.txt when the plugin is reloaded. If distance/time still shows unknown, check the Indigo Event Log for a "Requirements" line and reload the plugin once more.
+- Waze failures are now explained once in the Event Log instead of silently at debug level.
+
+**1.7.26**
+- Fix "Invalid URL 'None/fmipservice/...'" after a successful login and 2FA. Apple's September 2026 iCloud Terms of Use update hides Find My until the new terms are accepted.
+- New Plugin Config option to automatically accept updated Apple iCloud Terms of Use (off by default, see Account Details above).
+- Refresh Apple's service list after 2FA so Find My is found straight after entering a code.
+- Clear Event Log messages explaining why Find My is unavailable (terms, untrusted session, or Find My not offered for the account).
+
+**1.7.25**
+- Fix for Apple verification code not arriving; allow SMS codes.
+
 **0.1.4**
 - Delete unused code/node - much smaller now!
 - Tidy up uiValue/Values for Geofences
