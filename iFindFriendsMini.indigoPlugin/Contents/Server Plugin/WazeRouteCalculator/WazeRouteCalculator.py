@@ -5,6 +5,20 @@ import logging
 import requests
 import re
 
+# Since 2026-09-30 Waze rejects requests whose TLS handshake does not look like a
+# current browser (HTTP 403 from every routing server). Changing headers or the
+# User-Agent does not help. curl_cffi can impersonate a browser's TLS fingerprint,
+# which is what pywaze (used by Home Assistant) does. It is installed by Indigo
+# from the plugin's requirements.txt; fall back to plain requests if missing.
+try:
+    from curl_cffi import requests as curl_requests
+    HAVE_CURL_CFFI = True
+except Exception:  # pragma: no cover - optional dependency
+    curl_requests = None
+    HAVE_CURL_CFFI = False
+
+BROWSER_IMPERSONATE = "chrome"
+
 
 class WRCError(Exception):
     def __init__(self, message):
@@ -73,6 +87,24 @@ class WazeRouteCalculator(object):
             self.end_coords = self.address_to_coords(end_address)
         self.log.debug('End coords: (%s, %s)', self.end_coords["lat"], self.end_coords["lon"])
 
+    def _http_get(self, url, params):
+        """GET with browser TLS impersonation when curl_cffi is available."""
+        if HAVE_CURL_CFFI:
+            try:
+                return curl_requests.get(url, params=params, headers=self.HEADERS,
+                                         impersonate=BROWSER_IMPERSONATE, timeout=30)
+            except Exception as err:
+                raise WRCError("Waze request failed: %s" % err)
+        return requests.get(url, params=params, headers=self.HEADERS, timeout=30)
+
+    def _blocked_message(self, response):
+        if HAVE_CURL_CFFI:
+            return ("Waze refused the request (HTTP %s) even with browser impersonation. "
+                    "Waze may have changed its bot protection again." % response.status_code)
+        return ("Waze refused the request (HTTP %s). Waze now blocks clients that do not look like a browser. "
+                "The curl_cffi package is required: reload the plugin so Indigo installs it from requirements.txt."
+                % response.status_code)
+
     def already_coords(self, address):
         """test used to see if we have coordinates or address"""
 
@@ -98,7 +130,9 @@ class WazeRouteCalculator(object):
             "lon": base_coords["lon"]
         }
 
-        response = requests.get(self.WAZE_URL + get_cord, params=url_options, headers=self.HEADERS)
+        response = self._http_get(self.WAZE_URL + get_cord, params=url_options)
+        if response.status_code in (403, 410):
+            raise WRCError(self._blocked_message(response))
         for response_json in response.json():
             if response_json.get('city'):
                 lat = response_json['location']['lat']
@@ -134,7 +168,9 @@ class WazeRouteCalculator(object):
         if self.avoid_subscription_roads is False:
             url_options["subscription"] = "*"
 
-        response = requests.get(routing_server, params=url_options, headers=self.HEADERS)
+        response = self._http_get(routing_server, params=url_options)
+        if response.status_code in (403, 410):
+            raise WRCError(self._blocked_message(response))
         response.encoding = 'utf-8'
         response_json = self._check_response(response)
         if response_json:
@@ -150,7 +186,7 @@ class WazeRouteCalculator(object):
                     return [response_obj]
                 return response_obj
         else:
-            raise WRCError("empty response")
+            raise WRCError("empty response (HTTP %s)" % response.status_code)
 
     @staticmethod
     def _check_response(response):

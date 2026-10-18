@@ -2320,7 +2320,15 @@ class Plugin(indigo.PluginBase):
             return timedisplay, distancedisplay, route_time, route_distance
 
         except WazeRouteCalculator.WRCError as err:
-            self.logger.debug("Waze Error: "+str(err))
+            msg = str(err)
+            if "refused the request" in msg and not getattr(self, "_waze_blocked_warned", False):
+                # Log the bot-protection explanation once per plugin run, not every refresh.
+                self._waze_blocked_warned = True
+                self.logger.info(u"{0:=^130}".format(""))
+                self.logger.info("Waze route/time lookups are failing: " + msg)
+                self.logger.info("Distance and time states will not update until this is resolved.")
+                self.logger.info(u"{0:=^130}".format(""))
+            self.logger.debug("Waze Error: " + msg)
             return "unknown","unknown",0,0
         except Exception as e:
             self.logger.debug("Caught Exception in using Waze Route Calculator:"+str(e))
